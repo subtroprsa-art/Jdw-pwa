@@ -680,23 +680,37 @@ function filterBuyers(){
 }
 function sortBuyers(by){renderBuyers([...buyerData].sort((a,b)=>by==="name"?a.name.localeCompare(b.name):b[by]-a[by]));}
 
-function daysOnFloor(arrived){
-  if(!arrived)return 0;
+function daysOnFloor(dateStr){
+  if(!dateStr)return 0;
   try{
     const now=new Date(); now.setHours(0,0,0,0);
     let d;
-    if(/^\d{4}-/.test(arrived)){
-      d=new Date(arrived);
-    } else {
-      const p=arrived.split('/');
-      const day=parseInt(p[0]),mon=parseInt(p[1])-1;
-      const yr=p[2]?parseInt(p[2]):now.getFullYear();
-      d=new Date(yr,mon,day);
+    if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){
+      // YYYY-MM-DD format from Firebase
+      const parts=dateStr.slice(0,10).split('-');
+      d=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    } else if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){
+      // DD/MM/YYYY
+      const p=dateStr.split('/');
+      d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+    } else if(/^\d{2}\/\d{2}$/.test(dateStr)){
+      // DD/MM — use current year, roll back if future
+      const p=dateStr.split('/');
+      const yr=now.getFullYear();
+      d=new Date(yr,parseInt(p[1])-1,parseInt(p[0]));
       if(d>now) d.setFullYear(yr-1);
+    } else {
+      return 0;
     }
     d.setHours(0,0,0,0);
-    return Math.floor((now-d)/(1000*60*60*24));
+    return Math.max(0,Math.floor((now-d)/(1000*60*60*24)));
   }catch(e){return 0;}
+}
+
+function fmtArrived(dateStr){
+  if(!dateStr)return "—";
+  if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr.slice(5).replace('-','/');
+  return dateStr;
 }
 
 function renderStock(data){
@@ -709,7 +723,8 @@ function renderStock(data){
     const old=s.flr>0&&days>=14;
     const oldBadge=old?`<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d on floor</span>`:"";
     const cardStyle=old?"border-left:4px solid var(--red)":"";
-    return`<div class="scard" style="${cardStyle}"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${s.arrived||s.date||"—"}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}${oldBadge}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
+    const arrivedLabel=fmtArrived(s.arrived||s.date||"");
+    return`<div class="scard" style="${cardStyle}"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${arrivedLabel}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}${oldBadge}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
   }).join(""):`<div class="empty">No stock found</div>`;
 }
 function filterStock(){
@@ -730,7 +745,7 @@ function showPage(id,el){
         const all=[];
         for(const [ukey,uval] of Object.entries(d||{}))
           for(const e of Object.values(uval||{}))
-            all.push({...firebaseToItem(e), user: e.user||ukey});
+            all.push({...firebaseToItem(e),user:e.user||ukey});
         allLiveStockData=all;
         renderCommodities(buildCommoditySummary());
       })
@@ -751,7 +766,7 @@ let allLiveStockData=[];
 
 function firebaseToItem(e){
   const p=(e.commodity||'').split(',');
-  return {producer:e.producer||'',grn:String(e.grn||''),commodity:p[0]||'',pack:p[1]||'*',variety:p[2]||'*',grade:String(p[3]||'1'),size:String(p[5]||'*'),arrived:e.date?e.date.slice(5).replace('-','/'):''  ,rec:Number(e.qty_rec)||0,sold:0,flr:Number(e.qty_sort)||0,user:e.user||''};
+  const rec=Number(e.qty_rec)||0,flr=Number(e.qty_sort)||0;return {producer:e.producer||'',grn:String(e.grn||''),commodity:p[0]||'',pack:p[1]||'*',variety:p[2]||'*',grade:String(p[3]||'1'),size:String(p[5]||'*'),arrived:e.date||'',rec:rec,sold:Math.max(0,rec-flr),flr:flr,user:e.user||''};
 }
 
 async function loadStockFromFirebase(user){
