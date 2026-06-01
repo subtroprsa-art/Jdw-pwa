@@ -666,8 +666,9 @@ function firebaseToItem(e){
 
 async function loadStockFromFirebase(user){
   try{
-    const r=await fetch(SYNC+'/stock/'+user);
-    if(!r.ok)throw new Error('Fetch failed');
+    const url='https://jdw-crm-default-rtdb.firebaseio.com/stock/'+user+'.json';
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('Firebase fetch failed');
     const d=await r.json();
     liveStockData=Object.values(d||{}).map(firebaseToItem);
     filterStock();
@@ -679,7 +680,8 @@ async function loadStockFromFirebase(user){
 
 async function loadAllStockForMatcher(){
   try{
-    const r=await fetch(SYNC+'/stock/all');
+    const url='https://jdw-crm-default-rtdb.firebaseio.com/stock.json';
+    const r=await fetch(url);
     if(!r.ok)throw new Error();
     const d=await r.json();
     const all=[];
