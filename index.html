@@ -312,7 +312,7 @@ main{padding:14px 12px}
       <option value="GVS">Guavas</option>
     </select>
   </div>
-  <button class="btn-gold" style="width:100%;margin-bottom:14px" onclick="renderMatchPage(stockData)">⚡ Auto-Match All</button>
+  <button class="btn-gold" style="width:100%;margin-bottom:14px" onclick="renderMatchPage(allLiveStockData&&allLiveStockData.length?allLiveStockData:stockData)">⚡ Auto-Match All</button>
   <div id="match-result" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
   <div id="match-grid"></div>
 </div>
@@ -607,6 +607,21 @@ function renderSales(){
     </div>`).join("");
 }
 
+// Convert live buyer profiles to matcher-compatible format
+function getMatcherBuyers(){
+  // Use live buyers if available, fall back to hardcoded
+  const src=liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;
+  // Normalise prefs: live buyers have {comm, pack, cls, sizes} which matchScore already understands
+  // but commMap expects comm as a full name like "Avocados" not code like "AVOS"
+  // Live buyers already store comm as full name so they work directly
+  return src;
+}
+
+// Reverse lookup: commodity code -> full name for commMap
+const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",
+  CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",
+  GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit"};
+
 function renderMatchPage(data){
   const groups={};
   data.filter(s=>s.flr>0).forEach(s=>{
@@ -617,12 +632,18 @@ function renderMatchPage(data){
     groups[s.commodity].totalSold+=s.sold;
   });
   let count=0;
+  const allBuyers=getMatcherBuyers();
   document.getElementById("match-grid").innerHTML=Object.entries(groups).map(([comm,g])=>{
-    const pct=Math.round(g.totalSold/g.totalRec*100);
-    const buyers=buyerData.filter(b=>b.prefs.some(p=>commMap[p.comm]===comm));
+    const pct=g.totalRec>0?Math.round(g.totalSold/g.totalRec*100):0;
+    // Match buyers who have a pref for this commodity code
+    const commFullName=commCodeToName[comm]||comm;
+    const buyers=allBuyers.filter(b=>b.prefs&&b.prefs.some(p=>{
+      // Support both commMap lookup (hardcoded) and direct code match (live)
+      return commMap[p.comm]===comm || p.comm===commFullName || p.comm===comm;
+    }));
     count++;
     const buyersHTML=buyers.map(buyer=>{
-      const pref=buyer.prefs.find(p=>commMap[p.comm]===comm);
+      const pref=buyer.prefs.find(p=>commMap[p.comm]===comm||p.comm===commFullName||p.comm===comm);
       if(!pref)return"";
       const exact=g.items.filter(s=>matchScore(s,pref)==="exact"&&s.flr>0);
       const close=g.items.filter(s=>matchScore(s,pref)==="close"&&s.flr>0);
@@ -634,20 +655,20 @@ function renderMatchPage(data){
         <div class="bmatch-head">
           <span class="dot ${ind}" style="flex-shrink:0"></span>
           <span class="bmatch-name">${buyer.name}</span>
-          <span class="bmatch-acc">Acc ${buyer.acc}</span>
+          <span class="bmatch-acc">Acc ${buyer.acc||'—'}</span>
           <span class="b ${indBadge}" style="font-size:10px">${indLabel}</span>
         </div>
         <div class="bmatch-body">
           <div class="spec-row">
-            <div class="spec"><div class="spec-l">Pack</div><div class="spec-v">${pref.pack}</div></div>
+            <div class="spec"><div class="spec-l">Pack</div><div class="spec-v">${pref.pack||'—'}</div></div>
             <div class="spec"><div class="spec-l">Class</div><div class="spec-v">${pref.cls}</div></div>
             <div class="spec"><div class="spec-l">Size(s)</div><div class="spec-v">${pref.sizes.join(", ")}</div></div>
-            <div class="spec"><div class="spec-l">Avg Order</div><div class="spec-v">R ${Math.round(buyer.spend/buyer.txns).toLocaleString()}</div></div>
+            <div class="spec"><div class="spec-l">Avg Order</div><div class="spec-v">R ${buyer.txns>0?Math.round(buyer.spend/buyer.txns).toLocaleString():'—'}</div></div>
           </div>
           ${pref.note?`<div class="sml">💬 ${pref.note}</div>`:""}
           ${lines.length>0?`<div class="smatch-title">Matching Stock on Floor</div>${lines.map(s=>{
             const sc=matchScore(s,pref);
-            return`<div class="smatch-row"><div class="smatch-top"><span class="dot ${sc==="exact"?"dot-e":"dot-c"}" style="margin-right:6px;flex-shrink:0"></span><span class="smatch-prod">${s.producer}</span><span class="smatch-units">${s.flr} units</span></div><div class="smatch-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}</div><div class="smatch-grn">GRN ${s.grn} · Arrived ${s.arrived}</div></div>`;
+            return`<div class="smatch-row"><div class="smatch-top"><span class="dot ${sc==="exact"?"dot-e":"dot-c"}" style="margin-right:6px;flex-shrink:0"></span><span class="smatch-prod">${s.producer}</span><span class="smatch-units">${s.flr} units</span></div><div class="smatch-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}</div><div class="smatch-grn">GRN ${s.grn} · Arrived ${s.arrived||s.date||"—"}</div></div>`;
           }).join("")}${g.items.filter(s=>["exact","close"].includes(matchScore(s,pref))&&s.flr>0).length>3?`<div style="font-size:11px;color:var(--muted);padding-top:4px">+${g.items.filter(s=>["exact","close"].includes(matchScore(s,pref))&&s.flr>0).length-3} more lines</div>`:""}`:
           `<div class="no-match">⚠ No matching stock on floor for this preference</div>`}
         </div>
@@ -655,17 +676,18 @@ function renderMatchPage(data){
     }).join("");
     return`<div class="mcard"><div class="mcard-hdr ${commHdr[comm]||"mcg"}"><div><div class="mcard-title">${commName[comm]||comm}</div><div class="mcard-sub">${g.items.length} lines · ${pct}% sold</div></div><div class="mpill"><div class="mpill-n">${g.totalFlr.toLocaleString()}</div><div class="mpill-l">on floor</div></div></div>${buyers.length>0?buyersHTML:`<div style="padding:14px 16px;font-size:13px;color:var(--muted)">No historic buyers on record</div>`}</div>`;
   }).join("");
-  document.getElementById("match-result").textContent=`${count} commodity groups · ${buyerData.length} buyers matched`;
+  document.getElementById("match-result").textContent=`${count} commodity groups · ${allBuyers.length} buyers`;
 }
 
 function filterMatches(){
   const q=document.getElementById("match-search").value.toLowerCase();
   const f=document.getElementById("match-filter").value;
-  renderMatchPage(stockData.filter(s=>(!f||s.commodity===f)&&(!q||s.commodity.toLowerCase().includes(q)||s.producer.toLowerCase().includes(q)||s.pack.toLowerCase().includes(q)||s.size.toLowerCase().includes(q)||buyerData.some(b=>b.name.toLowerCase().includes(q)&&b.prefs.some(p=>commMap[p.comm]===s.commodity)))));
+  const src=allLiveStockData&&allLiveStockData.length?allLiveStockData:stockData;
+  const allBuyers=getMatcherBuyers();
+  renderMatchPage(src.filter(s=>(!f||s.commodity===f)&&(!q||s.commodity.toLowerCase().includes(q)||s.producer.toLowerCase().includes(q)||s.pack.toLowerCase().includes(q)||s.size.toLowerCase().includes(q)||allBuyers.some(b=>b.name.toLowerCase().includes(q)&&b.prefs&&b.prefs.some(p=>commMap[p.comm]===s.commodity||p.comm===commCodeToName[s.commodity])))));
 }
 
 let liveBuyerData=[];
-
 async function loadBuyersFromFirebase(){
   const el=document.getElementById('buyer-list');
   if(el)el.innerHTML='<div class="empty">Loading buyers…</div>';
@@ -677,50 +699,32 @@ async function loadBuyersFromFirebase(){
     const history=Array.isArray(raw)?raw:Object.values(raw);
     liveBuyerData=buildBuyerProfiles(history);
     renderBuyers(liveBuyerData);
-  }catch(e){
-    liveBuyerData=buyerData;
-    renderBuyers(buyerData);
-  }
+  }catch(e){liveBuyerData=buyerData;renderBuyers(buyerData);}
 }
-
 function buildBuyerProfiles(history){
   const map={};
-  const COMM_NAMES={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',
-    CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',
-    GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
-  const PACK_GUESS={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',
-    LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',
-    FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
+  const CN={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
+  const PG={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
   for(const h of history){
     if(!h.buyer||h.buyer==='UNKNOWN')continue;
     const name=h.buyer;
     if(!map[name])map[name]={name,acc:h.account||'',card:h.card||'',txns:0,spend:0,prefs:{},lastDate:''};
     const b=map[name];
-    b.txns++;
-    b.spend+=Number(h.total)||0;
+    b.txns++;b.spend+=Number(h.total)||0;
     if(!b.acc&&h.account)b.acc=h.account;
     if(!b.card&&h.card)b.card=h.card;
     if(!b.lastDate||h.date>b.lastDate)b.lastDate=h.date;
     const comm=h.commodity||'UNK';
-    if(!map[name].prefs[comm])map[name].prefs[comm]={
-      comm:COMM_NAMES[comm]||comm,pack:PACK_GUESS[comm]||'',
-      cls:'CL '+(h.cls||'1'),sizes:new Set(),txns:0,totalQty:0
-    };
+    if(!map[name].prefs[comm])map[name].prefs[comm]={comm:CN[comm]||comm,pack:PG[comm]||'',cls:'CL '+(h.cls||'1'),sizes:new Set(),txns:0,totalQty:0};
     const p=map[name].prefs[comm];
     p.txns++;p.totalQty+=Number(h.qty)||0;
     if(h.size&&h.size!=='*')p.sizes.add(h.size);
   }
   return Object.values(map).map(b=>({
-    name:b.name,acc:b.acc,card:b.card,txns:b.txns,
-    spend:Math.round(b.spend),lastDate:b.lastDate,
-    prefs:Object.values(b.prefs).map(p=>({
-      comm:p.comm,pack:p.pack,cls:p.cls,
-      sizes:p.sizes.size>0?[...p.sizes].sort():['*'],
-      note:`${p.txns} txn${p.txns>1?'s':''} · avg ${Math.round(p.totalQty/p.txns)} units`
-    }))
+    name:b.name,acc:b.acc,card:b.card,txns:b.txns,spend:Math.round(b.spend),lastDate:b.lastDate,
+    prefs:Object.values(b.prefs).map(p=>({comm:p.comm,pack:p.pack,cls:p.cls,sizes:p.sizes.size>0?[...p.sizes].sort():['*'],note:`${p.txns} txn${p.txns>1?'s':''} · avg ${Math.round(p.totalQty/p.txns)} units`}))
   })).sort((a,b)=>b.spend-a.spend);
 }
-
 function renderBuyers(data){
   document.getElementById("buyer-list").innerHTML=data.length?data.map(b=>`
     <div class="bcard">
@@ -733,38 +737,29 @@ function renderBuyers(data){
 }
 function filterBuyers(){
   const q=document.getElementById("buyer-search").value.toLowerCase();
-  const src=liveBuyerData.length?liveBuyerData:buyerData;
+  const src=liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;
   renderBuyers(src.filter(b=>b.name.toLowerCase().includes(q)||(b.acc&&b.acc.includes(q))));
 }
 function sortBuyers(by){
-  const src=liveBuyerData.length?liveBuyerData:buyerData;
+  const src=liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;
   renderBuyers([...src].sort((a,b)=>by==="name"?a.name.localeCompare(b.name):b[by]-a[by]));
 }
 
 function daysOnFloor(dateStr){
   if(!dateStr)return 0;
   try{
-    const now=new Date(); now.setHours(0,0,0,0);
+    const now=new Date();now.setHours(0,0,0,0);
     let d;
-    if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){
-      const parts=dateStr.slice(0,10).split('-');
-      d=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
-    } else if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){
-      const p=dateStr.split('/');
-      d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
-    } else if(/^\d{2}\/\d{2}$/.test(dateStr)){
-      const p=dateStr.split('/');
-      const yr=now.getFullYear();
-      d=new Date(yr,parseInt(p[1])-1,parseInt(p[0]));
-      if(d>now) d.setFullYear(yr-1);
-    } else { return 0; }
-    d.setHours(0,0,0,0);
-    return Math.max(0,Math.floor((now-d)/(1000*60*60*24)));
+    if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){const p=dateStr.slice(0,10).split('-');d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
+    else if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){const p=dateStr.split('/');d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}
+    else if(/^\d{2}\/\d{2}$/.test(dateStr)){const p=dateStr.split('/');const yr=now.getFullYear();d=new Date(yr,parseInt(p[1])-1,parseInt(p[0]));if(d>now)d.setFullYear(yr-1);}
+    else return 0;
+    d.setHours(0,0,0,0);return Math.max(0,Math.floor((now-d)/(1000*60*60*24)));
   }catch(e){return 0;}
 }
 function fmtArrived(dateStr){
   if(!dateStr)return "—";
-  if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr.slice(5).replace('-','/');
+  if(/^\d{4}-\d{2}-\d{2}/.test(dateStr))return dateStr.slice(5).replace('-','/');
   return dateStr;
 }
 function renderStock(data){
