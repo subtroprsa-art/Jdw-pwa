@@ -595,13 +595,10 @@ function renderStockChart(liveData){
 
 async function loadDashboard(){
   try{
-    // Load history for revenue/buyers/txns KPIs
-    const [histRes, stockRes] = await Promise.all([
+    const [histRes,stockRes]=await Promise.all([
       fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json'),
       fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json')
     ]);
-
-    // ── Stock KPIs ──
     if(stockRes.ok){
       const stockRaw=await stockRes.json();
       const allStock=[];
@@ -614,13 +611,10 @@ async function loadDashboard(){
       document.getElementById('kpi-floor-sub').textContent='Units on floor';
       renderStockChart(allStock);
     }
-
-    // ── History KPIs ──
     if(histRes.ok){
       const raw=await histRes.json();
       if(raw){
         const history=Array.isArray(raw)?raw:Object.values(raw);
-        // Get last 7 days
         const now=new Date();
         const week=new Date(now-7*24*60*60*1000);
         const recent=history.filter(h=>{
@@ -641,40 +635,14 @@ async function loadDashboard(){
         document.getElementById('kpi-buyers-sub').textContent='Active '+period.toLowerCase();
         document.getElementById('kpi-txns').textContent=txns;
         document.getElementById('kpi-txns-sub').textContent=period;
-        // Latest sales from history
         renderSalesFromHistory([...history].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10));
       }
     }
-  }catch(e){
-    // Fallback to static data
-    renderStockChart();
-    renderSales();
-  }
-}
-
-function renderSalesFromHistory(data){
-  const commNames={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',
-    CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',
-    GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
-  if(!data||!data.length){renderSales();return;}
-  document.getElementById("sale-list").innerHTML=data.map(s=>`
-    <div class="sale-card">
-      <div class="sale-dot ${(s.cls||'1')==='2'?"cl2":""}"></div>
-      <div class="sale-body">
-        <div class="sale-buyer">${s.buyer||'Unknown'}</div>
-        <div class="sale-acc">Acc ${s.account||'—'} · ${s.date||'—'}</div>
-        <div class="sale-specs">
-          <span class="b bb">${s.pack||'—'}</span>
-          <span class="b ${(s.cls||'1')==='1'?"bg":"ba"}">CL ${s.cls||'1'}</span>
-          <span class="b bt">sz ${s.size||'*'}</span>
-          <span class="b" style="background:#f0f4f0;color:var(--muted)">${commNames[s.commodity]||s.commodity||'—'}</span>
-        </div>
-      </div>
-      <div class="sale-right"><div class="sale-amt">R ${(Number(s.total)||0).toLocaleString()}</div><div class="sale-qty">${s.qty||0} units</div></div>
-    </div>`).join("");
+  }catch(e){renderStockChart();renderSales();}
 }
 
 function renderSales(){
+  // Fallback to static data if no live data
   document.getElementById("sale-list").innerHTML=salesData.map(s=>`
     <div class="sale-card">
       <div class="sale-dot ${s.cls==="CL 2"?"cl2":""}"></div>
@@ -690,6 +658,49 @@ function renderSales(){
       </div>
       <div class="sale-right"><div class="sale-amt">R ${s.amt.toLocaleString()}</div><div class="sale-qty">${s.qty} units</div></div>
     </div>`).join("");
+}
+
+function renderSalesFromHistory(data){
+  const CN={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',
+    CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',
+    GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
+  const PK={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',
+    LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',
+    FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
+  if(!data||!data.length){renderSales();return;}
+  document.getElementById("sale-list").innerHTML=data.map(s=>{
+    const comm    = s.commodity||'UNK';
+    const commLbl = CN[comm]||comm;
+    const pack    = s.pack||PK[comm]||'';
+    const cls     = s.cls||'1';
+    const clsLbl  = 'CL '+cls;
+    const size    = s.size&&s.size!=='*'?s.size:'—';
+    const variety = s.variety&&s.variety!=='*'?s.variety:'';
+    const total   = Number(s.total)||0;
+    const qty     = Number(s.qty)||0;
+    const price   = qty>0&&total>0?Math.round(total/qty):0;
+    const acc     = s.account||s.acc||'—';
+    const isC2    = cls==='2';
+    return`<div class="sale-card">
+      <div class="sale-dot ${isC2?"cl2":""}"></div>
+      <div class="sale-body">
+        <div class="sale-buyer">${s.buyer||'Unknown'}</div>
+        <div class="sale-acc">Acc ${acc} · ${s.date||'—'}${s.invoice?' · Inv '+s.invoice:''}</div>
+        <div class="sale-specs">
+          ${pack?`<span class="b bb">${pack}</span>`:''}
+          <span class="b ${isC2?'ba':'bg'}">${clsLbl}</span>
+          ${size!=='—'?`<span class="b bt">sz ${size}</span>`:''}
+          ${variety?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${variety}</span>`:''}
+          <span class="b" style="background:#e8f5ec;color:#1a5c2a">${commLbl}</span>
+        </div>
+        ${s.producer?`<div style="font-size:11px;color:var(--muted);margin-top:4px">🌱 ${s.producer}</div>`:''}
+      </div>
+      <div class="sale-right">
+        <div class="sale-amt">R ${total.toLocaleString()}</div>
+        <div class="sale-qty">${qty} units${price>0?' · R'+price+'/u':''}</div>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit"};
