@@ -213,6 +213,24 @@ main{padding:14px 12px}
 .stock-tabs{display:flex;gap:8px;margin-bottom:12px}
 .stock-tab{flex:1;padding:9px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--muted);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer}
 .stock-tab.active{background:var(--moss);color:#fff;border-color:var(--moss)}
+
+/* ══ COMMODITIES ══ */
+.comm-card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:10px;cursor:pointer;border-left:4px solid var(--sage);display:flex;align-items:center;justify-content:space-between}
+.comm-card:active{opacity:.8}
+.comm-card-left{display:flex;flex-direction:column;gap:3px}
+.comm-name{font-weight:700;font-size:15px;color:var(--ink)}
+.comm-code{font-size:11px;color:var(--muted)}
+.comm-card-right{text-align:right}
+.comm-flr{font-size:22px;font-weight:800;color:var(--moss)}
+.comm-flr-label{font-size:10px;color:var(--muted)}
+.comm-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.comm-stat-box{background:var(--paper);border-radius:10px;padding:10px 14px;flex:1;min-width:80px;text-align:center}
+.comm-stat-val{font-size:20px;font-weight:800;color:var(--moss)}
+.comm-stat-lbl{font-size:10px;color:var(--muted)}
+.comm-line{background:var(--paper);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.comm-line-top{display:flex;justify-content:space-between;font-weight:600;font-size:13px}
+.comm-line-bot{font-size:11px;color:var(--muted);margin-top:3px}
+.comm-badge{display:inline-block;background:var(--sage);color:#fff;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;margin-right:4px}
 </style>
 </head>
 <body>
@@ -331,22 +349,51 @@ main{padding:14px 12px}
   <div class="stock-tabs">
     <button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button>
     <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button>
+    <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button>
   </div>
   <div class="ctrl-row">
     <input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/>
     <select id="stock-filter" onchange="filterStock()">
       <option value="">All</option>
       <option value="AVOS">Avocados</option>
-      <option value="LEMS">Lemons</option>
+      <option value="BERS">Strawberries</option>
+      <option value="CLTM">Clementines</option>
+      <option value="DRAG">Dragon Fruit</option>
       <option value="FIGS">Figs</option>
-      <option value="KIWI">Kiwifruit</option>
-      <option value="ORGS">Oranges</option>
+      <option value="GFT">Grapefruit</option>
       <option value="GVS">Guavas</option>
+      <option value="KIWI">Kiwi</option>
+      <option value="LEMS">Lemons</option>
+      <option value="MANG">Mangoes</option>
+      <option value="NAAR">Naartjies</option>
+      <option value="ORGS">Oranges</option>
+      <option value="PAPO">Papino</option>
+      <option value="SATS">Satsumas</option>
     </select>
   </div>
   <div id="stock-list"></div>
 </div>
 
+
+<!-- ══ COMMODITIES ══ -->
+<div class="page" id="page-commodities">
+  <div class="ctrl-row">
+    <input type="text" id="comm-search" placeholder="🔍 Search commodity…" oninput="filterCommodities()"/>
+  </div>
+  <div id="comm-summary-list"></div>
+
+  <!-- Detail modal -->
+  <div id="comm-detail" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <button onclick="closeCommodityDetail()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:13px;cursor:pointer">← Back</button>
+        <div id="comm-detail-title" style="font-weight:700;font-size:16px;color:var(--moss)"></div>
+      </div>
+      <div id="comm-detail-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
+      <div id="comm-detail-lines"></div>
+    </div>
+  </div>
+</div>
 </main>
 
 <nav class="bnav">
@@ -648,6 +695,14 @@ function filterStock(){
 }
 
 function showPage(id,el){
+  if(id==='commodities'){
+    setTimeout(()=>{
+      const data=buildCommoditySummary();
+      renderCommodities(data);
+      document.getElementById('comm-detail').style.display='none';
+      document.getElementById('comm-summary-list').style.display='block';
+    },50);
+  }
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".bnav-item").forEach(n=>n.classList.remove("active"));
   document.getElementById("page-"+id).classList.add("active");
@@ -727,6 +782,101 @@ async function doStockUpload(clearFirst){
     stat.textContent='✗ '+e.message;
   }
 }
+
+
+// ══════════════════════════ COMMODITIES TAB ══════════════════════════════════
+
+const COMM_NAMES = {
+  AVOS:'Avocados', BERS:'Strawberries', CLTM:'Clementines', DRAG:'Dragon Fruit',
+  FIGS:'Figs', GFT:'Grapefruit', GVS:'Guavas', KIWI:'Kiwi', LEMS:'Lemons',
+  MANG:'Mangoes', NAAR:'Naartjies', ORGS:'Oranges', PAPO:'Papino', SATS:'Satsumas',
+  UNK:'Unknown'
+};
+
+function buildCommoditySummary() {
+  const src = allLiveStockData.length ? allLiveStockData : [];
+  const map = {};
+  for (const e of src) {
+    const code = e.commodity || 'UNK';
+    if (!map[code]) map[code] = { code, name: COMM_NAMES[code] || code, flr:0, rec:0, lines:[], users:new Set() };
+    map[code].flr   += Number(e.flr)  || 0;
+    map[code].rec   += Number(e.rec)  || 0;
+    map[code].lines.push(e);
+    if (e.user) map[code].users.add(e.user);
+  }
+  return Object.values(map).sort((a,b) => b.flr - a.flr);
+}
+
+function renderCommodities(data) {
+  const el = document.getElementById('comm-summary-list');
+  if (!el) return;
+  if (!data || data.length === 0) {
+    el.innerHTML = '<div class="empty">No stock data available.</div>';
+    return;
+  }
+  el.innerHTML = data.map(c => `
+    <div class="comm-card" onclick="showCommodityDetail('${c.code}')">
+      <div class="comm-card-left">
+        <div class="comm-name">${c.name}</div>
+        <div class="comm-code">${c.code} · ${c.lines.length} lines · ${[...c.users].join(', ')}</div>
+        <div class="comm-meta">Received: ${c.rec.toLocaleString()} units</div>
+      </div>
+      <div class="comm-card-right">
+        <div class="comm-flr">${c.flr.toLocaleString()}</div>
+        <div class="comm-flr-label">ON FLOOR</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterCommodities() {
+  const q = document.getElementById('comm-search').value.toLowerCase();
+  const data = buildCommoditySummary().filter(c =>
+    !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+  );
+  renderCommodities(data);
+}
+
+function showCommodityDetail(code) {
+  const src = allLiveStockData.length ? allLiveStockData : [];
+  const lines = src.filter(e => e.commodity === code);
+  const name  = COMM_NAMES[code] || code;
+  const flr   = lines.reduce((s,e) => s + (Number(e.flr)||0), 0);
+  const rec   = lines.reduce((s,e) => s + (Number(e.rec)||0), 0);
+  const users = [...new Set(lines.map(e => e.user).filter(Boolean))];
+
+  document.getElementById('comm-detail-title').textContent = name + ' (' + code + ')';
+  document.getElementById('comm-detail-stats').innerHTML = `
+    <div class="comm-stat-box"><div class="comm-stat-val">${flr.toLocaleString()}</div><div class="comm-stat-lbl">On Floor</div></div>
+    <div class="comm-stat-box"><div class="comm-stat-val">${rec.toLocaleString()}</div><div class="comm-stat-lbl">Received</div></div>
+    <div class="comm-stat-box"><div class="comm-stat-val">${lines.length}</div><div class="comm-stat-lbl">Lines</div></div>
+    <div class="comm-stat-box"><div class="comm-stat-val">${users.join('/')}</div><div class="comm-stat-lbl">Salesmen</div></div>
+  `;
+
+  // Sort by flr descending
+  const sorted = [...lines].sort((a,b) => (Number(b.flr)||0) - (Number(a.flr)||0));
+  document.getElementById('comm-detail-lines').innerHTML = sorted.map(e => `
+    <div class="comm-line">
+      <div class="comm-line-top">
+        <span>${e.producer || e.grn || '—'}</span>
+        <span style="color:var(--moss)">${(Number(e.flr)||0).toLocaleString()} FLR</span>
+      </div>
+      <div class="comm-line-bot">
+        <span class="comm-badge">${e.user||''}</span>
+        GRN ${e.grn || '—'} · Arrived ${e.arrived || e.date || '—'} · Rec ${Number(e.rec)||0}
+      </div>
+    </div>`).join('');
+
+  document.getElementById('comm-summary-list').style.display = 'none';
+  document.getElementById('comm-detail').style.display = 'block';
+}
+
+function closeCommodityDetail() {
+  document.getElementById('comm-summary-list').style.display = 'block';
+  document.getElementById('comm-detail').style.display = 'none';
+}
+
+// Load commodities when tab is shown
+const _origShowPage = window.showPage;
 
 </script>
 </body>
