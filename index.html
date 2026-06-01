@@ -592,7 +592,6 @@ function renderStockChart(liveData){
     return`<div class="prog-wrap"><div class="prog-row"><span class="prog-name">${commName[c]||c}</span><span class="prog-meta">${pct}% · ${flr.toLocaleString()} left</span></div><div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div></div>`;
   }).join("")||"<div class='empty'>No stock data</div>";
 }
-
 async function loadDashboard(){
   try{
     const [histRes,stockRes]=await Promise.all([
@@ -642,7 +641,6 @@ async function loadDashboard(){
 }
 
 function renderSales(){
-  // Fallback to static data if no live data
   document.getElementById("sale-list").innerHTML=salesData.map(s=>`
     <div class="sale-card">
       <div class="sale-dot ${s.cls==="CL 2"?"cl2":""}"></div>
@@ -661,26 +659,22 @@ function renderSales(){
 }
 
 function renderSalesFromHistory(data){
-  const CN={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',
-    CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',
-    GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
-  const PK={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',
-    LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',
-    FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
+  const CN={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
+  const PK={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
   if(!data||!data.length){renderSales();return;}
   document.getElementById("sale-list").innerHTML=data.map(s=>{
-    const comm    = s.commodity||'UNK';
-    const commLbl = CN[comm]||comm;
-    const pack    = s.pack||PK[comm]||'';
-    const cls     = s.cls||'1';
-    const clsLbl  = 'CL '+cls;
-    const size    = s.size&&s.size!=='*'?s.size:'—';
-    const variety = s.variety&&s.variety!=='*'?s.variety:'';
-    const total   = Number(s.total)||0;
-    const qty     = Number(s.qty)||0;
-    const price   = qty>0&&total>0?Math.round(total/qty):0;
-    const acc     = s.account||s.acc||'—';
-    const isC2    = cls==='2';
+    const comm=s.commodity||'UNK';
+    const commLbl=CN[comm]||comm;
+    const pack=s.pack||PK[comm]||'';
+    const cls=s.cls||'1';
+    const clsLbl='CL '+cls;
+    const size=s.size&&s.size!=='*'?s.size:'—';
+    const variety=s.variety&&s.variety!=='*'?s.variety:'';
+    const total=Number(s.total)||0;
+    const qty=Number(s.qty)||0;
+    const price=qty>0&&total>0?Math.round(total/qty):0;
+    const acc=s.account||s.acc||'—';
+    const isC2=cls==='2';
     return`<div class="sale-card">
       <div class="sale-dot ${isC2?"cl2":""}"></div>
       <div class="sale-body">
@@ -893,8 +887,39 @@ let liveStockData=[];
 let allLiveStockData=[];
 
 function firebaseToItem(e){
-  const p=(e.commodity||'').split(',');
-  const rec=Number(e.qty_rec)||0,flr=Number(e.qty_sort)||0;return {producer:e.producer||'',grn:String(e.grn||''),commodity:p[0]||'',pack:p[1]||'*',variety:p[2]||'*',grade:String(p[3]||'1'),size:String(p[5]||'*'),arrived:e.date||'',rec:rec,sold:Math.max(0,rec-flr),flr:flr,user:e.user||''};
+  const comm = (e.commodity||'').split(',')[0] || '';
+  const rec  = Number(e.qty_rec)  || 0;
+  const flr  = Number(e.qty_sort) || 0;
+
+  // Pack — use stored pack field, fallback to commodity default
+  const packDefault={AVOS:'TR040',LEMS:'CTT150',ORGS:'CTT150',KIWI:'PTB005',
+    FIGS:'PTB002',GVS:'TR040',CLTM:'DL076',NAAR:'CTT150',
+    STRS:'PTB005',MANG:'TR040',DRAG:'TR040',GFT:'CTT150'}[comm]||'*';
+  const pack = e.pack || packDefault;
+
+  // Grade — use stored grade field
+  const grade = String(e.grade||e.cls||'1');
+
+  // Size — use stored size field, fallback to count
+  const size = String(e.size||e.count||'*');
+
+  // Arrived date
+  const arrived = e.date || '';
+
+  return {
+    producer:  e.producer || '',
+    grn:       String(e.grn || ''),
+    commodity: comm,
+    pack:      pack,
+    variety:   e.variety || '*',
+    grade:     grade,
+    size:      size,
+    arrived:   arrived,
+    rec:       rec,
+    sold:      Math.max(0, rec - flr),
+    flr:       flr,
+    user:      e.user || '',
+  };
 }
 
 async function loadStockFromFirebase(user){
