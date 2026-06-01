@@ -432,7 +432,7 @@ function showApp(displayName){
   document.getElementById('hdr-username').textContent=displayName;
   document.getElementById('live-date').textContent=
     new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
-  renderStockChart();renderSales();renderBuyers(buyerData);renderStock(stockData);renderMatchPage(stockData);if(typeof loadAllStockForMatcher==="function"){loadStockFromFirebase("RJ");loadAllStockForMatcher();}
+  renderStockChart();renderSales();renderStock(stockData);renderMatchPage(stockData);loadBuyersFromFirebase();if(typeof loadAllStockForMatcher==="function"){loadStockFromFirebase("RJ");loadAllStockForMatcher();}
 }
 
 function normalizeUser(raw){
@@ -664,67 +664,111 @@ function filterMatches(){
   renderMatchPage(stockData.filter(s=>(!f||s.commodity===f)&&(!q||s.commodity.toLowerCase().includes(q)||s.producer.toLowerCase().includes(q)||s.pack.toLowerCase().includes(q)||s.size.toLowerCase().includes(q)||buyerData.some(b=>b.name.toLowerCase().includes(q)&&b.prefs.some(p=>commMap[p.comm]===s.commodity)))));
 }
 
+// Live buyer data from Firebase
+let liveBuyerData = [];
+
+async function loadBuyersFromFirebase() {
+  const el = document.getElementById('buyer-list');
+  if (el) el.innerHTML = '<div class="empty">Loading buyers…</div>';
+  try {
+    const r = await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');
+    if (!r.ok) throw new Error('Firebase fetch failed');
+    const raw = await r.json();
+    if (!raw) { renderBuyers([]); return; }
+    const history = Array.isArray(raw) ? raw : Object.values(raw);
+    liveBuyerData = buildBuyerProfiles(history);
+    renderBuyers(liveBuyerData);
+  } catch(e) {
+    // Fallback to hardcoded data
+    liveBuyerData = buyerData;
+    renderBuyers(buyerData);
+  }
+}
+
+function buildBuyerProfiles(history) {
+  // Group transactions by buyer
+  const map = {};
+  for (const h of history) {
+    if (!h.buyer || h.buyer === 'UNKNOWN') continue;
+    const name = h.buyer;
+    if (!map[name]) map[name] = {
+      name, acc: h.account||'', card: h.card||'',
+      txns: 0, spend: 0, prefs: {}, lastDate: ''
+    };
+    const b = map[name];
+    b.txns++;
+    b.spend += Number(h.total) || 0;
+    if (!b.acc && h.account) b.acc = h.account;
+    if (!b.card && h.card)   b.card = h.card;
+    if (!b.lastDate || h.date > b.lastDate) b.lastDate = h.date;
+
+    // Build preferences per commodity
+    const comm = h.commodity || 'UNK';
+    const commName = {AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',
+      CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',
+      GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'}[comm]||comm;
+    if (!map[name].prefs[comm]) map[name].prefs[comm] = {
+      comm: commName, pack:'', cls:'CL '+(h.cls||'1'), sizes:new Set(), txns:0, totalQty:0
+    };
+    const p = map[name].prefs[comm];
+    p.txns++;
+    p.totalQty += Number(h.qty)||0;
+    if (h.size && h.size !== '*') p.sizes.add(h.size);
+    if (!p.pack && h.commodity) {
+      // Infer pack from commodity
+      const packGuess = {AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',
+        LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',
+        FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'}[comm]||'';
+      p.pack = packGuess;
+    }
+  }
+
+  // Convert to array format matching buyerData structure
+  return Object.values(map)
+    .map(b => ({
+      name:  b.name,
+      acc:   b.acc,
+      card:  b.card,
+      txns:  b.txns,
+      spend: Math.round(b.spend),
+      lastDate: b.lastDate,
+      prefs: Object.values(b.prefs).map(p => ({
+        comm:  p.comm,
+        pack:  p.pack,
+        cls:   p.cls,
+        sizes: p.sizes.size > 0 ? [...p.sizes].sort() : ['*'],
+        note:  `${p.txns} txn${p.txns>1?'s':''} · avg ${Math.round(p.totalQty/p.txns)} units`,
+      }))
+    }))
+    .sort((a,b) => b.spend - a.spend);
+}
+
 function renderBuyers(data){
   document.getElementById("buyer-list").innerHTML=data.length?data.map(b=>`
     <div class="bcard">
       <div class="bcard-top">
-        <div><div class="bcard-name">${b.name}</div><div class="bcard-acc">Acc ${b.acc} · Card ${b.card}</div></div>
-        <div class="bcard-spend"><div class="bcard-amt">R ${b.spend.toLocaleString()}</div><div class="bcard-txns">${b.txns} txn${b.txns>1?"s":""}</div></div>
+        <div><div class="bcard-name">${b.name}</div><div class="bcard-acc">Acc ${b.acc||'—'} · Card ${b.card||'—'}${b.lastDate?' · '+b.lastDate:''}</div></div>
+        <div class="bcard-spend"><div class="bcard-amt">R ${(b.spend||0).toLocaleString()}</div><div class="bcard-txns">${b.txns} txn${b.txns>1?"s":""}</div></div>
       </div>
-      <div class="bcard-prefs">${b.prefs.map(p=>`<div class="bpref"><div class="bpref-comm">${p.comm}</div><div class="bpref-tags"><span class="b bb">${p.pack}</span><span class="b ${p.cls==="CL 1"?"bg":"ba"}">${p.cls}</span><span class="b bt">sz ${p.sizes.join(", ")}</span></div>${p.note?`<div style="font-size:11px;color:var(--muted);margin-top:5px;font-style:italic">💬 ${p.note}</div>`:""}</div>`).join("")}</div>
+      <div class="bcard-prefs">${b.prefs.map(p=>`<div class="bpref"><div class="bpref-comm">${p.comm}</div><div class="bpref-tags"><span class="b bb">${p.pack||'—'}</span><span class="b ${p.cls==="CL 1"?"bg":"ba"}">${p.cls}</span><span class="b bt">sz ${p.sizes.join(", ")}</span></div>${p.note?`<div style="font-size:11px;color:var(--muted);margin-top:5px;font-style:italic">💬 ${p.note}</div>`:""}</div>`).join("")}</div>
     </div>`).join(""):`<div class="empty">No buyers found</div>`;
 }
 function filterBuyers(){
   const q=document.getElementById("buyer-search").value.toLowerCase();
-  renderBuyers(buyerData.filter(b=>b.name.toLowerCase().includes(q)||b.acc.includes(q)));
+  const src=liveBuyerData.length?liveBuyerData:buyerData;
+  renderBuyers(src.filter(b=>b.name.toLowerCase().includes(q)||(b.acc&&b.acc.includes(q))));
 }
-function sortBuyers(by){renderBuyers([...buyerData].sort((a,b)=>by==="name"?a.name.localeCompare(b.name):b[by]-a[by]));}
-
-function daysOnFloor(dateStr){
-  if(!dateStr)return 0;
-  try{
-    const now=new Date(); now.setHours(0,0,0,0);
-    let d;
-    if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){
-      // YYYY-MM-DD format from Firebase
-      const parts=dateStr.slice(0,10).split('-');
-      d=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
-    } else if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){
-      // DD/MM/YYYY
-      const p=dateStr.split('/');
-      d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
-    } else if(/^\d{2}\/\d{2}$/.test(dateStr)){
-      // DD/MM — use current year, roll back if future
-      const p=dateStr.split('/');
-      const yr=now.getFullYear();
-      d=new Date(yr,parseInt(p[1])-1,parseInt(p[0]));
-      if(d>now) d.setFullYear(yr-1);
-    } else {
-      return 0;
-    }
-    d.setHours(0,0,0,0);
-    return Math.max(0,Math.floor((now-d)/(1000*60*60*24)));
-  }catch(e){return 0;}
-}
-
-function fmtArrived(dateStr){
-  if(!dateStr)return "—";
-  if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr.slice(5).replace('-','/');
-  return dateStr;
+function sortBuyers(by){
+  const src=liveBuyerData.length?liveBuyerData:buyerData;
+  renderBuyers([...src].sort((a,b)=>by==="name"?a.name.localeCompare(b.name):b[by]-a[by]));
 }
 
 function renderStock(data){
-  const sorted=[...data].sort((a,b)=>(Number(b.flr)||0)-(Number(a.flr)||0));
-  document.getElementById("stock-list").innerHTML=sorted.length?sorted.map(s=>{
+  document.getElementById("stock-list").innerHTML=data.length?data.map(s=>{
     const pct=s.rec>0?Math.round(s.sold/s.rec*100):0;
     const bc=s.flr===0?"br":pct>80?"ba":"bg";
     const bl=s.flr===0?"Cleared":pct>80?"Low Stock":"In Stock";
-    const days=daysOnFloor(s.arrived||s.date||"");
-    const old=s.flr>0&&days>=14;
-    const oldBadge=old?`<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d on floor</span>`:"";
-    const cardStyle=old?"border-left:4px solid var(--red)":"";
-    const arrivedLabel=fmtArrived(s.arrived||s.date||"");
-    return`<div class="scard" style="${cardStyle}"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${arrivedLabel}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}${oldBadge}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
+    return`<div class="scard"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${s.arrived}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
   }).join(""):`<div class="empty">No stock found</div>`;
 }
 function filterStock(){
@@ -753,6 +797,7 @@ function showPage(id,el){
         document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load stock data.</div>';
       });
   }
+  if(id==='buyers') loadBuyersFromFirebase();
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".bnav-item").forEach(n=>n.classList.remove("active"));
   document.getElementById("page-"+id).classList.add("active");
@@ -766,7 +811,7 @@ let allLiveStockData=[];
 
 function firebaseToItem(e){
   const p=(e.commodity||'').split(',');
-  const rec=Number(e.qty_rec)||0,flr=Number(e.qty_sort)||0;return {producer:e.producer||'',grn:String(e.grn||''),commodity:p[0]||'',pack:p[1]||'*',variety:p[2]||'*',grade:String(p[3]||'1'),size:String(p[5]||'*'),arrived:e.date||'',rec:rec,sold:Math.max(0,rec-flr),flr:flr,user:e.user||''};
+  return {producer:e.producer||'',grn:String(e.grn||''),commodity:p[0]||'',pack:p[1]||'*',variety:p[2]||'*',grade:String(p[3]||'1'),size:String(p[5]||'*'),arrived:e.date?e.date.slice(5).replace('-','/'):''  ,rec:Number(e.qty_rec)||0,sold:0,flr:Number(e.qty_sort)||0,user:e.user||''};
 }
 
 async function loadStockFromFirebase(user){
