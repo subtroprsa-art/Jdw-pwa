@@ -282,10 +282,10 @@ main{padding:14px 12px}
 <!-- ══ DASHBOARD ══ -->
 <div class="page active" id="page-dashboard">
   <div class="kpi-row">
-    <div class="kpi gold"><div class="kpi-lbl">Revenue</div><div class="kpi-val">R26,520</div><div class="kpi-sub">05–06 May 2026</div></div>
-    <div class="kpi blue"><div class="kpi-lbl">Buyers</div><div class="kpi-val">9</div><div class="kpi-sub">Active period</div></div>
-    <div class="kpi"><div class="kpi-lbl">Transactions</div><div class="kpi-val">13</div><div class="kpi-sub">2 trading days</div></div>
-    <div class="kpi red"><div class="kpi-lbl">Floor Stock</div><div class="kpi-val">3,847</div><div class="kpi-sub">Units remaining</div></div>
+    <div class="kpi gold"><div class="kpi-lbl">Revenue</div><div class="kpi-val" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub">Loading…</div></div>
+    <div class="kpi blue"><div class="kpi-lbl">Buyers</div><div class="kpi-val" id="kpi-buyers">—</div><div class="kpi-sub" id="kpi-buyers-sub">Loading…</div></div>
+    <div class="kpi"><div class="kpi-lbl">Transactions</div><div class="kpi-val" id="kpi-txns">—</div><div class="kpi-sub" id="kpi-txns-sub">Loading…</div></div>
+    <div class="kpi red"><div class="kpi-lbl">Floor Stock</div><div class="kpi-val" id="kpi-floor">—</div><div class="kpi-sub" id="kpi-floor-sub">Loading…</div></div>
   </div>
   <div class="stitle">Sell-Through by Commodity</div>
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
@@ -432,7 +432,7 @@ function showApp(displayName){
   document.getElementById('hdr-username').textContent=displayName;
   document.getElementById('live-date').textContent=
     new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
-  renderStockChart();renderSales();renderStock(stockData);renderMatchPage(stockData);loadBuyersFromFirebase();if(typeof loadAllStockForMatcher==="function"){loadStockFromFirebase("RJ");loadAllStockForMatcher();}
+  loadDashboard();renderStock(stockData);renderMatchPage(stockData);loadBuyersFromFirebase();if(typeof loadAllStockForMatcher==="function"){loadStockFromFirebase("RJ");loadAllStockForMatcher();}
 }
 
 function normalizeUser(raw){
@@ -577,16 +577,101 @@ function matchScore(s,p){
 }
 
 // ══════════════════════════ RENDER FUNCTIONS ══════════════════════════════════
-function renderStockChart(){
-  const comms=["AVOS","ORGS","LEMS","KIWI","FIGS","GVS","CLTM"];
+function renderStockChart(liveData){
+  const src=liveData||(allLiveStockData&&allLiveStockData.length?allLiveStockData:stockData);
+  const comms=["AVOS","ORGS","LEMS","KIWI","FIGS","GVS","CLTM","NAAR","STRS","MANG","DRAG"];
   document.getElementById("stock-chart").innerHTML=comms.map(c=>{
-    const items=stockData.filter(s=>s.commodity===c);
+    const items=src.filter(s=>s.commodity===c);
     if(!items.length)return"";
-    const rec=items.reduce((a,i)=>a+i.rec,0),sold=items.reduce((a,i)=>a+i.sold,0),flr=items.reduce((a,i)=>a+i.flr,0);
+    const rec=items.reduce((a,i)=>a+(Number(i.rec)||0),0);
+    const sold=items.reduce((a,i)=>a+(Number(i.sold)||0),0);
+    const flr=items.reduce((a,i)=>a+(Number(i.flr)||0),0);
+    if(!rec)return"";
     const pct=Math.round(sold/rec*100);
     const fc=pct>80?"pf-g":pct>40?"pf-a":"pf-r";
     return`<div class="prog-wrap"><div class="prog-row"><span class="prog-name">${commName[c]||c}</span><span class="prog-meta">${pct}% · ${flr.toLocaleString()} left</span></div><div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div></div>`;
-  }).join("");
+  }).join("")||"<div class='empty'>No stock data</div>";
+}
+
+async function loadDashboard(){
+  try{
+    // Load history for revenue/buyers/txns KPIs
+    const [histRes, stockRes] = await Promise.all([
+      fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json'),
+      fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json')
+    ]);
+
+    // ── Stock KPIs ──
+    if(stockRes.ok){
+      const stockRaw=await stockRes.json();
+      const allStock=[];
+      for(const [ukey,uval] of Object.entries(stockRaw||{}))
+        for(const e of Object.values(uval||{}))
+          allStock.push({...firebaseToItem(e),user:e.user||ukey});
+      allLiveStockData=allStock;
+      const totalFlr=allStock.reduce((s,e)=>s+(Number(e.flr)||0),0);
+      document.getElementById('kpi-floor').textContent=totalFlr.toLocaleString();
+      document.getElementById('kpi-floor-sub').textContent='Units on floor';
+      renderStockChart(allStock);
+    }
+
+    // ── History KPIs ──
+    if(histRes.ok){
+      const raw=await histRes.json();
+      if(raw){
+        const history=Array.isArray(raw)?raw:Object.values(raw);
+        // Get last 7 days
+        const now=new Date();
+        const week=new Date(now-7*24*60*60*1000);
+        const recent=history.filter(h=>{
+          if(!h.date)return false;
+          const p=h.date.split('/');
+          if(p.length<3)return false;
+          const d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+          return d>=week;
+        });
+        const src=recent.length>0?recent:history;
+        const revenue=src.reduce((s,h)=>s+(Number(h.total)||0),0);
+        const buyers=new Set(src.map(h=>h.buyer).filter(Boolean)).size;
+        const txns=src.length;
+        const period=recent.length>0?'Last 7 days':'All time';
+        document.getElementById('kpi-revenue').textContent='R '+Math.round(revenue).toLocaleString();
+        document.getElementById('kpi-revenue-sub').textContent=period;
+        document.getElementById('kpi-buyers').textContent=buyers;
+        document.getElementById('kpi-buyers-sub').textContent='Active '+period.toLowerCase();
+        document.getElementById('kpi-txns').textContent=txns;
+        document.getElementById('kpi-txns-sub').textContent=period;
+        // Latest sales from history
+        renderSalesFromHistory([...history].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10));
+      }
+    }
+  }catch(e){
+    // Fallback to static data
+    renderStockChart();
+    renderSales();
+  }
+}
+
+function renderSalesFromHistory(data){
+  const commNames={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',
+    CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',
+    GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
+  if(!data||!data.length){renderSales();return;}
+  document.getElementById("sale-list").innerHTML=data.map(s=>`
+    <div class="sale-card">
+      <div class="sale-dot ${(s.cls||'1')==='2'?"cl2":""}"></div>
+      <div class="sale-body">
+        <div class="sale-buyer">${s.buyer||'Unknown'}</div>
+        <div class="sale-acc">Acc ${s.account||'—'} · ${s.date||'—'}</div>
+        <div class="sale-specs">
+          <span class="b bb">${s.pack||'—'}</span>
+          <span class="b ${(s.cls||'1')==='1'?"bg":"ba"}">CL ${s.cls||'1'}</span>
+          <span class="b bt">sz ${s.size||'*'}</span>
+          <span class="b" style="background:#f0f4f0;color:var(--muted)">${commNames[s.commodity]||s.commodity||'—'}</span>
+        </div>
+      </div>
+      <div class="sale-right"><div class="sale-amt">R ${(Number(s.total)||0).toLocaleString()}</div><div class="sale-qty">${s.qty||0} units</div></div>
+    </div>`).join("");
 }
 
 function renderSales(){
@@ -607,21 +692,8 @@ function renderSales(){
     </div>`).join("");
 }
 
-// Convert live buyer profiles to matcher-compatible format
-function getMatcherBuyers(){
-  // Use live buyers if available, fall back to hardcoded
-  const src=liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;
-  // Normalise prefs: live buyers have {comm, pack, cls, sizes} which matchScore already understands
-  // but commMap expects comm as a full name like "Avocados" not code like "AVOS"
-  // Live buyers already store comm as full name so they work directly
-  return src;
-}
-
-// Reverse lookup: commodity code -> full name for commMap
-const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",
-  CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",
-  GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit"};
-
+const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit"};
+function getMatcherBuyers(){return liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;}
 function renderMatchPage(data){
   const groups={};
   data.filter(s=>s.flr>0).forEach(s=>{
@@ -635,15 +707,11 @@ function renderMatchPage(data){
   const allBuyers=getMatcherBuyers();
   document.getElementById("match-grid").innerHTML=Object.entries(groups).map(([comm,g])=>{
     const pct=g.totalRec>0?Math.round(g.totalSold/g.totalRec*100):0;
-    // Match buyers who have a pref for this commodity code
-    const commFullName=commCodeToName[comm]||comm;
-    const buyers=allBuyers.filter(b=>b.prefs&&b.prefs.some(p=>{
-      // Support both commMap lookup (hardcoded) and direct code match (live)
-      return commMap[p.comm]===comm || p.comm===commFullName || p.comm===comm;
-    }));
+    const commFull=commCodeToName[comm]||comm;
+    const buyers=allBuyers.filter(b=>b.prefs&&b.prefs.some(p=>commMap[p.comm]===comm||p.comm===commFull||p.comm===comm));
     count++;
     const buyersHTML=buyers.map(buyer=>{
-      const pref=buyer.prefs.find(p=>commMap[p.comm]===comm||p.comm===commFullName||p.comm===comm);
+      const pref=buyer.prefs.find(p=>commMap[p.comm]===comm||p.comm===commFull||p.comm===comm);
       if(!pref)return"";
       const exact=g.items.filter(s=>matchScore(s,pref)==="exact"&&s.flr>0);
       const close=g.items.filter(s=>matchScore(s,pref)==="close"&&s.flr>0);
@@ -678,7 +746,6 @@ function renderMatchPage(data){
   }).join("");
   document.getElementById("match-result").textContent=`${count} commodity groups · ${allBuyers.length} buyers`;
 }
-
 function filterMatches(){
   const q=document.getElementById("match-search").value.toLowerCase();
   const f=document.getElementById("match-filter").value;
@@ -748,8 +815,7 @@ function sortBuyers(by){
 function daysOnFloor(dateStr){
   if(!dateStr)return 0;
   try{
-    const now=new Date();now.setHours(0,0,0,0);
-    let d;
+    const now=new Date();now.setHours(0,0,0,0);let d;
     if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){const p=dateStr.slice(0,10).split('-');d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
     else if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){const p=dateStr.split('/');d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}
     else if(/^\d{2}\/\d{2}$/.test(dateStr)){const p=dateStr.split('/');const yr=now.getFullYear();d=new Date(yr,parseInt(p[1])-1,parseInt(p[0]));if(d>now)d.setFullYear(yr-1);}
@@ -758,7 +824,7 @@ function daysOnFloor(dateStr){
   }catch(e){return 0;}
 }
 function fmtArrived(dateStr){
-  if(!dateStr)return "—";
+  if(!dateStr)return"—";
   if(/^\d{4}-\d{2}-\d{2}/.test(dateStr))return dateStr.slice(5).replace('-','/');
   return dateStr;
 }
@@ -769,9 +835,9 @@ function renderStock(data){
     const bc=s.flr===0?"br":pct>80?"ba":"bg";
     const bl=s.flr===0?"Cleared":pct>80?"Low Stock":"In Stock";
     const days=daysOnFloor(s.arrived||s.date||"");
-    const old=s.flr>0&&days>=14;
-    const oldBadge=old?`<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d on floor</span>`:"";
-    const cardStyle=old?"border-left:4px solid var(--red)":"";
+    const isOld=s.flr>0&&days>=14;
+    const oldBadge=isOld?`<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d on floor</span>`:"";
+    const cardStyle=isOld?"border-left:4px solid var(--red)":"";
     const arrivedLabel=fmtArrived(s.arrived||s.date||"");
     return`<div class="scard" style="${cardStyle}"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${arrivedLabel}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}${oldBadge}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
   }).join(""):`<div class="empty">No stock found</div>`;
@@ -803,6 +869,7 @@ function showPage(id,el){
       });
   }
   if(id==='buyers')loadBuyersFromFirebase();
+  if(id==='dashboard')loadDashboard();
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".bnav-item").forEach(n=>n.classList.remove("active"));
   document.getElementById("page-"+id).classList.add("active");
