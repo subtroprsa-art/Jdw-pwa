@@ -77,11 +77,11 @@ body.app-active{padding-bottom:var(--nav-h)}
 .logout-btn:active{background:rgba(255,255,255,0.2)}
 
 /* ══ BOTTOM NAV ══ */
-.bnav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:#fff;border-top:1.5px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);z-index:200;box-shadow:0 -2px 12px rgba(30,77,43,0.08)}
+.bnav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:#fff;border-top:1.5px solid var(--border);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;z-index:200;box-shadow:0 -2px 12px rgba(30,77,43,0.08);scrollbar-width:none}.bnav::-webkit-scrollbar{display:none}
 .bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);transition:color .15s;padding:6px 0}
 .bnav-item.active{color:var(--moss)}
 .bnav-icon{font-size:21px;line-height:1}
-.bnav-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.bnav-item{min-width:60px;flex-shrink:0}.bnav-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 
 /* ══ PAGES ══ */
 main{padding:14px 12px}
