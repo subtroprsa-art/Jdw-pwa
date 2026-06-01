@@ -680,12 +680,36 @@ function filterBuyers(){
 }
 function sortBuyers(by){renderBuyers([...buyerData].sort((a,b)=>by==="name"?a.name.localeCompare(b.name):b[by]-a[by]));}
 
+function daysOnFloor(arrived){
+  if(!arrived)return 0;
+  try{
+    const now=new Date(); now.setHours(0,0,0,0);
+    let d;
+    if(/^\d{4}-/.test(arrived)){
+      d=new Date(arrived);
+    } else {
+      const p=arrived.split('/');
+      const day=parseInt(p[0]),mon=parseInt(p[1])-1;
+      const yr=p[2]?parseInt(p[2]):now.getFullYear();
+      d=new Date(yr,mon,day);
+      if(d>now) d.setFullYear(yr-1);
+    }
+    d.setHours(0,0,0,0);
+    return Math.floor((now-d)/(1000*60*60*24));
+  }catch(e){return 0;}
+}
+
 function renderStock(data){
-  document.getElementById("stock-list").innerHTML=data.length?data.map(s=>{
+  const sorted=[...data].sort((a,b)=>(Number(b.flr)||0)-(Number(a.flr)||0));
+  document.getElementById("stock-list").innerHTML=sorted.length?sorted.map(s=>{
     const pct=s.rec>0?Math.round(s.sold/s.rec*100):0;
     const bc=s.flr===0?"br":pct>80?"ba":"bg";
     const bl=s.flr===0?"Cleared":pct>80?"Low Stock":"In Stock";
-    return`<div class="scard"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${s.arrived}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
+    const days=daysOnFloor(s.arrived||s.date||"");
+    const old=s.flr>0&&days>=14;
+    const oldBadge=old?`<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d on floor</span>`:"";
+    const cardStyle=old?"border-left:4px solid var(--red)":"";
+    return`<div class="scard" style="${cardStyle}"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${s.arrived||s.date||"—"}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}${oldBadge}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
   }).join(""):`<div class="empty">No stock found</div>`;
 }
 function filterStock(){
@@ -708,8 +732,7 @@ function showPage(id,el){
           for(const e of Object.values(uval||{}))
             all.push({...firebaseToItem(e), user: e.user||ukey});
         allLiveStockData=all;
-        const data=buildCommoditySummary();
-        renderCommodities(data);
+        renderCommodities(buildCommoditySummary());
       })
       .catch(()=>{
         document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load stock data.</div>';
