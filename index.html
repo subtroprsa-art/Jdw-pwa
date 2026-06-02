@@ -888,23 +888,17 @@ let allLiveStockData=[];
 
 function firebaseToItem(e){
   const comm = (e.commodity||'').split(',')[0] || '';
-  const rec  = Number(e.qty_rec)  || 0;
-  const flr  = Number(e.qty_sort) || 0;
+  const rec  = Number(e.qtyRec)  || Number(e.qty_rec)  || 0;
+  const flr  = Number(e.qtyFlr)  || Number(e.qty_sort) || 0;
+  const sold = Number(e.qtySold) || Math.max(0, rec - flr);
 
-  // Pack — use stored pack field, fallback to commodity default
   const packDefault={AVOS:'TR040',LEMS:'CTT150',ORGS:'CTT150',KIWI:'PTB005',
     FIGS:'PTB002',GVS:'TR040',CLTM:'DL076',NAAR:'CTT150',
     STRS:'PTB005',MANG:'TR040',DRAG:'TR040',GFT:'CTT150'}[comm]||'*';
-  const pack = e.pack || packDefault;
-
-  // Grade — use stored grade field
-  const grade = String(e.grade||e.cls||'1');
-
-  // Size — use stored size field, fallback to count
-  const size = String(e.size||e.count||'*');
-
-  // Arrived date
-  const arrived = e.date || '';
+  const pack    = e.pack    || packDefault;
+  const grade   = String(e.grade || e.cls || '1');
+  const size    = String(e.size  || e.count || '*');
+  const arrived = e.arriveDate || e.date || '';
 
   return {
     producer:  e.producer || '',
@@ -916,7 +910,7 @@ function firebaseToItem(e){
     size:      size,
     arrived:   arrived,
     rec:       rec,
-    sold:      Math.max(0, rec - flr),
+    sold:      sold,
     flr:       flr,
     user:      e.user || '',
   };
