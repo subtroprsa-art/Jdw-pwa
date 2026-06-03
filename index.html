@@ -782,7 +782,7 @@ function buildBuyerProfiles(history){
     const name=h.buyer;
     if(!map[name])map[name]={name,acc:h.account||'',card:h.card||'',txns:0,spend:0,prefs:{},lastDate:''};
     const b=map[name];
-    b.txns++;b.spend+=Number(h.total)||0;
+    b.txns++;b.spend+=Number(h.total)||(Number(h.price||0)*Number(h.qty||0))||0;
     if(!b.acc&&h.account)b.acc=h.account;
     if(!b.card&&h.card)b.card=h.card;
     if(!b.lastDate||h.date>b.lastDate)b.lastDate=h.date;
