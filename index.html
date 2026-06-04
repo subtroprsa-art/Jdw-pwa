@@ -432,7 +432,7 @@ function showApp(displayName){
   document.getElementById('hdr-username').textContent=displayName;
   document.getElementById('live-date').textContent=
     new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
-  loadDashboard();renderStock(stockData);renderMatchPage(stockData);loadBuyersFromFirebase();if(typeof loadAllStockForMatcher==="function"){loadStockFromFirebase("RJ");loadAllStockForMatcher();}
+  loadDashboard();loadBuyersFromFirebase();if(typeof loadAllStockForMatcher==="function"){loadStockFromFirebase("RJ");loadAllStockForMatcher();}
 }
 
 function normalizeUser(raw){
@@ -1010,6 +1010,7 @@ function showPage(id,el){
         document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load stock data.</div>';
       });
   }
+  if(id==='stock'){var activeTab=document.querySelector('.stock-tab.active');var u=activeTab?activeTab.id.replace('tab-',''):'RJ';loadStockFromFirebase(u);}
   if(id==='buyers')loadBuyersFromFirebase();
   if(id==='dashboard')loadDashboard();
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
