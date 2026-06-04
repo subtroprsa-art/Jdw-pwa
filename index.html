@@ -833,27 +833,164 @@ function fmtArrived(dateStr){
   if(/^\d{4}-\d{2}-\d{2}/.test(dateStr))return dateStr.slice(5).replace('-','/');
   return dateStr;
 }
-function renderStock(data){
-  const sorted=[...data].sort((a,b)=>(Number(b.flr)||0)-(Number(a.flr)||0));
-  document.getElementById("stock-list").innerHTML=sorted.length?sorted.map(s=>{
-    const pct=s.rec>0?Math.round(s.sold/s.rec*100):0;
-    const bc=s.flr===0?"br":pct>80?"ba":"bg";
-    const bl=s.flr===0?"Cleared":pct>80?"Low Stock":"In Stock";
-    const days=daysOnFloor(s.arrived||s.date||"");
-    const isOld=s.flr>0&&days>=14;
-    const oldBadge=isOld?`<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d on floor</span>`:"";
-    const cardStyle=isOld?"border-left:4px solid var(--red)":"";
-    const arrivedLabel=fmtArrived(s.arrived||s.date||"");
-    return`<div class="scard" style="${cardStyle}"><div class="scard-top"><div><div class="scard-prod">${s.producer}</div><div class="scard-grn">GRN ${s.grn} · Arrived ${arrivedLabel}</div></div><div><div class="scard-comm">${commName[s.commodity]||s.commodity}</div><span class="b ${bc}" style="margin-top:4px;display:inline-block">${bl} ${pct}%</span></div></div><div class="scard-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==="1"?"bg":"ba"}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety!=="*"?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:""}${oldBadge}</div><div class="scard-nums"><div class="scard-num"><div class="scard-num-l">Received</div><div class="scard-num-v" style="color:var(--blue)">${s.rec}</div></div><div class="scard-num"><div class="scard-num-l">Sold</div><div class="scard-num-v" style="color:var(--sage)">${s.sold}</div></div><div class="scard-num"><div class="scard-num-l">Floor</div><div class="scard-num-v" style="color:${s.flr===0?"var(--red)":s.flr<20?"var(--gold)":"var(--moss)"}">${s.flr}</div></div></div></div>`;
-  }).join(""):`<div class="empty">No stock found</div>`;
-}
-function filterStock(){
-  const src=(typeof liveStockData!=="undefined"&&liveStockData.length)?liveStockData:stockData;
-  const q=document.getElementById("stock-search").value.toLowerCase();
-  const f=document.getElementById("stock-filter").value;
-  renderStock(src.filter(s=>(!f||s.commodity===f)&&(!q||s.producer.toLowerCase().includes(q)||s.commodity.toLowerCase().includes(q))));
+// ══════════════════════════ STOCK TAB — REDESIGNED ═══════════════════════════
+// Replace the existing renderStock and filterStock functions with these.
+// Groups by commodity alphabetically, then by producer alphabetically,
+// with collapsible dropdowns for each.
+
+function renderStock(data) {
+  const el = document.getElementById('stock-list');
+  if (!data || data.length === 0) {
+    el.innerHTML = '<div class="empty">No stock found</div>';
+    return;
+  }
+
+  // Group by commodity
+  const byComm = {};
+  data.forEach(s => {
+    const comm = s.commodity || 'UNK';
+    if (!byComm[comm]) byComm[comm] = {};
+    const prod = s.producer || 'Unknown';
+    if (!byComm[comm][prod]) byComm[comm][prod] = [];
+    byComm[comm][prod].push(s);
+  });
+
+  // Sort commodities alphabetically by display name
+  const commNames = {
+    AVOS:'Avocados', BERS:'Berries', CLTM:'Clementines', DRAG:'Dragon Fruit',
+    FIGS:'Figs', GFT:'Grapefruit', GVS:'Guavas', KIWI:'Kiwi', LEMS:'Lemons',
+    MANG:'Mangoes', NAAR:'Naartjies', ORGS:'Oranges', PAPO:'Papino', SATS:'Satsumas', UNK:'Unknown'
+  };
+
+  const sortedComms = Object.keys(byComm).sort((a, b) => {
+    const na = commNames[a] || a;
+    const nb = commNames[b] || b;
+    return na.localeCompare(nb);
+  });
+
+  el.innerHTML = sortedComms.map(comm => {
+    const commLabel = commNames[comm] || comm;
+    const producers = byComm[comm];
+
+    // Sort producers alphabetically
+    const sortedProds = Object.keys(producers).sort((a, b) => a.localeCompare(b));
+
+    // Total floor for this commodity
+    const totalFlr = sortedProds.reduce((sum, p) =>
+      sum + producers[p].reduce((s, e) => s + (Number(e.flr) || 0), 0), 0);
+
+    const commId = 'comm-' + comm + '-' + Math.random().toString(36).slice(2);
+
+    const producerHTML = sortedProds.map(prod => {
+      const lines = producers[prod];
+      const prodFlr = lines.reduce((s, e) => s + (Number(e.flr) || 0), 0);
+      const prodRec = lines.reduce((s, e) => s + (Number(e.rec) || 0), 0);
+      const prodId = 'prod-' + prod.replace(/\s+/g, '-') + '-' + Math.random().toString(36).slice(2);
+
+      const linesHTML = lines
+        .sort((a, b) => (Number(b.flr) || 0) - (Number(a.flr) || 0))
+        .map(s => {
+          const pct = s.rec > 0 ? Math.round(s.sold / s.rec * 100) : 0;
+          const bc  = s.flr === 0 ? 'br' : pct > 80 ? 'ba' : 'bg';
+          const bl  = s.flr === 0 ? 'Cleared' : pct > 80 ? 'Low Stock' : 'In Stock';
+          const days = daysOnFloor(s.arrived || s.date || '');
+          const isOld = s.flr > 0 && days >= 14;
+          const oldBadge = isOld ? `<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d</span>` : '';
+          const arrivedLabel = fmtArrived(s.arrived || s.date || '');
+          const sizeLabel = s.size && s.size !== '*' ? s.size : '—';
+          return `
+            <div style="background:#fff;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1.5px solid var(--border)">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">
+                <div style="font-size:11px;color:var(--muted)">GRN ${s.grn} · Arrived ${arrivedLabel}</div>
+                <span class="b ${bc}">${bl} ${pct}%</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
+                <span class="b bb">${pn(s.pack)}</span>
+                <span class="b ${s.grade === '1' ? 'bg' : 'ba'}">CL ${s.grade}</span>
+                ${sizeLabel !== '—' ? `<span class="b bt">sz ${sizeLabel}</span>` : ''}
+                ${s.variety && s.variety !== '*' ? `<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety] || s.variety}</span>` : ''}
+                ${oldBadge}
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+                <div style="background:var(--paper);border-radius:8px;padding:6px;text-align:center">
+                  <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Rec</div>
+                  <div style="font-size:16px;font-weight:800;color:var(--blue)">${s.rec}</div>
+                </div>
+                <div style="background:var(--paper);border-radius:8px;padding:6px;text-align:center">
+                  <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Sold</div>
+                  <div style="font-size:16px;font-weight:800;color:var(--sage)">${s.sold}</div>
+                </div>
+                <div style="background:var(--paper);border-radius:8px;padding:6px;text-align:center">
+                  <div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Floor</div>
+                  <div style="font-size:16px;font-weight:800;color:${s.flr === 0 ? 'var(--red)' : s.flr < 20 ? 'var(--gold)' : 'var(--moss)'}">${s.flr}</div>
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+
+      return `
+        <div style="border:1.5px solid var(--border);border-radius:11px;margin-bottom:8px;overflow:hidden">
+          <div onclick="toggleSection('${prodId}')"
+               style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--paper);cursor:pointer">
+            <div>
+              <div style="font-weight:700;font-size:13.5px">${prod}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:1px">${lines.length} line${lines.length > 1 ? 's' : ''} · ${prodRec.toLocaleString()} rec</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="text-align:right">
+                <div style="font-size:18px;font-weight:800;color:var(--moss)">${prodFlr.toLocaleString()}</div>
+                <div style="font-size:9px;color:var(--muted);text-transform:uppercase">floor</div>
+              </div>
+              <div id="arr-${prodId}" style="color:var(--muted);font-size:14px;transition:transform .2s">▼</div>
+            </div>
+          </div>
+          <div id="${prodId}" style="display:none;padding:10px 10px 2px">
+            ${linesHTML}
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden">
+        <div onclick="toggleSection('${commId}')"
+             style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--moss);cursor:pointer">
+          <div>
+            <div style="font-weight:800;font-size:16px;color:#fff">${commLabel}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">${sortedProds.length} producer${sortedProds.length > 1 ? 's' : ''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center">
+              <div style="font-size:20px;font-weight:800;color:#fff;line-height:1">${totalFlr.toLocaleString()}</div>
+              <div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">on floor</div>
+            </div>
+            <div id="arr-${commId}" style="color:#fff;font-size:14px;transition:transform .2s">▼</div>
+          </div>
+        </div>
+        <div id="${commId}" style="display:none;padding:10px">
+          ${producerHTML}
+        </div>
+      </div>`;
+  }).join('');
 }
 
+function toggleSection(id) {
+  const el  = document.getElementById(id);
+  const arr = document.getElementById('arr-' + id);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display  = open ? 'none' : 'block';
+  if (arr) arr.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function filterStock() {
+  const src = (typeof liveStockData !== 'undefined' && liveStockData.length) ? liveStockData : stockData;
+  const q   = document.getElementById('stock-search').value.toLowerCase();
+  const f   = document.getElementById('stock-filter').value;
+  renderStock(src.filter(s =>
+    (!f || s.commodity === f) &&
+    (!q || s.producer.toLowerCase().includes(q) || s.commodity.toLowerCase().includes(q))
+  ));
+}
 function showPage(id,el){
   if(id==='commodities'){
     document.getElementById('comm-summary-list').innerHTML='<div class="empty">Loading…</div>';
