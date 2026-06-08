@@ -33,8 +33,7 @@ body{background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px}
 .login-pw-wrap .login-input{padding-right:48px}
 .login-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);padding:4px}
 .login-btn{width:100%;padding:16px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:16px;background:var(--moss);color:#fff;margin-top:8px;transition:background .2s,transform .1s;box-shadow:0 4px 16px rgba(30,77,43,0.3);}
-.login-btn:hover{background:var(--sage)}
-.login-btn:active{transform:scale(0.98)}
+.login-btn:hover{background:var(--sage)}.login-btn:active{transform:scale(0.98)}
 .login-error{background:var(--red-light);color:var(--red);border-radius:10px;padding:11px 14px;font-size:13.5px;font-weight:600;margin-top:14px;display:none;text-align:center;}
 .login-error.show{display:block}
 .login-footer{color:rgba(255,255,255,0.35);font-size:11px;margin-top:24px;text-align:center}
@@ -133,6 +132,12 @@ main{padding:14px 12px}
 .comm-line-top{display:flex;justify-content:space-between;font-weight:600;font-size:13px}
 .comm-line-bot{font-size:11px;color:var(--muted);margin-top:3px}
 .comm-badge{display:inline-block;background:var(--sage);color:#fff;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;margin-right:4px}
+/* ── DAY BADGES ── */
+.day-row{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.day-badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;border-radius:6px;font-size:10px;font-weight:700;border:1.5px solid transparent}
+.day-active{background:var(--sage-light);color:#1a5c2a;border-color:#b8ddc0}
+.day-inactive{background:#f0f0f0;color:#bbb}
+.day-today{background:var(--moss);color:#fff;border-color:var(--moss)}
 </style>
 </head>
 <body>
@@ -315,13 +320,11 @@ function doLogout(){
   document.getElementById('app').style.display='none';
   document.body.classList.remove('app-active');
   document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-user').value='';
-  document.getElementById('login-pass').value='';
+  document.getElementById('login-user').value='';document.getElementById('login-pass').value='';
   document.getElementById('login-error').classList.remove('show');
 }
 function togglePw(){
-  var inp=document.getElementById('login-pass');
-  var btn=document.getElementById('eye-btn');
+  var inp=document.getElementById('login-pass');var btn=document.getElementById('eye-btn');
   if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}else{inp.type='password';btn.textContent='👁';}
 }
 document.addEventListener('keydown',function(e){if(e.key==='Enter'){var ls=document.getElementById('login-screen');if(ls&&ls.style.display!=='none')doLogin();}});
@@ -341,7 +344,6 @@ const buyerData=[];
 
 // ── LOOKUPS ───────────────────────────────────────────────────────────────────
 const commName={AVOS:"Avocados",LEMS:"Lemons",FIGS:"Figs",KIWI:"Kiwifruit",ORGS:"Oranges",GVS:"Guavas",CLTM:"Clementines",NAAR:"Naartjies",STRS:"Strawberries",MANG:"Mangoes",DRAG:"Dragon Fruit",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
-const commHdr={AVOS:"mch",LEMS:"mcl",FIGS:"mcf",KIWI:"mck",ORGS:"mco",GVS:"mcg",CLTM:"mco"};
 const packName={TR040:"4KG TRAY",BG150:"15KG BAG",BG160:"16KG BAG",CTT150:"CTT 150 CARTON",PTB005:"500G PUNNET",PTB002:"160G PUNNET",DL076:"DL 076 CARTON",PC030:"3KG POCKET",PC060:"6KG POCKET",CO100:"10KG CARTON",JP100:"JP 100",EC020:"EC 020",PC150:"PC 150",JP090:"JP 090"};
 const varName={AF:"Fuerte",AH:"Hass",AK:"Pinkerton",MA:"Maluma",MD:"Mendez",NV:"Navel","*":"Open"};
 const commMap={"Avocados":"AVOS","Lemons":"LEMS","Limes":"LIME","Figs":"FIGS","Kiwifruit":"KIWI","Oranges":"ORGS","Guavas":"GVS","Clementines":"CLTM","Naartjies":"NAAR","Strawberries":"STRS","Dragon Fruit":"DRAG","Mangoes":"MANG","Grapefruit":"GFT","Satsumas":"SATS","Papino":"PAPO"};
@@ -368,6 +370,52 @@ function toggleSection(id){
   const open=el.style.display!=='none';
   el.style.display=open?'none':'block';
   if(arr)arr.style.transform=open?'':'rotate(180deg)';
+}
+
+// ── DAY OF WEEK HELPERS ───────────────────────────────────────────────────────
+const DAY_LABELS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// Parse date string DD/MM/YYYY or YYYY-MM-DD → JS Date
+function parseHistoryDate(dateStr){
+  if(!dateStr)return null;
+  try{
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){
+      const p=dateStr.split('/');
+      return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+    }
+    if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){
+      const p=dateStr.slice(0,10).split('-');
+      return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+    }
+  }catch(e){}
+  return null;
+}
+
+// Returns array of 7 booleans [Mon,Tue,Wed,Thu,Fri,Sat,Sun]
+// true = buyer bought on this day at least once
+function calcBuyingDays(dates){
+  const counts=[0,0,0,0,0,0,0]; // Mon=0 ... Sun=6
+  for(const d of dates){
+    const dt=parseHistoryDate(d);
+    if(!dt)continue;
+    let dow=dt.getDay(); // 0=Sun,1=Mon...6=Sat
+    dow=dow===0?6:dow-1; // convert to Mon=0...Sun=6
+    counts[dow]++;
+  }
+  const max=Math.max(...counts)||1;
+  // Active if bought on this day >= 20% of max frequency
+  return counts.map(c=>c>0&&(c/max)>=0.2);
+}
+
+// Render day badges HTML — highlight today
+function renderDayBadges(activeDays){
+  const todayDow=(()=>{let d=new Date().getDay();return d===0?6:d-1;})();
+  return`<div class="day-row">${DAY_LABELS.map((lbl,i)=>{
+    const isToday=i===todayDow;
+    const isActive=activeDays[i];
+    const cls=isToday?'day-today':isActive?'day-active':'day-inactive';
+    return`<span class="day-badge ${cls}">${lbl}</span>`;
+  }).join('')}</div>`;
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
@@ -442,11 +490,7 @@ function renderSales(){
       <div class="sale-body">
         <div class="sale-buyer">${s.buyer}</div>
         <div class="sale-acc">Acc ${s.acc} · ${s.date}</div>
-        <div class="sale-specs">
-          <span class="b bb">${s.pack}</span>
-          <span class="b ${s.cls==="CL 1"?"bg":"ba"}">${s.cls}</span>
-          <span class="b bt">sz ${s.size}</span>
-        </div>
+        <div class="sale-specs"><span class="b bb">${s.pack}</span><span class="b ${s.cls==="CL 1"?"bg":"ba"}">${s.cls}</span><span class="b bt">sz ${s.size}</span></div>
       </div>
       <div class="sale-right"><div class="sale-amt">R ${s.amt.toLocaleString()}</div><div class="sale-qty">${s.qty} units</div></div>
     </div>`).join("");
@@ -491,7 +535,7 @@ function renderSalesFromHistory(data){
   }).join("");
 }
 
-// ── MATCHER — commodity dropdowns A-Z ────────────────────────────────────────
+// ── MATCHER ───────────────────────────────────────────────────────────────────
 const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
 function getMatcherBuyers(){return liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;}
 
@@ -505,14 +549,7 @@ function renderMatchPage(data){
     groups[s.commodity].totalSold+=s.sold;
   });
   const allBuyers=getMatcherBuyers();
-
-  // Sort commodities A-Z by display name
-  const sortedComms=Object.keys(groups).sort((a,b)=>{
-    const na=commCodeToName[a]||a;
-    const nb=commCodeToName[b]||b;
-    return na.localeCompare(nb);
-  });
-
+  const sortedComms=Object.keys(groups).sort((a,b)=>(commCodeToName[a]||a).localeCompare(commCodeToName[b]||b));
   const q=(document.getElementById('match-search').value||'').toLowerCase();
 
   document.getElementById("match-grid").innerHTML=sortedComms.map(comm=>{
@@ -534,12 +571,22 @@ function renderMatchPage(data){
       const indLabel=exact.length>0?'Exact':close.length>0?'Close':'No Match';
       const indBadge=exact.length>0?'bg':close.length>0?'ba':'br';
       const lines=[...exact,...close].slice(0,3);
+
+      // Day of week analysis
+      const dayBadgesHTML=buyer.buyingDays?renderDayBadges(buyer.buyingDays):'';
+      // Check if today is an active buying day
+      const todayDow=(()=>{let d=new Date().getDay();return d===0?6:d-1;})();
+      const buysTodayHTML=buyer.buyingDays&&buyer.buyingDays[todayDow]
+        ?`<span class="b bg" style="font-size:10px;margin-left:6px">🛒 Buys today</span>`
+        :``;
+
       return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;background:#f7fbf7;gap:8px">
           <span class="dot ${ind}" style="flex-shrink:0"></span>
           <span style="font-weight:700;font-size:13.5px;color:var(--moss);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${buyer.name}</span>
           <span style="font-size:11px;color:var(--muted);white-space:nowrap">Acc ${buyer.acc||'—'}</span>
           <span class="b ${indBadge}" style="font-size:10px">${indLabel}</span>
+          ${buysTodayHTML}
         </div>
         <div style="padding:11px 13px;border-top:1px solid var(--border)">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
@@ -548,11 +595,12 @@ function renderMatchPage(data){
             <div style="background:var(--paper);border-radius:8px;padding:8px 10px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Size(s)</div><div style="font-size:13.5px;font-weight:700">${pref.sizes.join(', ')}</div></div>
             <div style="background:var(--paper);border-radius:8px;padding:8px 10px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Avg Order</div><div style="font-size:13.5px;font-weight:700">R ${buyer.txns>0?Math.round(buyer.spend/buyer.txns).toLocaleString():'—'}</div></div>
           </div>
-          ${pref.note?`<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;font-style:italic">💬 ${pref.note}</div>`:''}
-          ${lines.length>0?`<div class="smatch-title">Matching Stock on Floor</div>${lines.map(s=>{
+          ${dayBadgesHTML}
+          ${pref.note?`<div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-style:italic">💬 ${pref.note}</div>`:''}
+          ${lines.length>0?`<div class="smatch-title" style="margin-top:10px">Matching Stock on Floor</div>${lines.map(s=>{
             const sc=matchScore(s,pref);
             return`<div class="smatch-row"><div class="smatch-top"><span class="dot ${sc==='exact'?'dot-e':'dot-c'}" style="margin-right:6px;flex-shrink:0"></span><span class="smatch-prod">${s.producer}</span><span class="smatch-units">${s.flr} units</span></div><div class="smatch-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==='1'?'bg':'ba'}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety&&s.variety!=='*'?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:''}</div><div class="smatch-grn">GRN ${s.grn} · Arrived ${s.arrived||s.date||'—'}</div></div>`;
-          }).join('')}`:`<div class="no-match">⚠ No matching stock on floor</div>`}
+          }).join('')}`:`<div class="no-match" style="margin-top:8px">⚠ No matching stock on floor</div>`}
         </div>
       </div>`;
     }).join('');
@@ -586,7 +634,7 @@ function filterMatches(){
   renderMatchPage(src);
 }
 
-// ── BUYERS — dropdown per buyer, sorted by spend desc, commodities by revenue ─
+// ── BUYERS ────────────────────────────────────────────────────────────────────
 let liveBuyerData=[];
 
 async function loadBuyersFromFirebase(){
@@ -610,10 +658,11 @@ function buildBuyerProfiles(history){
   for(const h of history){
     if(!h.buyer||h.buyer==='UNKNOWN')continue;
     const name=h.buyer;
-    if(!map[name])map[name]={name,acc:h.account||'',card:h.card||'',txns:0,spend:0,prefs:{},lastDate:''};
+    if(!map[name])map[name]={name,acc:h.account||'',card:h.card||'',txns:0,spend:0,prefs:{},lastDate:'',dates:[]};
     const b=map[name];
     const lineTotal=Number(h.total)||(Number(h.price||0)*Number(h.qty||0))||0;
     b.txns++;b.spend+=lineTotal;
+    if(h.date)b.dates.push(h.date);
     if(!b.acc&&h.account)b.acc=h.account;
     if(!b.card&&h.card)b.card=h.card;
     if(!b.lastDate||h.date>b.lastDate)b.lastDate=h.date;
@@ -625,17 +674,20 @@ function buildBuyerProfiles(history){
   }
   return Object.values(map).map(b=>({
     name:b.name,acc:b.acc,card:b.card,txns:b.txns,spend:Math.round(b.spend),lastDate:b.lastDate,
+    buyingDays:calcBuyingDays(b.dates),
     prefs:Object.values(b.prefs)
-      .sort((a,c)=>c.revenue-a.revenue) // sort commodities by revenue desc
+      .sort((a,c)=>c.revenue-a.revenue)
       .map(p=>({comm:p.comm,pack:p.pack,cls:p.cls,sizes:p.sizes.size>0?[...p.sizes].sort():['*'],revenue:Math.round(p.revenue),note:`${p.txns} txn${p.txns>1?'s':''} · avg ${Math.round(p.totalQty/p.txns)} units`}))
-  })).sort((a,b)=>b.spend-a.spend); // sort buyers by spend desc
+  })).sort((a,b)=>b.spend-a.spend);
 }
 
 function renderBuyers(data){
   const el=document.getElementById('buyer-list');
   if(!data||!data.length){el.innerHTML='<div class="empty">No buyers found</div>';return;}
+  const todayDow=(()=>{let d=new Date().getDay();return d===0?6:d-1;})();
   el.innerHTML=data.map(b=>{
     const bid='buyer-'+b.name.replace(/\W/g,'-')+'-'+Math.random().toString(36).slice(2);
+    const buysTodayBadge=b.buyingDays&&b.buyingDays[todayDow]?`<span class="b bg" style="font-size:10px;margin-top:4px;display:inline-flex">🛒 Buys today</span>`:'';
     const prefsHTML=b.prefs.map(p=>{
       const pid='pref-'+Math.random().toString(36).slice(2);
       return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:7px;overflow:hidden">
@@ -676,6 +728,8 @@ function renderBuyers(data){
         </div>
       </div>
       <div id="${bid}" style="display:none;padding:10px">
+        ${b.buyingDays?renderDayBadges(b.buyingDays):''}
+        ${buysTodayBadge?`<div style="margin:6px 0 10px">${buysTodayBadge}</div>`:''}
         ${prefsHTML}
       </div>
     </div>`;
@@ -809,20 +863,17 @@ function showPage(id,el){
     document.getElementById('comm-detail').style.display='none';
     document.getElementById('comm-summary-list').style.display='block';
     fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json')
-      .then(r=>r.json())
-      .then(d=>{
+      .then(r=>r.json()).then(d=>{
         const all=[];
         for(const [ukey,uval] of Object.entries(d||{}))
           for(const e of Object.values(uval||{}))
             all.push({...firebaseToItem(e),user:e.user||ukey});
-        allLiveStockData=all;
-        renderCommodities(buildCommoditySummary());
-      })
-      .catch(()=>{document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load stock data.</div>';});
+        allLiveStockData=all;renderCommodities(buildCommoditySummary());
+      }).catch(()=>{document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load stock data.</div>';});
   }
   if(id==='stock'){var activeTab=document.querySelector('.stock-tab.active');var u=activeTab?activeTab.id.replace('tab-',''):'RJ';loadStockFromFirebase(u);loadAllStockForMatcher();}
   if(id==='buyers')loadBuyersFromFirebase();
-  if(id==='matching'){loadAllStockForMatcher();}
+  if(id==='matching')loadAllStockForMatcher();
   if(id==='dashboard')loadDashboard();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
@@ -850,8 +901,7 @@ function firebaseToItem(e){
 
 async function loadStockFromFirebase(user){
   try{
-    const url='https://jdw-crm-default-rtdb.firebaseio.com/stock/'+user+'.json';
-    const r=await fetch(url);
+    const r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock/'+user+'.json');
     if(!r.ok)throw new Error('Firebase fetch failed');
     const d=await r.json();
     liveStockData=Object.values(d||{}).map(firebaseToItem);
@@ -864,8 +914,7 @@ async function loadStockFromFirebase(user){
 
 async function loadAllStockForMatcher(){
   try{
-    const url='https://jdw-crm-default-rtdb.firebaseio.com/stock.json';
-    const r=await fetch(url);
+    const r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json');
     if(!r.ok)throw new Error();
     const d=await r.json();
     const all=[];
@@ -900,8 +949,7 @@ async function doStockUpload(clearFirst){
     if(!r.ok)throw new Error(result.error||'Upload failed');
     stat.style.color='var(--sage)';
     stat.textContent='✓ '+result.count+' entries loaded for '+result.user;
-    input.value='';
-    document.getElementById('stockFileName').textContent='No file chosen';
+    input.value='';document.getElementById('stockFileName').textContent='No file chosen';
     document.querySelectorAll('.stock-tab').forEach(b=>b.classList.toggle('active',b.id==='tab-'+result.user));
     loadStockFromFirebase(result.user);loadAllStockForMatcher();
   }catch(e){stat.style.color='var(--red)';stat.textContent='✗ '+e.message;}
@@ -916,10 +964,8 @@ function buildCommoditySummary(){
   for(const e of src){
     const code=e.commodity||'UNK';
     if(!map[code])map[code]={code,name:COMM_NAMES[code]||code,flr:0,rec:0,lines:[],users:new Set()};
-    map[code].flr+=Number(e.flr)||0;
-    map[code].rec+=Number(e.rec)||0;
-    map[code].lines.push(e);
-    if(e.user)map[code].users.add(e.user);
+    map[code].flr+=Number(e.flr)||0;map[code].rec+=Number(e.rec)||0;
+    map[code].lines.push(e);if(e.user)map[code].users.add(e.user);
   }
   return Object.values(map).sort((a,b)=>b.flr-a.flr);
 }
@@ -933,7 +979,7 @@ function renderCommodities(data){
       <div class="comm-card-left">
         <div class="comm-name">${c.name}</div>
         <div class="comm-code">${c.code} · ${c.lines.length} lines · ${[...c.users].join(', ')}</div>
-        <div class="comm-meta" style="color:var(--muted)">Received: ${c.rec.toLocaleString()} units</div>
+        <div class="comm-meta">Received: ${c.rec.toLocaleString()} units</div>
       </div>
       <div class="comm-card-right">
         <div class="comm-flr">${c.flr.toLocaleString()}</div>
