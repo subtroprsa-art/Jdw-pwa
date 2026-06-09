@@ -362,6 +362,7 @@ main{padding:14px 12px}
     Open Orders
     <span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span>
     <span style="flex:1;height:1px;background:var(--border);display:block"></span>
+    <button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">🖨 Print</button>
     <button onclick="loadOrders()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↻ Refresh</button>
   </div>
   <div id="orders-list"><div class="empty">No open orders</div></div>
@@ -1307,6 +1308,72 @@ async function checkOrdersAgainstStock(stockItems){
     if(badge) badge.style.display = updatedFlagged > 0 ? 'block' : 'none';
 
   }catch(e){console.warn('Order check error:',e.message);}
+}
+
+// Print open orders
+async function printOrders(){
+  try{
+    const res = await fetch(FB_ORDERS+'.json?auth='+FB_SECRET);
+    const raw = await res.json();
+    if(!raw){alert('No open orders to print.');return;}
+    const orders = Object.entries(raw)
+      .map(([id,o])=>({id,...o}))
+      .filter(o=>o.status==='open')
+      .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    if(!orders.length){alert('No open orders to print.');return;}
+
+    const now = new Date().toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const rows = orders.map((o,i)=>{
+      const commFull = COMM_FULL[o.commodity]||o.commodity;
+      const packFull = PACK_FULL[o.pack]||o.pack||'Any';
+      const dateStr  = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) : '—';
+      const flagged  = o.flagged ? '<span style="color:#c9882a;font-weight:bold"> 🔔 STOCK AVAILABLE</span>' : '';
+      return `<tr style="border-bottom:1px solid #ddd">
+        <td style="padding:8px 6px;font-weight:600">${i+1}</td>
+        <td style="padding:8px 6px;font-weight:700">${o.buyer}${flagged}</td>
+        <td style="padding:8px 6px">${commFull}</td>
+        <td style="padding:8px 6px">${packFull}</td>
+        <td style="padding:8px 6px">${o.size&&o.size!=='*'?o.size:'Any'}</td>
+        <td style="padding:8px 6px">${o.grade?'CL '+o.grade:'Any'}</td>
+        <td style="padding:8px 6px">${o.qty||'—'}</td>
+        <td style="padding:8px 6px">${o.price?'R'+o.price:'—'}</td>
+        <td style="padding:8px 6px;font-size:11px;color:#666">${o.notes||''}</td>
+        <td style="padding:8px 6px;font-size:11px;color:#888">${dateStr}</td>
+      </tr>`;
+    }).join('');
+
+    const printHtml = `<!DOCTYPE html><html><head>
+      <meta charset="UTF-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1"/>
+      <title>SubTrop RSA — Open Orders</title>
+      <style>
+        body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:16px;margin:0}
+        h1{font-size:18px;color:#1e4d2b;margin-bottom:4px}
+        .sub{font-size:12px;color:#888;margin-bottom:16px}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th{background:#1e4d2b;color:#fff;padding:8px 6px;text-align:left;font-size:11px}
+        tr:nth-child(even){background:#f3f7f3}
+        @media print{body{padding:8px}button{display:none}}
+      </style>
+    </head><body>
+      <h1>SubTrop RSA — Open Orders</h1>
+      <div class="sub">Printed: ${now} · ${orders.length} open order${orders.length>1?'s':''}</div>
+      <table>
+        <thead><tr>
+          <th>#</th><th>Buyer</th><th>Commodity</th><th>Pack</th>
+          <th>Size</th><th>Class</th><th>Qty</th><th>Price</th>
+          <th>Notes</th><th>Date</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body></html>`;
+
+    const win = window.open('','_blank','width=800,height=600');
+    win.document.write(printHtml);
+    win.document.close();
+    win.focus();
+    setTimeout(()=>win.print(), 600);
+  }catch(e){alert('Could not load orders: '+e.message);}
 }
 
 // Populate buyer autocomplete when orders tab opens
