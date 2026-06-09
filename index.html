@@ -535,11 +535,15 @@ function renderSalesFromHistory(data){
   }).join("");
 }
 
-// ── MATCHER ───────────────────────────────────────────────────────────────────
+// ── MATCHER — buyers sorted by revenue, all commodities per buyer ────────────
 const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
 function getMatcherBuyers(){return liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;}
 
 function renderMatchPage(data){
+  const allBuyers=getMatcherBuyers();
+  const q=(document.getElementById('match-search').value||'').toLowerCase();
+
+  // Build stock groups by commodity for matching
   const groups={};
   data.filter(s=>s.flr>0).forEach(s=>{
     if(!groups[s.commodity])groups[s.commodity]={items:[],totalFlr:0,totalRec:0,totalSold:0};
@@ -548,23 +552,34 @@ function renderMatchPage(data){
     groups[s.commodity].totalRec+=s.rec;
     groups[s.commodity].totalSold+=s.sold;
   });
-  const allBuyers=getMatcherBuyers();
-  const sortedComms=Object.keys(groups).sort((a,b)=>(commCodeToName[a]||a).localeCompare(commCodeToName[b]||b));
-  const q=(document.getElementById('match-search').value||'').toLowerCase();
 
-  document.getElementById("match-grid").innerHTML=sortedComms.map(comm=>{
-    const g=groups[comm];
-    const pct=g.totalRec>0?Math.round(g.totalSold/g.totalRec*100):0;
-    const commFull=commCodeToName[comm]||comm;
-    const buyers=allBuyers.filter(b=>b.prefs&&b.prefs.some(p=>commMap[p.comm]===comm||p.comm===commFull||p.comm===comm));
-    if(q&&!commFull.toLowerCase().includes(q)&&!buyers.some(b=>b.name.toLowerCase().includes(q)))return'';
+  // Filter buyers by search
+  const filteredBuyers = q
+    ? allBuyers.filter(b=>b.name.toLowerCase().includes(q)||
+        b.prefs.some(p=>p.comm.toLowerCase().includes(q)))
+    : allBuyers;
 
-    const commId='mcomm-'+comm+'-'+Math.random().toString(36).slice(2);
+  // Buyers already sorted by spend desc from buildBuyerProfiles
+  const today = new Date().getDay();
+  const todayDow = today===0?6:today-1;
 
-    const buyersHTML=buyers.map(buyer=>{
-      if(q&&!buyer.name.toLowerCase().includes(q)&&!commFull.toLowerCase().includes(q))return'';
-      const pref=buyer.prefs.find(p=>commMap[p.comm]===comm||p.comm===commFull||p.comm===comm);
-      if(!pref)return'';
+  document.getElementById("match-grid").innerHTML=filteredBuyers.map(buyer=>{
+    if(!buyer.prefs||!buyer.prefs.length)return'';
+
+    const bid='mbuyer-'+Math.random().toString(36).slice(2);
+
+    // Build commodity sections for this buyer
+    const commSections = buyer.prefs.map(pref=>{
+      const commCode = commMap[pref.comm]||pref.comm;
+      const g = groups[commCode];
+
+      if(!g){
+        return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;padding:10px 13px;background:#fafafa">
+          <div style="font-weight:700;font-size:13px;color:var(--muted)">${pref.comm}</div>
+          <div class="no-match">⚠ No stock on floor</div>
+        </div>`;
+      }
+
       const exact=g.items.filter(s=>matchScore(s,pref)==='exact'&&s.flr>0);
       const close=g.items.filter(s=>matchScore(s,pref)==='close'&&s.flr>0);
       const ind=exact.length>0?'dot-e':close.length>0?'dot-c':'dot-n';
@@ -572,61 +587,57 @@ function renderMatchPage(data){
       const indBadge=exact.length>0?'bg':close.length>0?'ba':'br';
       const lines=[...exact,...close].slice(0,3);
 
-      // Day of week analysis
-      const dayBadgesHTML=buyer.buyingDays?renderDayBadges(buyer.buyingDays):'';
-      // Check if today is an active buying day
-      const todayDow=(()=>{let d=new Date().getDay();return d===0?6:d-1;})();
-      const buysTodayHTML=buyer.buyingDays&&buyer.buyingDays[todayDow]
-        ?`<span class="b bg" style="font-size:10px;margin-left:6px">🛒 Buys today</span>`
-        :``;
-
       return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;background:#f7fbf7;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f7fbf7">
           <span class="dot ${ind}" style="flex-shrink:0"></span>
-          <span style="font-weight:700;font-size:13.5px;color:var(--moss);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${buyer.name}</span>
-          <span style="font-size:11px;color:var(--muted);white-space:nowrap">Acc ${buyer.acc||'—'}</span>
+          <span style="font-weight:700;font-size:13px;color:var(--moss);flex:1">${pref.comm}</span>
           <span class="b ${indBadge}" style="font-size:10px">${indLabel}</span>
-          ${buysTodayHTML}
+          <span style="font-size:11px;color:var(--muted)">R ${pref.revenue.toLocaleString()}</span>
         </div>
-        <div style="padding:11px 13px;border-top:1px solid var(--border)">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px">
-            <div style="background:var(--paper);border-radius:8px;padding:8px 10px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Pack</div><div style="font-size:13.5px;font-weight:700">${pref.pack||'—'}</div></div>
-            <div style="background:var(--paper);border-radius:8px;padding:8px 10px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Class</div><div style="font-size:13.5px;font-weight:700">${pref.cls}</div></div>
-            <div style="background:var(--paper);border-radius:8px;padding:8px 10px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Size(s)</div><div style="font-size:13.5px;font-weight:700">${pref.sizes.join(', ')}</div></div>
-            <div style="background:var(--paper);border-radius:8px;padding:8px 10px"><div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Avg Order</div><div style="font-size:13.5px;font-weight:700">R ${buyer.txns>0?Math.round(buyer.spend/buyer.txns).toLocaleString():'—'}</div></div>
+        <div style="padding:10px 12px;border-top:1px solid var(--border)">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            <span class="b bb">${pref.pack||'—'}</span>
+            <span class="b ${pref.cls==='CL 1'?'bg':'ba'}">${pref.cls}</span>
+            <span class="b bt">sz ${pref.sizes.join(', ')}</span>
+            <span class="b" style="background:#f0f4f0;color:var(--muted)">avg R ${buyer.txns>0?Math.round(buyer.spend/buyer.txns).toLocaleString():'—'}/order</span>
           </div>
-          ${dayBadgesHTML}
-          ${pref.note?`<div style="font-size:11.5px;color:var(--muted);margin-top:8px;font-style:italic">💬 ${pref.note}</div>`:''}
-          ${lines.length>0?`<div class="smatch-title" style="margin-top:10px">Matching Stock on Floor</div>${lines.map(s=>{
+          ${lines.length>0?`<div class="smatch-title">Matching Stock on Floor</div>${lines.map(s=>{
             const sc=matchScore(s,pref);
             return`<div class="smatch-row"><div class="smatch-top"><span class="dot ${sc==='exact'?'dot-e':'dot-c'}" style="margin-right:6px;flex-shrink:0"></span><span class="smatch-prod">${s.producer}</span><span class="smatch-units">${s.flr} units</span></div><div class="smatch-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==='1'?'bg':'ba'}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety&&s.variety!=='*'?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:''}</div><div class="smatch-grn">GRN ${s.grn} · Arrived ${s.arrived||s.date||'—'}</div></div>`;
-          }).join('')}`:`<div class="no-match" style="margin-top:8px">⚠ No matching stock on floor</div>`}
+          }).join('')}${[...exact,...close].filter(s=>s.flr>0).length>3?`<div style="font-size:11px;color:var(--muted);padding-top:4px">+${[...exact,...close].filter(s=>s.flr>0).length-3} more lines</div>`:''}`:
+          `<div class="no-match">⚠ No matching stock on floor</div>`}
         </div>
       </div>`;
     }).join('');
 
-    return`<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden">
-      <div onclick="toggleSection('${commId}')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:linear-gradient(120deg,#1e4d2b,#3a7a4a);cursor:pointer">
-        <div>
-          <div style="font-weight:800;font-size:16px;color:#fff">${commFull}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">${buyers.length} buyer${buyers.length!==1?'s':''} · ${pct}% sold</div>
+    // Check if buyer buys today
+    const buysTodayBadge = buyer.buyingDays&&buyer.buyingDays[todayDow]
+      ? `<span class="b" style="background:rgba(255,255,255,0.25);color:#fff;font-size:10px">🛒 Today</span>`
+      : '';
+
+    return`<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">
+      <div onclick="toggleSection('${bid}')" style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:var(--moss);cursor:pointer;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:15px;color:#fff;word-break:break-word">${buyer.name}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">${buyer.prefs.length} commodity${buyer.prefs.length>1?'ies':''} · ${buyer.txns} txns</div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center">
-            <div style="font-size:20px;font-weight:800;color:#fff;line-height:1">${g.totalFlr.toLocaleString()}</div>
-            <div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">on floor</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          ${buysTodayBadge}
+          <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:5px 10px;text-align:center">
+            <div style="font-size:16px;font-weight:800;color:#fff;line-height:1">R ${(buyer.spend||0).toLocaleString()}</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">revenue</div>
           </div>
-          <div id="arr-${commId}" style="color:#fff;font-size:14px;transition:transform .2s">▼</div>
+          <div id="arr-${bid}" style="color:#fff;font-size:14px;transition:transform .2s">▼</div>
         </div>
       </div>
-      <div id="${commId}" style="display:none;padding:10px">
-        ${buyers.length>0?buyersHTML:`<div style="padding:4px 4px 6px;font-size:13px;color:var(--muted)">No historic buyers on record</div>`}
+      <div id="${bid}" style="display:none;padding:10px">
+        ${buyer.buyingDays?renderDayBadges(buyer.buyingDays)+'<div style="margin-bottom:8px"></div>':''}
+        ${commSections}
       </div>
     </div>`;
-  }).join('');
+  }).join('') || '<div class="empty">No buyers found</div>';
 
-  const count=sortedComms.length;
-  document.getElementById("match-result").textContent=`${count} commodities · ${allBuyers.length} buyers`;
+  document.getElementById("match-result").textContent=`${filteredBuyers.length} buyers · ${Object.keys(groups).length} commodities on floor`;
 }
 
 function filterMatches(){
