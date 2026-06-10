@@ -384,7 +384,7 @@ async function runAIMatch(){
     if(!response.ok){var et=await response.text();var em='API error '+response.status;try{em=JSON.parse(et).error||em;}catch(e){}throw new Error(em);}
     var data=await response.json(),text=(data.content&&data.content[0]&&data.content[0].text)||'';
     if(!text)throw new Error('Empty AI response');
-    var parsed=extractJSON(text);
+    var parsed=data.preparse?JSON.parse(text):extractJSON(text);
     if(parsed.summary){st.textContent=parsed.summary;se.style.display='block';}
     var matches=parsed.matches||[];
     cn.textContent=matches.length+' AI-ranked matches'+(data.model?' · '+data.model:'');
