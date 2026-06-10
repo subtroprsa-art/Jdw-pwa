@@ -184,14 +184,55 @@ main{padding:14px 12px}
 <main>
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-  <div class="kpi-row">
-    <div class="kpi gold"><div class="kpi-lbl">Revenue</div><div class="kpi-val" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub">Loading…</div></div>
-    <div class="kpi blue"><div class="kpi-lbl">Buyers</div><div class="kpi-val" id="kpi-buyers">—</div><div class="kpi-sub" id="kpi-buyers-sub">Loading…</div></div>
-    <div class="kpi"><div class="kpi-lbl">Transactions</div><div class="kpi-val" id="kpi-txns">—</div><div class="kpi-sub" id="kpi-txns-sub">Loading…</div></div>
-    <div class="kpi red"><div class="kpi-lbl">Floor Stock</div><div class="kpi-val" id="kpi-floor">—</div><div class="kpi-sub" id="kpi-floor-sub">Loading…</div></div>
+
+  <!-- KPI ROW 1: Revenue + Floor Stock -->
+  <div class="kpi-row" style="margin-bottom:10px">
+    <div class="kpi gold">
+      <div class="kpi-lbl">Revenue This Week</div>
+      <div class="kpi-val" id="kpi-revenue">—</div>
+      <div class="kpi-sub" id="kpi-revenue-sub">Loading…</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-lbl">Floor Stock</div>
+      <div class="kpi-val" id="kpi-floor">—</div>
+      <div class="kpi-sub" id="kpi-floor-sub">Loading…</div>
+    </div>
   </div>
+
+  <!-- KPI ROW 2: Clearance + Urgent -->
+  <div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi">
+      <div class="kpi-lbl">Clearance Rate</div>
+      <div class="kpi-val" id="kpi-clearance">—</div>
+      <div class="kpi-sub" id="kpi-clearance-sub">% stock sold</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-lbl">Urgent Stock</div>
+      <div class="kpi-val" id="kpi-urgent">—</div>
+      <div class="kpi-sub" id="kpi-urgent-sub">lines 14+ days old</div>
+    </div>
+  </div>
+
+  <!-- DUE TODAY -->
+  <div id="dash-due-today" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:8px">📦 Collections Due Today</div>
+    <div id="dash-due-list" style="font-size:13px;color:#8a5a00"></div>
+  </div>
+
+  <!-- CALL LIST -->
+  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
+    <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      📞 Call List — Top Buyers Today
+      <span style="flex:1;height:1px;background:var(--border);display:block"></span>
+    </div>
+    <div id="dash-call-list"><div class="empty" style="padding:12px 0">Loading stock data…</div></div>
+  </div>
+
+  <!-- SELL-THROUGH CHART -->
   <div class="stitle">Sell-Through by Commodity</div>
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
+
+  <!-- LATEST SALES -->
   <div class="stitle">Latest Sales</div>
   <div id="sale-list"></div>
 </div>
@@ -374,6 +415,26 @@ main{padding:14px 12px}
         <div>
           <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Price (R)</label>
           <input id="order-price" type="number" placeholder="e.g. 120" min="0" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Collection Date</label>
+          <input id="order-collect-date" type="date" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Collection Time</label>
+          <select id="order-collect-time" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
+            <option value="">Any time</option>
+            <option value="05:00">05:00</option>
+            <option value="06:00">06:00</option>
+            <option value="07:00">07:00</option>
+            <option value="08:00">08:00</option>
+            <option value="09:00">09:00</option>
+            <option value="10:00">10:00</option>
+            <option value="11:00">11:00</option>
+            <option value="12:00">12:00</option>
+          </select>
         </div>
       </div>
       <div>
@@ -560,10 +621,13 @@ function renderStockChart(liveData){
 
 async function loadDashboard(){
   try{
-    const [histRes,stockRes]=await Promise.all([
+    const [histRes,stockRes,ordersRes]=await Promise.all([
       fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json'),
-      fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json')
+      fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json'),
+      fetch(FB_ORDERS+'.json?auth='+FB_SECRET)
     ]);
+
+    // ── STOCK ──────────────────────────────────────────────────────────────
     if(stockRes.ok){
       const stockRaw=await stockRes.json();
       const allStock=[];
@@ -571,39 +635,121 @@ async function loadDashboard(){
         for(const e of Object.values(uval||{}))
           allStock.push({...firebaseToItem(e),user:e.user||ukey});
       allLiveStockData=allStock;
+
+      // Floor stock total
       const totalFlr=allStock.reduce((s,e)=>s+(Number(e.flr)||0),0);
+      const totalRec=allStock.reduce((s,e)=>s+(Number(e.rec)||0),0);
+      const totalSold=allStock.reduce((s,e)=>s+(Number(e.sold)||0),0);
       document.getElementById('kpi-floor').textContent=totalFlr.toLocaleString();
-      document.getElementById('kpi-floor-sub').textContent='Units on floor';
+      document.getElementById('kpi-floor-sub').textContent='units on floor';
+
+      // Clearance rate
+      const clearPct = totalRec>0?Math.round(totalSold/totalRec*100):0;
+      document.getElementById('kpi-clearance').textContent=clearPct+'%';
+      document.getElementById('kpi-clearance-sub').textContent='of all stock sold';
+
+      // Urgent stock (14+ days)
+      const urgentCount = allStock.filter(s=>{
+        if(!s.flr||s.flr<1)return false;
+        const days=daysOnFloor(s.arrived||s.date||'');
+        return days>=14;
+      }).length;
+      document.getElementById('kpi-urgent').textContent=urgentCount;
+      document.getElementById('kpi-urgent-sub').textContent='lines '+(urgentCount>0?'— needs pushing':'on floor');
+      if(urgentCount>0) document.getElementById('kpi-urgent').parentElement.style.borderTopColor='var(--red)';
+
       renderStockChart(allStock);
+
+      // ── CALL LIST ────────────────────────────────────────────────────────
+      // Build call list: buyers sorted by stock match first, then revenue, then buying day
+      const todayDow=(()=>{var d=new Date().getDay();return d===0?6:d-1;})();
+      const buyers=liveBuyerData&&liveBuyerData.length?liveBuyerData:[];
+      const callList=[];
+      for(const buyer of buyers.slice(0,30)){
+        if(!buyer.prefs||!buyer.prefs.length)continue;
+        var hasExact=false,hasClose=false,matchDesc='';
+        for(const pref of buyer.prefs){
+          const commCode=commMap[pref.comm]||pref.comm;
+          const stockForComm=allStock.filter(s=>s.commodity===commCode&&s.flr>0);
+          const exact=stockForComm.filter(s=>matchScore(s,pref)==='exact');
+          const close=stockForComm.filter(s=>matchScore(s,pref)==='close');
+          if(exact.length>0){hasExact=true;matchDesc=pref.comm+' (Exact: '+exact[0].producer+' '+exact[0].flr+'u)';break;}
+          if(close.length>0){hasClose=true;matchDesc=pref.comm+' (Close: '+close[0].producer+' '+close[0].flr+'u)';}
+        }
+        if(!hasExact&&!hasClose)continue;
+        const buysToday=buyer.buyingDays&&buyer.buyingDays[todayDow];
+        const matchScore2=hasExact?3:2;
+        callList.push({name:buyer.name,spend:buyer.spend,matchDesc,matchScore2,buysToday,lastDate:buyer.lastDate});
+      }
+      callList.sort((a,b)=>b.matchScore2-a.matchScore2||(b.spend||0)-(a.spend||0));
+
+      const callEl=document.getElementById('dash-call-list');
+      if(callList.length===0){
+        callEl.innerHTML='<div style="font-size:13px;color:var(--muted)">No strong matches today — check Stock tab for new arrivals.</div>';
+      } else {
+        callEl.innerHTML=callList.slice(0,8).map((c,i)=>{
+          const matchBg=c.matchScore2===3?'var(--sage-light)':'var(--gold-light)';
+          const matchColor=c.matchScore2===3?'#1a5c2a':'#8a5a00';
+          const todayBadge=c.buysToday?'<span class="b bg" style="font-size:10px;margin-left:6px">Today</span>':'';
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">'
+            +'<div style="width:24px;height:24px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0;margin-top:1px">'+(i+1)+'</div>'
+            +'<div style="flex:1;min-width:0">'
+            +'<div style="font-weight:700;font-size:13.5px;word-break:break-word">'+c.name+todayBadge+'</div>'
+            +'<div style="font-size:11px;margin-top:3px"><span style="background:'+matchBg+';color:'+matchColor+';padding:2px 7px;border-radius:5px;font-weight:600;font-size:10px">'
+            +(c.matchScore2===3?'EXACT':'CLOSE')+'</span> '+c.matchDesc+'</div>'
+            +'</div>'
+            +'<div style="text-align:right;flex-shrink:0;font-size:11px;color:var(--muted)">R '+(c.spend||0).toLocaleString()+'</div>'
+            +'</div>';
+        }).join('');
+      }
     }
+
+    // ── ORDERS DUE TODAY ─────────────────────────────────────────────────────
+    if(ordersRes.ok){
+      const ordersRaw=await ordersRes.json();
+      const todayISO=new Date().toISOString().slice(0,10);
+      const dueToday=ordersRaw?Object.values(ordersRaw).filter(o=>o.status==='open'&&o.collectDate===todayISO):[];
+      const dueEl=document.getElementById('dash-due-today');
+      const dueList=document.getElementById('dash-due-list');
+      if(dueToday.length>0){
+        dueEl.style.display='block';
+        dueList.innerHTML=dueToday.map(o=>{
+          const cf=COMM_FULL[o.commodity]||o.commodity;
+          const time=o.collectTime?' @ '+o.collectTime:'';
+          return '<div style="padding:4px 0;border-bottom:1px solid rgba(201,136,42,0.2);display:flex;justify-content:space-between">'
+            +'<span style="font-weight:700">'+o.buyer+'</span>'
+            +'<span>'+cf+' '+o.qty+'u'+time+'</span>'
+            +'</div>';
+        }).join('');
+      } else {
+        dueEl.style.display='none';
+      }
+    }
+
+    // ── HISTORY / REVENUE ─────────────────────────────────────────────────────
     if(histRes.ok){
       const raw=await histRes.json();
       if(raw){
         const history=Array.isArray(raw)?raw:Object.values(raw);
         const now=new Date();
-        const week=new Date(now-7*24*60*60*1000);
+        const weekAgo=new Date(now-7*24*60*60*1000);
         const recent=history.filter(h=>{
           if(!h.date)return false;
           const p=h.date.split('/');
           if(p.length<3)return false;
           const d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
-          return d>=week;
+          return d>=weekAgo;
         });
         const src=recent.length>0?recent:history;
         const revenue=src.reduce((s,h)=>s+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0,0);
         const buyers=new Set(src.map(h=>h.buyer).filter(Boolean)).size;
-        const txns=src.length;
         const period=recent.length>0?'Last 7 days':'All time';
         document.getElementById('kpi-revenue').textContent='R '+Math.round(revenue).toLocaleString();
-        document.getElementById('kpi-revenue-sub').textContent=period;
-        document.getElementById('kpi-buyers').textContent=buyers;
-        document.getElementById('kpi-buyers-sub').textContent='Active '+period.toLowerCase();
-        document.getElementById('kpi-txns').textContent=txns;
-        document.getElementById('kpi-txns-sub').textContent=period;
+        document.getElementById('kpi-revenue-sub').textContent=period+' · '+buyers+' buyers';
         renderSalesFromHistory([...history].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10));
       }
     }
-  }catch(e){renderStockChart();renderSales();}
+  }catch(e){renderStockChart();renderSales();console.error('Dashboard error:',e.message);}
 }
 
 function renderSales(){
@@ -682,11 +828,28 @@ function renderMatchPage(data){
         b.prefs.some(p=>p.comm.toLowerCase().includes(q)))
     : allBuyers;
 
-  // Buyers already sorted by spend desc from buildBuyerProfiles
+  // Sort buyers: 1st by stock match quality, 2nd by revenue, 3rd buying day
   const today = new Date().getDay();
   const todayDow = today===0?6:today-1;
 
-  document.getElementById("match-grid").innerHTML=filteredBuyers.map(buyer=>{
+  // Score each buyer for sorting
+  const scoredBuyers = filteredBuyers.map(buyer=>{
+    var hasExact=0, hasClose=0;
+    if(buyer.prefs){
+      buyer.prefs.forEach(pref=>{
+        const commCode=commMap[pref.comm]||pref.comm;
+        const g=groups[commCode];
+        if(!g)return;
+        if(g.items.some(s=>matchScore(s,pref)==='exact'&&s.flr>0))hasExact++;
+        else if(g.items.some(s=>matchScore(s,pref)==='close'&&s.flr>0))hasClose++;
+      });
+    }
+    const matchPri = hasExact>0?3:hasClose>0?2:0;
+    const buysTodayBonus = buyer.buyingDays&&buyer.buyingDays[todayDow]?1:0;
+    return {...buyer, _sort: matchPri*100000 + (buyer.spend||0)/100 + buysTodayBonus*10};
+  }).sort((a,b)=>b._sort-a._sort);
+
+  document.getElementById("match-grid").innerHTML=scoredBuyers.map(buyer=>{
     if(!buyer.prefs||!buyer.prefs.length)return'';
 
     const bid='mbuyer-'+Math.random().toString(36).slice(2);
@@ -760,7 +923,7 @@ function renderMatchPage(data){
     </div>`;
   }).join('') || '<div class="empty">No buyers found</div>';
 
-  document.getElementById("match-result").textContent=`${filteredBuyers.length} buyers · ${Object.keys(groups).length} commodities on floor`;
+  document.getElementById("match-result").textContent=`${scoredBuyers.length} buyers · ${Object.keys(groups).length} commodities on floor`;
 }
 
 // ── AI MATCHER ────────────────────────────────────────────────────────────────
@@ -810,7 +973,7 @@ async function runAIMatch(){
       return b.name + bt + ': R' + b.spend + ' | ' + comms;
     }).join('\n');
 
-    var prompt = 'You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: ' + today + '\n\nFLOOR STOCK (' + stock.length + ' lines):\n' + stockLines + '\n\nBUYERS (by revenue):\n' + buyerLines + '\n\nReturn ONLY raw JSON (no markdown) with this structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"name","score":88,"commodity":"Avocados","stockLine":"stock","reason":"why","tip":"call tip","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH/MEDIUM/LOW, max 10 matches by score desc, only genuine matches.';
+    var prompt = 'You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: ' + today + '\n\nFLOOR STOCK (' + stock.length + ' lines):\n' + stockLines + '\n\nBUYERS (by revenue):\n' + buyerLines + '\n\nReturn ONLY raw JSON (no markdown) with this structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"name","score":88,"commodity":"Avocados","stockLine":"stock","reason":"why","tip":"call tip","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH/MEDIUM/LOW, max 10 matches by score desc. Score based on: 1st stock match quality (commodity/pack/size = most important), 2nd buyer total revenue (higher spend = higher score), 3rd buying day pattern (today is a bonus not a requirement). Only include genuine matches with stock on floor.';
 
     var response = await fetch('https://jdw-sync.onrender.com/ai-match', {
       method: 'POST',
@@ -1282,13 +1445,17 @@ async function saveOrder(){
   const grade    = document.getElementById('order-grade').value;
   const qty      = parseInt(document.getElementById('order-qty').value)||0;
   const price    = parseFloat(document.getElementById('order-price').value)||0;
-  const notes    = document.getElementById('order-notes').value.trim();
-  const stat     = document.getElementById('order-status');
+  const notes       = document.getElementById('order-notes').value.trim();
+  const collectDate = document.getElementById('order-collect-date').value;
+  const collectTime = document.getElementById('order-collect-time').value;
+  const stat        = document.getElementById('order-status');
 
   if(!buyer||!commodity){stat.style.color='var(--red)';stat.textContent='⚠ Buyer name and commodity are required';return;}
 
   const order = {
     buyer, commodity, pack, size, grade, qty, price, notes,
+    collectDate: collectDate||null,
+    collectTime: collectTime||null,
     status: 'open',
     createdAt: new Date().toISOString(),
     flagged: false,
@@ -1305,7 +1472,7 @@ async function saveOrder(){
     if(!res.ok)throw new Error('Save failed');
     stat.style.color='var(--sage)';stat.textContent='✅ Order saved!';
     // Clear form
-    ['order-buyer','order-size','order-qty','order-price','order-notes'].forEach(id=>document.getElementById(id).value='');
+    ['order-buyer','order-size','order-qty','order-price','order-notes','order-collect-date','order-collect-time'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('order-commodity').value='';
     document.getElementById('order-pack').value='';
     document.getElementById('order-grade').value='1';
@@ -1316,72 +1483,79 @@ async function saveOrder(){
 
 async function loadOrders(){
   const el = document.getElementById('orders-list');
-  el.innerHTML='<div class="empty">Loading…</div>';
+  el.innerHTML='<div class="empty">Loading...</div>';
   try{
-    const res = await fetch(`${FB_ORDERS}.json?auth=${FB_SECRET}`);
+    const res = await fetch(FB_ORDERS+'.json?auth='+FB_SECRET);
     const raw = await res.json();
     if(!raw){el.innerHTML='<div class="empty">No open orders</div>';document.getElementById('orders-count').textContent='0';return;}
     const orders = Object.entries(raw)
-      .map(([id,o])=>({id,...o}))
-      .filter(o=>o.status==='open')
-      .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-
+      .map(function(e){return Object.assign({id:e[0]},e[1]);})
+      .filter(function(o){return o.status==='open';})
+      .sort(function(a,b){
+        var da=a.collectDate||'9999';var db=b.collectDate||'9999';
+        if(da!==db)return da.localeCompare(db);
+        return new Date(b.createdAt)-new Date(a.createdAt);
+      });
     document.getElementById('orders-count').textContent=orders.length;
-
-    // Check for flagged orders and show alert
-    const flagged = orders.filter(o=>o.flagged);
-    const alertEl = document.getElementById('orders-alert');
+    var flagged=orders.filter(function(o){return o.flagged;});
+    var alertEl=document.getElementById('orders-alert');
     if(flagged.length>0){
       alertEl.style.display='block';
-      document.getElementById('orders-alert-text').textContent=
-        `${flagged.length} order${flagged.length>1?'s':''} have matching stock on floor now!`;
+      document.getElementById('orders-alert-text').textContent=flagged.length+' order'+(flagged.length>1?'s':'')+' have matching stock!';
       document.getElementById('orders-badge').style.display='block';
-    } else {
-      alertEl.style.display='none';
-      document.getElementById('orders-badge').style.display='none';
-    }
-
+    }else{alertEl.style.display='none';document.getElementById('orders-badge').style.display='none';}
     if(orders.length===0){el.innerHTML='<div class="empty">No open orders</div>';return;}
-
-    el.innerHTML=orders.map(o=>{
-      const commFull = COMM_FULL[o.commodity]||o.commodity;
-      const packFull = PACK_FULL[o.pack]||o.pack||'Any pack';
-      const isFlagged = o.flagged;
-      const cardBorder = isFlagged ? 'border:2px solid var(--gold)' : 'border:1.5px solid var(--border)';
-      const headerBg  = isFlagged ? 'background:var(--gold-light)' : 'background:var(--paper)';
-      const dateStr   = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) : '—';
-
-      return`<div style="border-radius:12px;margin-bottom:10px;overflow:hidden;${cardBorder}">
-        <div style="padding:12px 14px;${headerBg};display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-          <div style="flex:1;min-width:0">
-            ${isFlagged?`<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:3px">🔔 STOCK AVAILABLE NOW!</div>`:''}
-            <div style="font-weight:700;font-size:14px;word-break:break-word">${o.buyer}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${dateStr}</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-weight:800;font-size:15px;color:var(--moss)">${commFull}</div>
-            <div style="font-size:11px;color:var(--muted)">${o.qty||'—'} units</div>
-          </div>
-        </div>
-        <div style="padding:10px 14px;background:#fff;border-top:1px solid var(--border)">
-          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
-            <span class="b bb">${packFull}</span>
-            ${o.grade?`<span class="b bg">CL ${o.grade}</span>`:''}
-            ${o.size&&o.size!=='*'?`<span class="b bt">sz ${o.size}</span>`:''}
-            ${o.price?`<span class="b" style="background:#f0f4f0;color:var(--muted)">R ${o.price}/unit</span>`:''}
-          </div>
-          ${o.notes?`<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:8px">💬 ${o.notes}</div>`:''}
-          ${isFlagged&&o.matchedStock?`<div style="background:var(--gold-light);border-radius:8px;padding:8px 10px;font-size:12px;color:#8a5a00;margin-bottom:8px">🌿 ${o.matchedStock}</div>`:''}
-          <div style="display:flex;gap:8px">
-            <button onclick="fulfillOrder('${o.id}')" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer">✅ Fulfilled</button>
-            <button onclick="cancelOrder('${o.id}')" style="flex:1;padding:9px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer">✕ Cancel</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  }catch(e){el.innerHTML='<div class="empty">Could not load orders: '+e.message+'</div>';}
+    var todayISO=new Date().toISOString().slice(0,10);
+    var tomorrowISO=new Date(Date.now()+86400000).toISOString().slice(0,10);
+    var grp={today:[],tomorrow:[],later:[],nodate:[]};
+    orders.forEach(function(o){
+      if(!o.collectDate)grp.nodate.push(o);
+      else if(o.collectDate===todayISO)grp.today.push(o);
+      else if(o.collectDate===tomorrowISO)grp.tomorrow.push(o);
+      else grp.later.push(o);
+    });
+    function card(o){
+      var cf=COMM_FULL[o.commodity]||o.commodity;
+      var pf=PACK_FULL[o.pack]||o.pack||'Any';
+      var fl=o.flagged;
+      var cs=o.collectDate?new Date(o.collectDate+'T12:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'}):'No date';
+      if(o.collectTime)cs+=' @ '+o.collectTime;
+      return '<div style="border-radius:12px;margin-bottom:10px;overflow:hidden;border:'+(fl?'2px solid var(--gold)':'1.5px solid var(--border)')+';">'
+        +'<div style="padding:12px 14px;background:'+(fl?'var(--gold-light)':'var(--paper)')+';">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+        +'<div style="flex:1;min-width:0">'
+        +(fl?'<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:3px">STOCK AVAILABLE!</div>':'')
+        +'<div style="font-weight:700;font-size:14px;word-break:break-word">'+o.buyer+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Collect: '+cs+'</div>'
+        +'</div>'
+        +'<div style="text-align:right;flex-shrink:0">'
+        +'<div style="font-weight:800;font-size:15px;color:var(--moss)">'+cf+'</div>'
+        +'<div style="font-size:11px;color:var(--muted)">'+(o.qty||'?')+' units</div>'
+        +'</div></div></div>'
+        +'<div style="padding:10px 14px;background:#fff;border-top:1px solid var(--border)">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'
+        +'<span class="b bb">'+pf+'</span>'
+        +(o.grade?'<span class="b bg">CL '+o.grade+'</span>':'')
+        +(o.size&&o.size!=='*'?'<span class="b bt">sz '+o.size+'</span>':'')
+        +(o.price?'<span class="b" style="background:#f0f0f0;color:var(--muted)">R '+o.price+'/u</span>':'')
+        +'</div>'
+        +(o.notes?'<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:8px">'+o.notes+'</div>':'')
+        +(fl&&o.matchedStock?'<div style="background:var(--gold-light);border-radius:8px;padding:8px;font-size:12px;color:#8a5a00;margin-bottom:8px">'+o.matchedStock+'</div>':'')
+        +'<div style="display:flex;gap:8px">'
+        +'<button onclick="fulfillOrder(''+o.id+'')" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer">Fulfilled</button>'
+        +'<button onclick="cancelOrder(''+o.id+'')" style="flex:1;padding:9px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer">Cancel</button>'
+        +'</div></div></div>';
+    }
+    function sec(label,color,items){
+      if(!items.length)return '';
+      return '<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:'+color+';margin:12px 0 8px;display:flex;align-items:center;gap:8px">'
+        +label+' <span style="background:'+color+';color:#fff;border-radius:20px;padding:1px 8px;font-size:10px">'+items.length+'</span>'
+        +'<span style="flex:1;height:1px;background:var(--border)"></span></div>'
+        +items.map(card).join('');
+    }
+    el.innerHTML=sec('Due Today','#c9882a',grp.today)+sec('Due Tomorrow','#1e4d2b',grp.tomorrow)+sec('Later','#6b7c6c',grp.later)+sec('No Date','#aaa',grp.nodate);
+  }catch(e){el.innerHTML='<div class="empty">Error: '+e.message+'</div>';}
 }
-
 async function fulfillOrder(id){
   await fetch(`${FB_ORDERS}/${id}.json?auth=${FB_SECRET}`,{
     method:'PATCH',headers:{'Content-Type':'application/json'},
