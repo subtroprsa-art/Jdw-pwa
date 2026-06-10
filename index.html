@@ -797,12 +797,12 @@ async function runAIMatch(){
     var dow = new Date().getDay();
     var todayDow = dow === 0 ? 6 : dow - 1;
 
-    var stockLines = stock.slice(0,50).map(function(s){
+    var stockLines = stock.slice(0,30).map(function(s){
       var v = s.variety !== '*' ? (AI_VN[s.variety] || s.variety) : '';
       return (AI_CN[s.commodity]||s.commodity) + ' ' + (AI_PN[s.pack]||s.pack) + ' ' + v + ' CL' + s.grade + ' sz' + s.size + ' ' + s.flr + 'u (' + s.producer + ')';
     }).join('\n');
 
-    var buyerLines = buyers.slice(0,25).map(function(b){
+    var buyerLines = buyers.slice(0,15).map(function(b){
       var comms = b.prefs.slice(0,3).map(function(p){
         return p.comm + '(' + (p.pack||'any') + ' ' + p.cls + ' sz' + p.sizes.join('/') + ' R' + Math.round(p.revenue) + ')';
       }).join(', ');
@@ -810,7 +810,7 @@ async function runAIMatch(){
       return b.name + bt + ': R' + b.spend + ' | ' + comms;
     }).join('\n');
 
-    var prompt = 'You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: ' + today + '\n\nFLOOR STOCK (' + stock.length + ' lines):\n' + stockLines + '\n\nBUYERS (by revenue):\n' + buyerLines + '\n\nReturn ONLY raw JSON (no markdown) with this structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"exact name","score":88,"commodity":"Avocados","stockLine":"brief description","reason":"max 15 words","tip":"max 12 words","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH(80+)/MEDIUM(60-79)/LOW(<60), max 15 matches sorted by score desc, only genuine matches with stock on floor.';
+    var prompt = 'You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: ' + today + '\n\nFLOOR STOCK (' + stock.length + ' lines):\n' + stockLines + '\n\nBUYERS (by revenue):\n' + buyerLines + '\n\nReturn ONLY raw JSON (no markdown) with this structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"name","score":88,"commodity":"Avocados","stockLine":"stock","reason":"why","tip":"call tip","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH/MEDIUM/LOW, max 10 matches by score desc, only genuine matches.';
 
     var response = await fetch('https://jdw-sync.onrender.com/ai-match', {
       method: 'POST',
