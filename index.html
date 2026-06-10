@@ -1,477 +1,1043 @@
-/**
- * jdw-sync v6
- * - Stock Scans: watches folder every 5 min + instant /trigger-stock endpoint
- * - AI Match: Gemini 2.5 Flash via /ai-match endpoint
- */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>SubTrop RSA</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --moss:#1e4d2b; --sage:#3a7a4a; --sage-light:#e8f5ec;
+  --gold:#c9882a; --gold-light:#fff4e0;
+  --red:#c0392b;  --red-light:#fdecea;
+  --blue:#1a4479; --blue-light:#e8f0fc;
+  --ink:#141f15;  --muted:#6b7c6c; --border:#dde8de;
+  --paper:#f3f7f3; --card:#ffffff;
+  --shadow:0 1px 8px rgba(30,77,43,0.10);
+  --r:14px; --rl:20px; --nav-h:64px;
+  font-family:'Outfit',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px}
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(160deg,#1e4d2b 0%,#2d6e3e 50%,#1a3d22 100%);}
+.login-logo{width:72px;height:72px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:32px;color:#fff;margin-bottom:16px;box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+.login-title{color:#fff;font-weight:800;font-size:26px;margin-bottom:4px}
+.login-title span{color:var(--gold)}
+.login-sub{color:rgba(255,255,255,0.55);font-size:13px;margin-bottom:36px;text-align:center}
+.login-box{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.25)}
+.login-field{margin-bottom:16px}
+.login-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:7px;display:block}
+.login-input{width:100%;padding:14px 16px;border-radius:12px;border:2px solid var(--border);font-family:inherit;font-size:16px;color:var(--ink);background:#f8faf8;outline:none;transition:border-color .2s;}
+.login-input:focus{border-color:var(--sage);background:#fff}
+.login-pw-wrap{position:relative}
+.login-pw-wrap .login-input{padding-right:48px}
+.login-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);padding:4px}
+.login-btn{width:100%;padding:16px;border-radius:12px;border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:16px;background:var(--moss);color:#fff;margin-top:8px;transition:background .2s,transform .1s;box-shadow:0 4px 16px rgba(30,77,43,0.3);}
+.login-btn:hover{background:var(--sage)}.login-btn:active{transform:scale(0.98)}
+.login-error{background:var(--red-light);color:var(--red);border-radius:10px;padding:11px 14px;font-size:13.5px;font-weight:600;margin-top:14px;display:none;text-align:center;}
+.login-error.show{display:block}
+.login-footer{color:rgba(255,255,255,0.35);font-size:11px;margin-top:24px;text-align:center}
+#app{display:none}
+body.app-active{padding-bottom:var(--nav-h)}
+.hdr{background:var(--moss);padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-logo{width:36px;height:36px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0}
+.hdr-title{color:#fff;font-weight:700;font-size:18px;line-height:1}
+.hdr-title span{color:var(--gold)}
+.hdr-sub{color:rgba(255,255,255,0.55);font-size:11px;margin-top:1px}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.hdr-date{background:rgba(255,255,255,0.12);border-radius:8px;padding:5px 9px;color:#fff;font-size:11px;font-weight:500;white-space:nowrap}
+.hdr-user{background:rgba(255,255,255,0.12);border-radius:8px;padding:5px 9px;color:var(--gold);font-size:11px;font-weight:700;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+.logout-btn{background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.2);border-radius:8px;padding:5px 10px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.logout-btn:active{background:rgba(255,255,255,0.2)}
+.bnav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:#fff;border-top:1.5px solid var(--border);display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;z-index:200;box-shadow:0 -2px 12px rgba(30,77,43,0.08);scrollbar-width:none}.bnav::-webkit-scrollbar{display:none}
+.bnav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);transition:color .15s;padding:6px 0;min-width:60px;flex-shrink:0}
+.bnav-item.active{color:var(--moss)}
+.bnav-icon{font-size:21px;line-height:1}
+.bnav-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+main{padding:14px 12px}
+.page{display:none}.page.active{display:block}
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.kpi{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);border-top:3px solid var(--sage)}
+.kpi.gold{border-top-color:var(--gold)}.kpi.red{border-top-color:var(--red)}.kpi.blue{border-top-color:var(--blue)}
+.kpi-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:5px}
+.kpi-val{font-size:24px;font-weight:800;color:var(--ink);line-height:1}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.stitle{font-size:15px;font-weight:700;color:var(--moss);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
+.stitle::after{content:'';flex:1;height:1px;background:var(--border)}
+.sale-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:13px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px}
+.sale-dot{width:10px;height:10px;border-radius:50%;background:var(--sage);flex-shrink:0;margin-top:5px}
+.sale-dot.cl2{background:var(--gold)}
+.sale-body{flex:1;min-width:0}
+.sale-buyer{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sale-acc{font-size:11px;color:var(--muted);margin-top:1px}
+.sale-specs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.sale-right{text-align:right;flex-shrink:0}
+.sale-amt{font-weight:800;font-size:15px;color:var(--moss)}
+.sale-qty{font-size:11px;color:var(--muted);margin-top:2px}
+.b{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.bg{background:var(--sage-light);color:#1a5c2a}.ba{background:var(--gold-light);color:#8a5a00}
+.br{background:var(--red-light);color:#a00}.bb{background:var(--blue-light);color:var(--blue)}
+.bm{background:#f3e8fc;color:#5a1a8a}.bt{background:#e0f5f3;color:#0a5e52}
+.prog-wrap{margin-bottom:14px}
+.prog-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.prog-name{font-weight:600;font-size:13.5px}
+.prog-meta{font-size:11px;color:var(--muted)}
+.prog-bar{height:8px;background:#e0ece0;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .6s}
+.pf-g{background:var(--sage)}.pf-a{background:var(--gold)}.pf-r{background:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-e{background:#1a6e30}.dot-c{background:var(--gold)}.dot-n{background:var(--red)}
+.smatch-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:7px}
+.smatch-row{background:var(--paper);border-radius:9px;padding:9px 11px;margin-bottom:6px}
+.smatch-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.smatch-prod{font-weight:600;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.smatch-units{font-weight:800;font-size:14px;color:var(--moss);white-space:nowrap;margin-left:8px}
+.smatch-tags{display:flex;flex-wrap:wrap;gap:4px}
+.smatch-grn{font-size:10px;color:var(--muted);margin-top:3px}
+.no-match{font-size:12.5px;color:var(--red);padding:6px 0}
+.ctrl-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.ctrl-row input,.ctrl-row select{flex:1;min-width:140px;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none}
+.ctrl-row input:focus,.ctrl-row select:focus{border-color:var(--sage)}
+.btn-gold{padding:11px 18px;border-radius:10px;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:14px;background:var(--gold);color:#fff;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:var(--muted);margin-bottom:14px}
+.legend span{display:flex;align-items:center;gap:5px}
+.empty{text-align:center;padding:32px 16px;color:var(--muted);font-size:13.5px}
+.upload-box{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:15px;margin-bottom:14px;border-top:3px solid var(--sage)}
+.upload-title{font-weight:700;font-size:14px;color:var(--moss);margin-bottom:4px}
+.upload-hint{font-size:11px;color:var(--muted);margin-bottom:10px}
+.upload-file-btn{display:inline-block;background:var(--paper);border:1.5px solid var(--border);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--moss);cursor:pointer;margin-bottom:8px}
+.upload-fname{font-size:11px;color:var(--muted);display:block;margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload-btn-row{display:flex;gap:8px}
+.upload-btn{flex:1;padding:11px;border:none;border-radius:10px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.upload-btn:active{opacity:.8}
+.upload-btn-red{background:#c0392b}
+.upload-status{font-size:12px;margin-top:10px;min-height:1.2em;color:var(--sage)}
+.stock-tabs{display:flex;gap:8px;margin-bottom:12px}
+.stock-tab{flex:1;padding:9px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--muted);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.stock-tab.active{background:var(--moss);color:#fff;border-color:var(--moss)}
+.comm-card{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:10px;cursor:pointer;border-left:4px solid var(--sage);display:flex;align-items:center;justify-content:space-between}
+.comm-card:active{opacity:.8}
+.comm-card-left{display:flex;flex-direction:column;gap:3px}
+.comm-name{font-weight:700;font-size:15px;color:var(--ink)}
+.comm-code{font-size:11px;color:var(--muted)}
+.comm-card-right{text-align:right}
+.comm-flr{font-size:22px;font-weight:800;color:var(--moss)}
+.comm-flr-label{font-size:10px;color:var(--muted)}
+.comm-meta{font-size:11px;color:var(--muted);margin-top:3px}
+.comm-stat-box{background:var(--paper);border-radius:10px;padding:10px 14px;flex:1;min-width:80px;text-align:center}
+.comm-stat-val{font-size:20px;font-weight:800;color:var(--moss)}
+.comm-stat-lbl{font-size:10px;color:var(--muted)}
+.comm-line{background:var(--paper);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.comm-line-top{display:flex;justify-content:space-between;font-weight:600;font-size:13px}
+.comm-line-bot{font-size:11px;color:var(--muted);margin-top:3px}
+.comm-badge{display:inline-block;background:var(--sage);color:#fff;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;margin-right:4px}
+/* ── DAY BADGES ── */
+.day-row{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.day-badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;border-radius:6px;font-size:10px;font-weight:700;border:1.5px solid transparent}
+.day-active{background:var(--sage-light);color:#1a5c2a;border-color:#b8ddc0}
+.day-inactive{background:#f0f0f0;color:#bbb}
+.day-today{background:var(--moss);color:#fff;border-color:var(--moss)}
+</style>
+</head>
+<body>
 
-const { google }   = require("googleapis");
-const admin        = require("firebase-admin");
-const cron         = require("node-cron");
-const http         = require("http");
-const https        = require("https");
+<div id="login-screen">
+  <div class="login-logo">S</div>
+  <div class="login-title">SubTrop <span>RSA</span></div>
+  <div class="login-sub">RSA Market Agents · JHB Fresh Produce Market</div>
+  <div class="login-box">
+    <div class="login-field">
+      <label class="login-label" for="login-user">Username</label>
+      <input class="login-input" type="text" id="login-user" placeholder="e.g. riaan.joubert" autocomplete="username" autocapitalize="none" spellcheck="false"/>
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="login-pass">Password</label>
+      <div class="login-pw-wrap">
+        <input class="login-input" type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password"/>
+        <button class="login-eye" onclick="togglePw()" type="button" id="eye-btn">👁</button>
+      </div>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error">Incorrect username or password.</div>
+  </div>
+  <div class="login-footer">SubTrop RSA · Authorised users only · Session expires after 8 hours</div>
+</div>
 
-const { execFile } = require("child_process");
-const fs           = require("fs");
-const os           = require("os");
-const path         = require("path");
+<div id="app">
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-logo">S</div>
+    <div>
+      <div class="hdr-title">SubTrop <span>RSA</span></div>
+      <div class="hdr-sub">RSA Market Agents</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-user" id="hdr-username"></div>
+    <div class="hdr-date" id="live-date"></div>
+    <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+  </div>
+</div>
 
-const BUYER_HISTORY_FOLDER = process.env.DRIVE_BUYER_HISTORY_FOLDER_ID || "1DBmo42cx_YnQPqKOer1MFiH8onww5pZ6";
-const STOCK_SCANS_FOLDER   = process.env.DRIVE_STOCK_SCANS_FOLDER_ID   || "1DrYmim6xThu6KfKRplr5SDBVZc-BFMBm";
-const FIREBASE_DB_URL      = process.env.FIREBASE_DATABASE_URL;
-const POLL_MINUTES         = parseInt(process.env.POLL_MINUTES || "5");
-const PARSER_SCRIPT        = path.join(__dirname, "parse_stock_pdf.py");
-const TRIGGER_SECRET       = process.env.TRIGGER_SECRET || "jdw-trigger-2026";
+<main>
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="kpi-row" style="margin-bottom:10px">
+    <div class="kpi gold">
+      <div class="kpi-lbl">Revenue This Week</div>
+      <div class="kpi-val" id="kpi-revenue">—</div>
+      <div class="kpi-sub" id="kpi-revenue-sub">Loading…</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-lbl">Floor Stock</div>
+      <div class="kpi-val" id="kpi-floor">—</div>
+      <div class="kpi-sub" id="kpi-floor-sub">Loading…</div>
+    </div>
+  </div>
+  <div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi">
+      <div class="kpi-lbl">Clearance Rate</div>
+      <div class="kpi-val" id="kpi-clearance">—</div>
+      <div class="kpi-sub" id="kpi-clearance-sub">% stock sold</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-lbl">Urgent Stock</div>
+      <div class="kpi-val" id="kpi-urgent">—</div>
+      <div class="kpi-sub" id="kpi-urgent-sub">lines 14+ days old</div>
+    </div>
+  </div>
+  <div id="dash-due-today" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:8px">📦 Collections Due Today</div>
+    <div id="dash-due-list" style="font-size:13px;color:#8a5a00"></div>
+  </div>
+  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
+    <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      📞 Call List — Top Buyers Today
+      <span style="flex:1;height:1px;background:var(--border);display:block"></span>
+    </div>
+    <div id="dash-call-list"><div class="empty" style="padding:12px 0">Loading stock data…</div></div>
+  </div>
+  <div class="stitle">Sell-Through by Commodity</div>
+  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
+  <div class="stitle">Latest Sales</div>
+  <div id="sale-list"></div>
+</div>
 
-// Commodity full names
-const COMM_NAMES = {
-  AVOS:"Avocados", LEMS:"Lemons", FIGS:"Figs", KIWI:"Kiwifruit",
-  ORGS:"Oranges", GVS:"Guavas", CLTM:"Clementines", NAAR:"Naartjies",
-  STRS:"Strawberries", MANG:"Mangoes", DRAG:"Dragon Fruit", GFT:"Grapefruit",
-  SATS:"Satsumas", PAPO:"Papino",
-};
+<!-- MATCHER -->
+<div class="page" id="page-matching">
+  <div style="background:linear-gradient(120deg,#1e4d2b,#3a7a4a);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="color:#fff;font-weight:800;font-size:15px">AI Stock Matcher</div>
+        <div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:2px">Claude analyses buyer history vs current stock</div>
+      </div>
+      <button id="ai-match-btn" onclick="runAIMatch()" style="background:var(--gold);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0">Run AI</button>
+    </div>
+    <div id="ai-loading" style="display:none;margin-top:12px;text-align:center;color:rgba(255,255,255,0.8);font-size:13px">Analysing...</div>
+    <div id="ai-summary" style="display:none;margin-top:12px;background:rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px">
+      <div style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">AI Summary</div>
+      <div id="ai-summary-text" style="color:#fff;font-size:13px;line-height:1.5"></div>
+    </div>
+    <div id="ai-error" style="display:none;margin-top:10px;background:rgba(192,57,43,0.3);border-radius:8px;padding:8px 12px;color:#ffcccc;font-size:12px"></div>
+  </div>
+  <div id="ai-results" style="display:none;margin-bottom:14px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px" id="ai-result-count"></div>
+    <div id="ai-cards"></div>
+    <div style="text-align:center;margin-top:8px">
+      <button onclick="document.getElementById('ai-results').style.display='none';document.getElementById('manual-match').style.display='block';" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:7px 14px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Show manual view</button>
+    </div>
+  </div>
+  <div id="manual-match">
+    <div class="legend">
+      <span><span class="dot dot-e"></span>Exact</span>
+      <span><span class="dot dot-c"></span>Close</span>
+      <span><span class="dot dot-n"></span>No match</span>
+    </div>
+    <div class="ctrl-row">
+      <input type="text" id="match-search" placeholder="Search buyer…" oninput="filterMatches()"/>
+    </div>
+    <div id="match-result" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+    <div id="match-grid"></div>
+  </div>
+</div>
 
-// ── Seed history ─────────────────────────────────────────────────────────────
-const SEED_HISTORY = [
-  { buyer:"MANDELA MARKET",       grn:"15379866", commodity:"AVOS", variety:"AK", count:"8",  qty:30,  price:50,  date:"26/05/2026" },
-  { buyer:"MANDELA MARKET",       grn:"15379857", commodity:"AVOS", variety:"AK", count:"10", qty:10,  price:50,  date:"26/05/2026" },
-  { buyer:"MANDELA MARKET",       grn:"15379869", commodity:"AVOS", variety:"AK", count:"16", qty:120, price:50,  date:"26/05/2026" },
-  { buyer:"MANDELA MARKET",       grn:"15444973", commodity:"AVOS", variety:"MA", count:"22", qty:164, price:70,  date:"26/05/2026" },
-  { buyer:"DAY DREAMERS",         grn:"15440606", commodity:"AVOS", variety:"AF", count:"12", qty:60,  price:120, date:"26/05/2026" },
-  { buyer:"DAY DREAMERS",         grn:"15428753", commodity:"KIWI", variety:"*",  count:"20", qty:2,   price:200, date:"26/05/2026" },
-  { buyer:"SUNNINGHILL SUPER SP", grn:"15440606", commodity:"AVOS", variety:"AF", count:"12", qty:25,  price:120, date:"26/05/2026" },
-  { buyer:"DE AGUIAR HELIO GOME", grn:"15440606", commodity:"AVOS", variety:"AF", count:"12", qty:30,  price:120, date:"26/05/2026" },
-  { buyer:"PAULS FRUIT & VEG",    grn:"15416268", commodity:"LEMS", variety:"*",  count:"88", qty:2,   price:120, date:"26/05/2026" },
-  { buyer:"PAULS FRUIT & VEG",    grn:"15428726", commodity:"NAAR", variety:"HM", count:"12", qty:5,   price:14,  date:"26/05/2026" },
-  { buyer:"PAULS FRUIT & VEG",    grn:"15415663", commodity:"KIWI", variety:"*",  count:"20", qty:5,   price:160, date:"26/05/2026" },
-  { buyer:"PAULS FRUIT & VEG",    grn:"15444988", commodity:"AVOS", variety:"AH", count:"*",  qty:5,   price:162, date:"26/05/2026" },
-  { buyer:"GEBREYSUS KERIGA TEK", grn:"15397488", commodity:"AVOS", variety:"AH", count:"14", qty:84,  price:70,  date:"26/05/2026" },
-  { buyer:"FLM SA (PTY) LTD",     grn:"15442214", commodity:"KIWI", variety:"*",  count:"20", qty:75,  price:240, date:"26/05/2026" },
-  { buyer:"WELKOM MINI MARKET",   grn:"15415663", commodity:"KIWI", variety:"*",  count:"20", qty:37,  price:128, date:"26/05/2026" },
-  { buyer:"AFRICAN FRUIT CO",     grn:"15440606", commodity:"AVOS", variety:"AF", count:"12", qty:30,  price:100, date:"26/05/2026" },
-  { buyer:"MUSTAFA AGMAT",        grn:"15421261", commodity:"NAAR", variety:"LR", count:"1X", qty:104, price:60,  date:"26/05/2026" },
-  { buyer:"RANDGATE SPAR",        grn:"15429339", commodity:"AVOS", variety:"AF", count:"14", qty:10,  price:110, date:"26/05/2026" },
-  { buyer:"KATOMPA MWAMBA",       grn:"15428721", commodity:"NAAR", variety:"HM", count:"15", qty:400, price:10,  date:"26/05/2026" },
-  { buyer:"GO FRESH HOSPITALITY", grn:"15440606", commodity:"AVOS", variety:"AF", count:"12", qty:20,  price:100, date:"26/05/2026" },
-  { buyer:"RIVERSIDE FRESH",      grn:"15429339", commodity:"AVOS", variety:"AF", count:"14", qty:15,  price:100, date:"26/05/2026" },
-  { buyer:"FLM SA (PTY) LTD",     grn:"15398683", commodity:"DRAG", variety:"*",  count:"10", qty:160, price:160, date:"05/05/2026" },
-  { buyer:"FLM SA (PTY) LTD",     grn:"15403543", commodity:"GVS",  variety:"*",  count:"L",  qty:200, price:50,  date:"05/05/2026" },
+<!-- BUYERS -->
+<div class="page" id="page-buyers">
+  <div class="ctrl-row">
+    <input type="text" id="buyer-search" placeholder="🔍 Search buyer…" oninput="filterBuyers()"/>
+  </div>
+  <div id="buyer-list"></div>
+</div>
+
+<!-- STOCK -->
+<div class="page" id="page-stock">
+  <div class="upload-box">
+    <div class="upload-title">📄 Upload Stock PDF</div>
+    <div class="upload-hint">POT.pdf · CDW.pdf · RIAAN.pdf</div>
+    <label class="upload-file-btn">📎 Choose PDF
+      <input type="file" id="stockFile" accept=".pdf" style="display:none" onchange="document.getElementById('stockFileName').textContent=this.files[0]?.name||'No file chosen'"/>
+    </label>
+    <span id="stockFileName" class="upload-fname">No file chosen</span>
+    <div class="upload-btn-row">
+      <button class="upload-btn" onclick="doStockUpload(false)">Upload</button>
+      <button class="upload-btn upload-btn-red" onclick="doStockUpload(true)">🔄 Clear &amp; Re-upload</button>
+    </div>
+    <div id="uploadStatus" class="upload-status"></div>
+  </div>
+  <div class="stock-tabs">
+    <button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button>
+    <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button>
+    <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button>
+  </div>
+  <div class="ctrl-row">
+    <input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/>
+    <select id="stock-filter" onchange="filterStock()">
+      <option value="">All</option>
+      <option value="AVOS">Avocados</option>
+      <option value="BERS">Strawberries</option>
+      <option value="CLTM">Clementines</option>
+      <option value="DRAG">Dragon Fruit</option>
+      <option value="FIGS">Figs</option>
+      <option value="GFT">Grapefruit</option>
+      <option value="GVS">Guavas</option>
+      <option value="KIWI">Kiwi</option>
+      <option value="LEMS">Lemons</option>
+      <option value="MANG">Mangoes</option>
+      <option value="NAAR">Naartjies</option>
+      <option value="ORGS">Oranges</option>
+      <option value="PAPO">Papino</option>
+      <option value="SATS">Satsumas</option>
+    </select>
+  </div>
+  <div id="stock-list"></div>
+</div>
+
+<!-- COMMODITIES -->
+<div class="page" id="page-commodities">
+  <div class="ctrl-row">
+    <input type="text" id="comm-search" placeholder="🔍 Search commodity…" oninput="filterCommodities()"/>
+  </div>
+  <div id="comm-summary-list"></div>
+  <div id="comm-detail" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <button onclick="closeCommodityDetail()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:13px;cursor:pointer">← Back</button>
+        <div id="comm-detail-title" style="font-weight:700;font-size:16px;color:var(--moss)"></div>
+      </div>
+      <div id="comm-detail-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
+      <div id="comm-detail-lines"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ORDERS -->
+<div class="page" id="page-orders">
+  <div id="orders-alert" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:12px 14px;margin-bottom:14px">
+    <div style="font-weight:700;font-size:13px;color:#8a5a00;margin-bottom:4px">🔔 Stock Available for Orders!</div>
+    <div id="orders-alert-text" style="font-size:12px;color:#8a5a00"></div>
+  </div>
+  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border-top:3px solid var(--gold)">
+    <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">📋 Record New Order</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Buyer Name</label>
+        <input id="order-buyer" list="buyer-suggestions" type="text" placeholder="e.g. MANDELA MARKET" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+        <datalist id="buyer-suggestions"></datalist>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Commodity</label>
+          <select id="order-commodity" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
+            <option value="">Select…</option>
+            <option value="AVOS">Avocados</option>
+            <option value="LEMS">Lemons</option>
+            <option value="ORGS">Oranges</option>
+            <option value="KIWI">Kiwifruit</option>
+            <option value="FIGS">Figs</option>
+            <option value="GVS">Guavas</option>
+            <option value="CLTM">Clementines</option>
+            <option value="NAAR">Naartjies</option>
+            <option value="STRS">Strawberries</option>
+            <option value="MANG">Mangoes</option>
+            <option value="DRAG">Dragon Fruit</option>
+            <option value="GFT">Grapefruit</option>
+            <option value="SATS">Satsumas</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Pack</label>
+          <select id="order-pack" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
+            <option value="">Any</option>
+            <option value="TR040">4KG Tray</option>
+            <option value="BG150">15KG Bag</option>
+            <option value="CTT150">15KG Carton</option>
+            <option value="PTB005">500G Punnet</option>
+            <option value="PTB002">160G Punnet</option>
+            <option value="DL076">DL 076 Carton</option>
+            <option value="PC030">3KG Pocket</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Size</label>
+          <input id="order-size" type="text" placeholder="e.g. 14 or *" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Class</label>
+          <select id="order-grade" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
+            <option value="1">CL 1</option>
+            <option value="2">CL 2</option>
+            <option value="">Any</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Qty (units)</label>
+          <input id="order-qty" type="number" placeholder="e.g. 50" min="1" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Price (R)</label>
+          <input id="order-price" type="number" placeholder="e.g. 120" min="0" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Collection Date</label>
+          <input id="order-collect-date" type="date" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Collection Time</label>
+          <select id="order-collect-time" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
+            <option value="">Any time</option>
+            <option value="05:00">05:00</option>
+            <option value="06:00">06:00</option>
+            <option value="07:00">07:00</option>
+            <option value="08:00">08:00</option>
+            <option value="09:00">09:00</option>
+            <option value="10:00">10:00</option>
+            <option value="11:00">11:00</option>
+            <option value="12:00">12:00</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:5px">Notes (optional)</label>
+        <input id="order-notes" type="text" placeholder="e.g. Needs Westfalia only" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
+      </div>
+      <button onclick="saveOrder()" style="padding:13px;border:none;border-radius:10px;background:var(--gold);color:#fff;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;margin-top:4px">📋 Save Order</button>
+      <div id="order-status" style="font-size:12px;color:var(--sage);min-height:1em;text-align:center"></div>
+    </div>
+  </div>
+  <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">
+    Open Orders
+    <span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span>
+    <span style="flex:1;height:1px;background:var(--border);display:block"></span>
+    <button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">🖨 Print</button>
+    <button onclick="loadOrders()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↻ Refresh</button>
+  </div>
+  <div id="orders-list"><div class="empty">No open orders</div></div>
+</div>
+
+</main>
+
+<nav class="bnav">
+  <div class="bnav-item active" onclick="showPage('dashboard',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Dashboard</div></div>
+  <div class="bnav-item" onclick="showPage('matching',this)"><div class="bnav-icon">🔗</div><div class="bnav-label">Matcher</div></div>
+  <div class="bnav-item" onclick="showPage('buyers',this)"><div class="bnav-icon">👥</div><div class="bnav-label">Buyers</div></div>
+  <div class="bnav-item" onclick="showPage('stock',this)"><div class="bnav-icon">📦</div><div class="bnav-label">Stock</div></div>
+  <div class="bnav-item" onclick="showPage('orders',this)">
+    <div class="bnav-icon">📋<span id="orders-badge" style="display:none;position:absolute;top:8px;width:8px;height:8px;background:var(--gold);border-radius:50%"></span></div>
+    <div class="bnav-label">Orders</div>
+  </div>
+  <div class="bnav-item" onclick="showPage('commodities',this)"><div class="bnav-icon">🌿</div><div class="bnav-label">Commodities</div></div>
+</nav>
+</div>
+
+<script>
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+const USERS={'riaan.joubert':{display:'Riaan Joubert',pw:'rsasubtrop2026'},'christoff.dewet':{display:'Christoff de Wet',pw:'rsasubtrop2026'}};
+const SK='st_sess';
+function saveSession(u){try{sessionStorage.setItem(SK,JSON.stringify({u,exp:Date.now()+28800000}));}catch(e){}}
+function loadSession(){try{var s=JSON.parse(sessionStorage.getItem(SK));if(s&&s.exp>Date.now())return s;}catch(e){}return null;}
+function clearSession(){try{sessionStorage.removeItem(SK);}catch(e){}}
+function showApp(displayName){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.body.classList.add('app-active');
+  document.getElementById('hdr-username').textContent=displayName;
+  document.getElementById('live-date').textContent=new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+  loadDashboard();loadBuyersFromFirebase();loadStockFromFirebase('RJ');loadAllStockForMatcher();
+}
+function normalizeUser(raw){return raw.trim().toLowerCase().replace(/\s+/g,'.');}
+function doLogin(){
+  var rawUser=document.getElementById('login-user').value;
+  var pass=document.getElementById('login-pass').value;
+  var errEl=document.getElementById('login-error');
+  errEl.classList.remove('show');
+  if(!rawUser||!pass){errEl.textContent='Please enter your username and password.';errEl.classList.add('show');return;}
+  var ukey=normalizeUser(rawUser);
+  var user=USERS[ukey];
+  if(!user||user.pw!==pass){errEl.textContent='Incorrect username or password.';errEl.classList.add('show');document.getElementById('login-pass').value='';return;}
+  saveSession(ukey);showApp(user.display);
+}
+function doLogout(){
+  clearSession();
+  document.getElementById('app').style.display='none';
+  document.body.classList.remove('app-active');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';document.getElementById('login-pass').value='';
+  document.getElementById('login-error').classList.remove('show');
+}
+function togglePw(){
+  var inp=document.getElementById('login-pass');var btn=document.getElementById('eye-btn');
+  if(inp.type==='password'){inp.type='text';btn.textContent='🙈';}else{inp.type='password';btn.textContent='👁';}
+}
+document.addEventListener('keydown',function(e){if(e.key==='Enter'){var ls=document.getElementById('login-screen');if(ls&&ls.style.display!=='none')doLogin();}});
+window.addEventListener('load',function(){var s=loadSession();if(s&&USERS[s.u])showApp(USERS[s.u].display);});
+
+// ── STATIC DATA ───────────────────────────────────────────────────────────────
+const salesData=[
+  {date:"06/05",buyer:"Flimieda Kwik Spar",acc:"121030",commodity:"Avocados",pack:"4KG TRAY",cls:"CL 1",size:"10",qty:65,amt:5931},
+  {date:"06/05",buyer:"Katompa (The Wedge)",acc:"276863",commodity:"Kiwifruit",pack:"500G PUNNET",cls:"CL 1",size:"8",qty:40,amt:5201},
+  {date:"06/05",buyer:"Jacobus",acc:"67333",commodity:"Avocados",pack:"4KG TRAY",cls:"CL 2",size:"14",qty:80,amt:5600},
 ];
+const stockData=[
+  {producer:"WESTFALIA MARKETING",grn:"15344101",commodity:"AVOS",pack:"TR040",variety:"AF",grade:"1",size:"14",arrived:"01/04",rec:264,sold:155,flr:109},
+  {producer:"KOMATI FRUITS",grn:"15400098",commodity:"LEMS",pack:"CTT150",variety:"*",grade:"1",size:"56",arrived:"01/05",rec:800,sold:87,flr:713},
+];
+const buyerData=[];
 
-// ── Helper functions ──────────────────────────────────────────────────────────
-function parseJSON(envVar, label) {
-  const raw = process.env[envVar];
-  if (!raw) throw new Error(`Missing env var: ${envVar} (${label})`);
-  try { return JSON.parse(raw); }
-  catch(e) { throw new Error(`Invalid JSON in ${envVar}: ${e.message}`); }
+// ── LOOKUPS ───────────────────────────────────────────────────────────────────
+const commName={AVOS:"Avocados",LEMS:"Lemons",FIGS:"Figs",KIWI:"Kiwifruit",ORGS:"Oranges",GVS:"Guavas",CLTM:"Clementines",NAAR:"Naartjies",STRS:"Strawberries",MANG:"Mangoes",DRAG:"Dragon Fruit",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
+const packName={TR040:"4KG TRAY",BG150:"15KG BAG",BG160:"16KG BAG",CTT150:"CTT 150 CARTON",PTB005:"500G PUNNET",PTB002:"160G PUNNET",DL076:"DL 076 CARTON",PC030:"3KG POCKET",PC060:"6KG POCKET",CO100:"10KG CARTON",JP100:"JP 100",EC020:"EC 020",PC150:"PC 150",JP090:"JP 090"};
+const varName={AF:"Fuerte",AH:"Hass",AK:"Pinkerton",MA:"Maluma",MD:"Mendez",NV:"Navel","*":"Open"};
+const commMap={"Avocados":"AVOS","Lemons":"LEMS","Limes":"LIME","Figs":"FIGS","Kiwifruit":"KIWI","Oranges":"ORGS","Guavas":"GVS","Clementines":"CLTM","Naartjies":"NAAR","Strawberries":"STRS","Dragon Fruit":"DRAG","Mangoes":"MANG","Grapefruit":"GFT","Satsumas":"SATS","Papino":"PAPO"};
+const packMap={"4KG TRAY":["TR040"],"15KG CARTON":["CTT150"],"500G PUNNET":["PTB005"],"160G PUNNET":["PTB002"],"3KG POCKET":["PC030","PTB"]};
+const pn=c=>packName[c]||c;
+
+function matchScore(s,p){
+  if(s.commodity!==commMap[p.comm])return"none";
+  const pg=p.cls==="CL 1"?"1":p.cls==="CL 2"?"2":null;
+  const pc=packMap[p.pack]||[];
+  const pm=pc.some(x=>s.pack.startsWith(x));
+  const gm=!pg||s.grade===pg;
+  const sm=p.sizes.includes("*")||p.sizes.includes(s.size);
+  if(pm&&gm&&sm)return"exact";
+  if(pm&&gm)return"close";
+  return"none";
 }
 
-function todayStr() {
-  const d = new Date();
-  return String(d.getDate()).padStart(2,"0") + String(d.getMonth()+1).padStart(2,"0") + d.getFullYear();
+function toggleSection(id){
+  const el=document.getElementById(id);
+  const arr=document.getElementById('arr-'+id);
+  if(!el)return;
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  if(arr)arr.style.transform=open?'':'rotate(180deg)';
 }
 
-// ── buildModel ────────────────────────────────────────────────────────────────
-function buildModel(history) {
-  const m = {};
-  for (const h of history) {
-    const b = h.buyer;
-    if (!b) continue;
-    const commodity = h.commodity || 'UNK';
-    const variety   = h.variety   || '*';
-    const count     = h.count     || h.size || '*';
-    const qty       = Number(h.qty)   || 0;
-    const price     = Number(h.price) || 0;
-    const date      = h.date || '';
-    const k = [commodity, variety, count].filter(v => v && v !== "*").join("|");
-    if (!m[b]) m[b] = {};
-    if (!m[b][k]) m[b][k] = { totalQty:0, txCount:0, priceSum:0, lastDate:"", commodity, variety, count };
-    m[b][k].totalQty += qty;
-    m[b][k].txCount  += 1;
-    m[b][k].priceSum += price * qty;
-    if (!m[b][k].lastDate || date > m[b][k].lastDate) m[b][k].lastDate = date;
-  }
-  for (const b of Object.keys(m))
-    for (const k of Object.keys(m[b])) {
-      const e = m[b][k];
-      e.avgPrice = e.totalQty > 0 ? e.priceSum / e.totalQty : 0;
-      e.score    = e.txCount * Math.log1p(e.totalQty);
-      e.avgQty   = e.txCount > 0 ? Math.round(e.totalQty / e.txCount) : 0;
+const DAY_LABELS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function parseHistoryDate(dateStr){
+  if(!dateStr)return null;
+  try{
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){
+      const p=dateStr.split('/');
+      return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
     }
-  return m;
+    if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){
+      const p=dateStr.slice(0,10).split('-');
+      return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+    }
+  }catch(e){}
+  return null;
 }
 
-// ── Slip PDF parser (stub — handled by Apps Script) ───────────────────────────
-function parseSlipPdf(pdfPath, filename) {
-  return Promise.resolve([]);
+function calcBuyingDays(dates){
+  const counts=[0,0,0,0,0,0,0];
+  for(const d of dates){
+    const dt=parseHistoryDate(d);
+    if(!dt)continue;
+    let dow=dt.getDay();
+    dow=dow===0?6:dow-1;
+    counts[dow]++;
+  }
+  const max=Math.max(...counts)||1;
+  return counts.map(c=>c>0&&(c/max)>=0.2);
 }
 
-function parseSlip(text, filename) { return []; }
+function renderDayBadges(activeDays){
+  const todayDow=(()=>{let d=new Date().getDay();return d===0?6:d-1;})();
+  return`<div class="day-row">${DAY_LABELS.map((lbl,i)=>{
+    const isToday=i===todayDow;
+    const isActive=activeDays[i];
+    const cls=isToday?'day-today':isActive?'day-active':'day-inactive';
+    return`<span class="day-badge ${cls}">${lbl}</span>`;
+  }).join('')}</div>`;
+}
 
-// ── Spatial stock PDF parser ──────────────────────────────────────────────────
-function parsePdfSpatial(pdfPath, filename, today) {
-  return new Promise((resolve) => {
-    if (!fs.existsSync(PARSER_SCRIPT)) { console.warn("   ⚠️  parse_stock_pdf.py not found"); return resolve([]); }
-    execFile("python3", [PARSER_SCRIPT, pdfPath, "", today || ""],
-      { timeout: 120000, maxBuffer: 10 * 1024 * 1024 },
-      (err, stdout, stderr) => {
-        if (stderr) console.warn(`   ⚠️  parser stderr: ${stderr.trim().slice(0,200)}`);
-        if (err) { console.error(`   ❌ Parser error: ${err.message}`); return resolve([]); }
-        try {
-          const rows = JSON.parse(stdout);
-          if (!Array.isArray(rows)) return resolve([]);
-          const results = rows
-            .filter(r => r.producer || r.grn || r.commodity)
-            .map(r => ({
-              grn:        String(r.grn        || ""),
-              producer:   String(r.producer   || ""),
-              commodity:  String(r.commodity  || "UNK"),
-              pack:       String(r.pack       || ""),
-              variety:    String(r.variety    || "*"),
-              grade:      String(r.grade      || "1"),
-              size:       String(r.size       || "*"),
-              count:      String(r.count      || "*"),
-              flr:        Number(r.qty_sort)  || 0,
-              rec:        Number(r.qty_rec)   || 0,
-              arriveDate: r.date              || null,
-              stockDate:  today,
-              src:        filename,
-            }))
-            .filter(r => r.grn || r.producer);
-          console.log(`   ✅ Spatial parser: ${results.length} rows from ${filename}`);
-          resolve(results);
-        } catch(e) { console.error(`   ❌ JSON parse error: ${e.message}`); resolve([]); }
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderStockChart(liveData){
+  const src=liveData||(allLiveStockData&&allLiveStockData.length?allLiveStockData:stockData);
+  const comms=["AVOS","ORGS","LEMS","KIWI","FIGS","GVS","CLTM","NAAR","STRS","MANG","DRAG"];
+  document.getElementById("stock-chart").innerHTML=comms.map(c=>{
+    const items=src.filter(s=>s.commodity===c);
+    if(!items.length)return"";
+    const rec=items.reduce((a,i)=>a+(Number(i.rec)||0),0);
+    const sold=items.reduce((a,i)=>a+(Number(i.sold)||0),0);
+    const flr=items.reduce((a,i)=>a+(Number(i.flr)||0),0);
+    if(!rec)return"";
+    const pct=Math.round(sold/rec*100);
+    const fc=pct>80?"pf-g":pct>40?"pf-a":"pf-r";
+    return`<div class="prog-wrap"><div class="prog-row"><span class="prog-name">${commName[c]||c}</span><span class="prog-meta">${pct}% · ${flr.toLocaleString()} left</span></div><div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div></div>`;
+  }).join("")||"<div class='empty'>No stock data</div>";
+}
+
+async function loadDashboard(){
+  try{
+    const [histRes,stockRes,ordersRes]=await Promise.all([
+      fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json'),
+      fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json'),
+      fetch(FB_ORDERS+'.json?auth='+FB_SECRET)
+    ]);
+    if(stockRes.ok){
+      const stockRaw=await stockRes.json();
+      const allStock=[];
+      for(const [ukey,uval] of Object.entries(stockRaw||{}))
+        for(const e of Object.values(uval||{}))
+          allStock.push({...firebaseToItem(e),user:e.user||ukey});
+      allLiveStockData=allStock;
+      const totalFlr=allStock.reduce((s,e)=>s+(Number(e.flr)||0),0);
+      const totalRec=allStock.reduce((s,e)=>s+(Number(e.rec)||0),0);
+      const totalSold=allStock.reduce((s,e)=>s+(Number(e.sold)||0),0);
+      document.getElementById('kpi-floor').textContent=totalFlr.toLocaleString();
+      document.getElementById('kpi-floor-sub').textContent='units on floor';
+      const clearPct=totalRec>0?Math.round(totalSold/totalRec*100):0;
+      document.getElementById('kpi-clearance').textContent=clearPct+'%';
+      document.getElementById('kpi-clearance-sub').textContent='of all stock sold';
+      const urgentCount=allStock.filter(s=>{
+        if(!s.flr||s.flr<1)return false;
+        const days=daysOnFloor(s.arrived||s.date||'');
+        return days>=14;
+      }).length;
+      document.getElementById('kpi-urgent').textContent=urgentCount;
+      document.getElementById('kpi-urgent-sub').textContent='lines '+(urgentCount>0?'— needs pushing':'on floor');
+      if(urgentCount>0) document.getElementById('kpi-urgent').parentElement.style.borderTopColor='var(--red)';
+      renderStockChart(allStock);
+      const todayDow=(()=>{var d=new Date().getDay();return d===0?6:d-1;})();
+      const buyers=liveBuyerData&&liveBuyerData.length?liveBuyerData:[];
+      const callList=[];
+      for(const buyer of buyers.slice(0,30)){
+        if(!buyer.prefs||!buyer.prefs.length)continue;
+        var hasExact=false,hasClose=false,matchDesc='';
+        for(const pref of buyer.prefs){
+          const commCode=commMap[pref.comm]||pref.comm;
+          const stockForComm=allStock.filter(s=>s.commodity===commCode&&s.flr>0);
+          const exact=stockForComm.filter(s=>matchScore(s,pref)==='exact');
+          const close=stockForComm.filter(s=>matchScore(s,pref)==='close');
+          if(exact.length>0){hasExact=true;matchDesc=pref.comm+' (Exact: '+exact[0].producer+' '+exact[0].flr+'u)';break;}
+          if(close.length>0){hasClose=true;matchDesc=pref.comm+' (Close: '+close[0].producer+' '+close[0].flr+'u)';}
+        }
+        if(!hasExact&&!hasClose)continue;
+        const buysToday=buyer.buyingDays&&buyer.buyingDays[todayDow];
+        const matchScore2=hasExact?3:2;
+        callList.push({name:buyer.name,spend:buyer.spend,matchDesc,matchScore2,buysToday,lastDate:buyer.lastDate});
       }
-    );
-  });
-}
-
-// ── Firebase & Drive init ─────────────────────────────────────────────────────
-let db;
-function initFirebase() {
-  if (db) return;
-  const sa = parseJSON("FIREBASE_SERVICE_ACCOUNT", "Firebase credentials");
-  if (!admin.apps.length) admin.initializeApp({ credential: admin.credential.cert(sa), databaseURL: FIREBASE_DB_URL });
-  db = admin.database();
-  console.log("✅ Firebase connected");
-}
-
-let drive;
-function initDrive() {
-  if (drive) return;
-  const creds = parseJSON("GOOGLE_SERVICE_ACCOUNT", "Google credentials");
-  const auth  = new google.auth.GoogleAuth({ credentials: creds, scopes: ["https://www.googleapis.com/auth/drive.readonly"] });
-  drive = google.drive({ version: "v3", auth });
-  console.log("✅ Google Drive connected");
-}
-
-// ── Download PDF from Drive ───────────────────────────────────────────────────
-async function downloadPdfToTemp(fileId, filename) {
-  const tmpPath = path.join(os.tmpdir(), filename);
-  try {
-    const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "arraybuffer" });
-    const buf = Buffer.from(res.data);
-    fs.writeFileSync(tmpPath, buf);
-    console.log(`   📥 Downloaded ${filename} (${buf.length} bytes)`);
-    return tmpPath;
-  } catch(e) {
-    console.warn(`   ⚠️  Download failed for ${filename}: ${e.message}`);
-    return null;
-  }
-}
-
-// ── Process a single stock file and push to Firebase ─────────────────────────
-async function processStockFile(fileId, filename) {
-  const base = filename.toLowerCase().replace(".pdf","");
-  let user = "unknown";
-  if      (base.includes("riaan")) user = "RJ";
-  else if (base.includes("cdw"))   user = "CW";
-  else if (base.includes("pot"))   user = "POT";
-
-  const dateMatch = filename.match(/^(\d{8})/);
-  const today = dateMatch ? dateMatch[1] : todayStr();
-
-  const tmpPath = await downloadPdfToTemp(fileId, filename);
-  if (!tmpPath) throw new Error("Download failed");
-
-  let rows = [];
-  try {
-    rows = await parsePdfSpatial(tmpPath, filename, today);
-    rows.forEach(r => r.user = user);
-  } finally {
-    try { fs.unlinkSync(tmpPath); } catch {}
-  }
-
-  if (rows.length === 0) {
-    console.log(`   ⚠️  No rows parsed from ${filename}`);
-    return 0;
-  }
-
-  // Build Firebase payload keyed by GRN
-  const stockByGrn = {};
-  rows.forEach(r => {
-    stockByGrn[r.grn] = {
-      grn:        r.grn,
-      producer:   r.producer,
-      commodity:  r.commodity,
-      pack:       r.pack       || "",
-      variety:    r.variety    || "*",
-      grade:      r.grade      || "1",
-      size:       r.size       || "*",
-      count:      r.count      || "*",
-      qty_rec:    r.rec        || 0,
-      qty_sort:   r.flr        || 0,
-      date:       r.arriveDate || today,
-      user:       user,
-      source:     "drive",
-      uploadedAt: new Date().toISOString(),
-    };
-  });
-
-  await db.ref(`stock/${user}`).set(stockByGrn);
-  console.log(`   ✅ Stock pushed: /stock/${user} — ${rows.length} rows from ${filename}`);
-
-  return rows.length;
-}
-
-// ── STOCK SYNC ────────────────────────────────────────────────────────────────
-const processedStockFiles = new Set();
-
-async function syncStock() {
-  console.log("   📦 Checking stock scans...");
-  try {
-    const res = await drive.files.list({
-      q: `'${STOCK_SCANS_FOLDER}' in parents and mimeType = 'application/pdf'`,
-      fields: "files(id,name,createdTime)",
-      pageSize: 200,
-      orderBy: "createdTime asc",
-    });
-    const allFiles = res.data.files || [];
-    const newFiles = allFiles.filter(f => !processedStockFiles.has(f.id));
-
-    if (newFiles.length === 0) { console.log("   ✅ No new stock files"); return; }
-    console.log(`   🔄 Processing ${newFiles.length} new stock file(s)...`);
-
-    for (const file of newFiles) {
-      try {
-        await processStockFile(file.id, file.name);
-        processedStockFiles.add(file.id);
-      } catch(e) {
-        console.error(`   ❌ ${file.name}: ${e.message}`);
+      callList.sort((a,b)=>b.matchScore2-a.matchScore2||(b.spend||0)-(a.spend||0));
+      const callEl=document.getElementById('dash-call-list');
+      if(callList.length===0){
+        callEl.innerHTML='<div style="font-size:13px;color:var(--muted)">No strong matches today — check Stock tab for new arrivals.</div>';
+      } else {
+        callEl.innerHTML=callList.slice(0,8).map((c,i)=>{
+          const matchBg=c.matchScore2===3?'var(--sage-light)':'var(--gold-light)';
+          const matchColor=c.matchScore2===3?'#1a5c2a':'#8a5a00';
+          const todayBadge=c.buysToday?'<span class="b bg" style="font-size:10px;margin-left:6px">Today</span>':'';
+          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">'
+            +'<div style="width:24px;height:24px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0;margin-top:1px">'+(i+1)+'</div>'
+            +'<div style="flex:1;min-width:0">'
+            +'<div style="font-weight:700;font-size:13.5px;word-break:break-word">'+c.name+todayBadge+'</div>'
+            +'<div style="font-size:11px;margin-top:3px"><span style="background:'+matchBg+';color:'+matchColor+';padding:2px 7px;border-radius:5px;font-weight:600;font-size:10px">'
+            +(c.matchScore2===3?'EXACT':'CLOSE')+'</span> '+c.matchDesc+'</div>'
+            +'</div>'
+            +'<div style="text-align:right;flex-shrink:0;font-size:11px;color:var(--muted)">R '+(c.spend||0).toLocaleString()+'</div>'
+            +'</div>';
+        }).join('');
       }
     }
-  } catch(e) {
-    console.error("   ❌ Stock sync error:", e.message);
-  }
-}
-
-// ── MAIN SYNC ─────────────────────────────────────────────────────────────────
-async function sync() {
-  console.log(`\n[${new Date().toISOString()}] 🔄 Sync started`);
-  try {
-    initFirebase();
-    initDrive();
-
-    const histSnap = await db.ref("jdw/history").once("value");
-    let history = histSnap.val();
-    if (!history || (Array.isArray(history) && history.length === 0)) {
-      console.log("   📦 Seeding base buyer history...");
-      const model = buildModel(SEED_HISTORY);
-      await db.ref("jdw").update({ history: SEED_HISTORY, model, lastSync: { ts: new Date().toISOString(), newRows: SEED_HISTORY.length, total: SEED_HISTORY.length, buyers: Object.keys(model).length } });
-      console.log(`   ✅ Seeded ${SEED_HISTORY.length} transactions`);
-    }
-
-    // Buyer history handled by Apps Script
-    await syncStock();
-  } catch(err) {
-    console.error("❌ Sync error:", err.message);
-  }
-}
-
-// ── HTTP SERVER ───────────────────────────────────────────────────────────────
-const server = http.createServer(async (req, res) => {
-
-  // ── CORS preflight (must be first) ─────────────────────────────────────────
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "Access-Control-Allow-Origin":  "*",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Allow-Methods": "POST, GET, OPTIONS"
-    });
-    return res.end();
-  }
-
-  // ── Health check ───────────────────────────────────────────────────────────
-  if (req.method === "GET" && req.url === "/") {
-    return res.end("jdw-sync v8 alive");
-  }
-
-  // ── Trigger stock sync ─────────────────────────────────────────────────────
-  if (req.method === "POST" && req.url === "/trigger-stock") {
-    let body = "";
-    req.on("data", chunk => body += chunk);
-    req.on("end", async () => {
-      try {
-        const { secret, fileId, filename } = JSON.parse(body);
-        if (secret !== TRIGGER_SECRET) {
-          res.writeHead(403);
-          return res.end(JSON.stringify({ error: "Unauthorized" }));
-        }
-        if (!fileId || !filename) {
-          res.writeHead(400);
-          return res.end(JSON.stringify({ error: "fileId and filename required" }));
-        }
-        console.log(`\n📡 Trigger received: ${filename} (${fileId})`);
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ status: "processing", filename }));
-        try {
-          initFirebase();
-          initDrive();
-          const count = await processStockFile(fileId, filename);
-          processedStockFiles.add(fileId);
-          console.log(`   ✅ Trigger complete: ${filename} → ${count} rows`);
-        } catch(e) {
-          console.error(`   ❌ Trigger processing error: ${e.message}`);
-        }
-      } catch(e) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "Invalid JSON: " + e.message }));
+    if(ordersRes.ok){
+      const ordersRaw=await ordersRes.json();
+      const todayISO=new Date().toISOString().slice(0,10);
+      const dueToday=ordersRaw?Object.values(ordersRaw).filter(o=>o.status==='open'&&o.collectDate===todayISO):[];
+      const dueEl=document.getElementById('dash-due-today');
+      const dueList=document.getElementById('dash-due-list');
+      if(dueToday.length>0){
+        dueEl.style.display='block';
+        dueList.innerHTML=dueToday.map(o=>{
+          const cf=COMM_FULL[o.commodity]||o.commodity;
+          const time=o.collectTime?' @ '+o.collectTime:'';
+          return '<div style="padding:4px 0;border-bottom:1px solid rgba(201,136,42,0.2);display:flex;justify-content:space-between">'
+            +'<span style="font-weight:700">'+o.buyer+'</span>'
+            +'<span>'+cf+' '+o.qty+'u'+time+'</span>'
+            +'</div>';
+        }).join('');
+      } else {
+        dueEl.style.display='none';
       }
-    });
-    return;
-  }
-
-  // ── AI Match endpoint ──────────────────────────────────────────────────────
-  if (req.method === "POST" && req.url === "/ai-match") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-    let body = "";
-    req.on("data", chunk => body += chunk);
-    req.on("end", async () => {
-      try {
-        const { prompt } = JSON.parse(body);
-
-        if (!prompt) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ error: "prompt required" }));
-        }
-
-        const GEMINI_KEY = process.env.GEMINI_API_KEY;
-        if (!GEMINI_KEY) {
-          res.writeHead(500, { "Content-Type": "application/json" });
-          return res.end(JSON.stringify({ error: "GEMINI_API_KEY not set on server" }));
-        }
-
-        // Model cascade: try 2.5-flash first, fall back to 1.5-flash if unavailable
-        const MODELS = [
-          "gemini-2.5-flash",
-          "gemini-1.5-flash-latest",
-          "gemini-1.5-flash-002",
-        ];
-        const MAX_RETRIES = 3;
-        const RETRY_DELAY_MS = 2000;
-
-        // Promisified single Gemini call
-        function callGemini(model, payload) {
-          return new Promise((resolve, reject) => {
-            const options = {
-              hostname: "generativelanguage.googleapis.com",
-              path:     `/v1beta/models/${model}:generateContent`,
-              method:   "POST",
-              headers: {
-                "Content-Type":   "application/json",
-                "x-goog-api-key": GEMINI_KEY,
-                "Content-Length": Buffer.byteLength(payload)
-              }
-            };
-            const apiReq = https.request(options, (apiRes) => {
-              let data = "";
-              apiRes.on("data", chunk => data += chunk);
-              apiRes.on("end", () => {
-                try {
-                  resolve({ parsed: JSON.parse(data), raw: data });
-                } catch(e) {
-                  reject(new Error("JSON parse error: " + e.message + " | raw: " + data.slice(0, 300)));
-                }
-              });
-            });
-            apiReq.on("error", (e) => reject(new Error("Network error: " + e.message)));
-            apiReq.write(payload);
-            apiReq.end();
-          });
-        }
-
-        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-        const payload = JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2000, temperature: 0.3 }
+    }
+    if(histRes.ok){
+      const raw=await histRes.json();
+      if(raw){
+        const history=Array.isArray(raw)?raw:Object.values(raw);
+        const now=new Date();
+        const weekAgo=new Date(now-7*24*60*60*1000);
+        const recent=history.filter(h=>{
+          if(!h.date)return false;
+          const p=h.date.split('/');
+          if(p.length<3)return false;
+          const d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+          return d>=weekAgo;
         });
-
-        let lastError = null;
-
-        for (const model of MODELS) {
-          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-            try {
-              console.log(`   🤖 Gemini attempt ${attempt}/${MAX_RETRIES} with ${model}`);
-              const { parsed: geminiResp } = await callGemini(model, payload);
-
-              // 503 / UNAVAILABLE — retryable
-              if (geminiResp.error?.code === 503 || geminiResp.error?.status === "UNAVAILABLE") {
-                lastError = `${model} unavailable (503)`;
-                console.warn(`   ⚠️  ${lastError} — attempt ${attempt}/${MAX_RETRIES}`);
-                if (attempt < MAX_RETRIES) await sleep(RETRY_DELAY_MS);
-                continue; // retry same model
-              }
-
-              // Any other Gemini error — not retryable, try next model
-              if (geminiResp.error) {
-                lastError = `${model}: ${geminiResp.error.message} (${geminiResp.error.status})`;
-                console.error(`   ❌ Gemini error on ${model}:`, JSON.stringify(geminiResp.error));
-                break; // skip remaining retries, try next model
-              }
-
-              const text = geminiResp.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-              if (!text) {
-                const reason = geminiResp.candidates?.[0]?.finishReason || "unknown";
-                lastError = `${model} empty response, finishReason: ${reason}`;
-                console.warn(`   ⚠️  ${lastError}`);
-                break; // try next model
-              }
-
-              // ✅ Success
-              console.log(`   ✅ Gemini success with ${model} (attempt ${attempt})`);
-              res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-              return res.end(JSON.stringify({ content: [{ type: "text", text }], model }));
-
-            } catch(e) {
-              lastError = e.message;
-              console.error(`   ❌ ${model} attempt ${attempt} threw: ${e.message}`);
-              if (attempt < MAX_RETRIES) await sleep(RETRY_DELAY_MS);
-            }
-          }
-        }
-
-        // All models and retries exhausted
-        console.error("   ❌ All Gemini models exhausted. Last error:", lastError);
-        res.writeHead(503, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-        res.end(JSON.stringify({ error: "AI unavailable — all models exhausted. Last error: " + lastError }));
-
-      } catch(e) {
-        res.writeHead(400, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
-        res.end(JSON.stringify({ error: "Invalid JSON: " + e.message }));
+        const src=recent.length>0?recent:history;
+        const revenue=src.reduce((s,h)=>s+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0,0);
+        const buyers=new Set(src.map(h=>h.buyer).filter(Boolean)).size;
+        const period=recent.length>0?'Last 7 days':'All time';
+        document.getElementById('kpi-revenue').textContent='R '+Math.round(revenue).toLocaleString();
+        document.getElementById('kpi-revenue-sub').textContent=period+' · '+buyers+' buyers';
+        renderSalesFromHistory([...history].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10));
       }
-    });
-    return;
+    }
+  }catch(e){renderStockChart();renderSales();console.error('Dashboard error:',e.message);}
+}
+
+function renderSales(){
+  document.getElementById("sale-list").innerHTML=salesData.map(s=>`
+    <div class="sale-card">
+      <div class="sale-dot ${s.cls==="CL 2"?"cl2":""}"></div>
+      <div class="sale-body">
+        <div class="sale-buyer">${s.buyer}</div>
+        <div class="sale-acc">Acc ${s.acc} · ${s.date}</div>
+        <div class="sale-specs"><span class="b bb">${s.pack}</span><span class="b ${s.cls==="CL 1"?"bg":"ba"}">${s.cls}</span><span class="b bt">sz ${s.size}</span></div>
+      </div>
+      <div class="sale-right"><div class="sale-amt">R ${s.amt.toLocaleString()}</div><div class="sale-qty">${s.qty} units</div></div>
+    </div>`).join("");
+}
+
+function renderSalesFromHistory(data){
+  const CN={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown'};
+  const PK={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
+  if(!data||!data.length){renderSales();return;}
+  document.getElementById("sale-list").innerHTML=data.map(s=>{
+    const comm=s.commodity||'UNK';
+    const commLbl=CN[comm]||comm;
+    const pack=s.pack||PK[comm]||'';
+    const cls=s.cls||'1';
+    const clsLbl='CL '+cls;
+    const size=s.size&&s.size!=='*'?s.size:'—';
+    const variety=s.variety&&s.variety!=='*'?s.variety:'';
+    const total=Number(s.total)||(Number(s.price||0)*Number(s.qty||0))||0;
+    const qty=Number(s.qty)||0;
+    const price=qty>0&&total>0?Math.round(total/qty):0;
+    const acc=s.account||s.acc||'—';
+    const isC2=cls==='2';
+    return`<div class="sale-card">
+      <div class="sale-dot ${isC2?"cl2":""}"></div>
+      <div class="sale-body">
+        <div class="sale-buyer">${s.buyer||'Unknown'}</div>
+        <div class="sale-acc">Acc ${acc} · ${s.date||'—'}${s.invoice?' · Inv '+s.invoice:''}</div>
+        <div class="sale-specs">
+          ${pack?`<span class="b bb">${pack}</span>`:''}
+          <span class="b ${isC2?'ba':'bg'}">${clsLbl}</span>
+          ${size!=='—'?`<span class="b bt">sz ${size}</span>`:''}
+          ${variety?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${variety}</span>`:''}
+          <span class="b" style="background:#e8f5ec;color:#1a5c2a">${commLbl}</span>
+        </div>
+        ${s.producer?`<div style="font-size:11px;color:var(--muted);margin-top:4px">🌱 ${s.producer}</div>`:''}
+      </div>
+      <div class="sale-right">
+        <div class="sale-amt">R ${total.toLocaleString()}</div>
+        <div class="sale-qty">${qty} units${price>0?' · R'+price+'/u':''}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── MATCHER ───────────────────────────────────────────────────────────────────
+const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
+function getMatcherBuyers(){return liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;}
+
+function renderMatchPage(data){
+  const allBuyers=getMatcherBuyers();
+  const q=(document.getElementById('match-search').value||'').toLowerCase();
+  const groups={};
+  data.filter(s=>s.flr>0).forEach(s=>{
+    if(!groups[s.commodity])groups[s.commodity]={items:[],totalFlr:0,totalRec:0,totalSold:0};
+    groups[s.commodity].items.push(s);
+    groups[s.commodity].totalFlr+=s.flr;
+    groups[s.commodity].totalRec+=s.rec;
+    groups[s.commodity].totalSold+=s.sold;
+  });
+  const filteredBuyers=q?allBuyers.filter(b=>b.name.toLowerCase().includes(q)||b.prefs.some(p=>p.comm.toLowerCase().includes(q))):allBuyers;
+  const today=new Date().getDay();
+  const todayDow=today===0?6:today-1;
+  const scoredBuyers=filteredBuyers.map(buyer=>{
+    var hasExact=0,hasClose=0;
+    if(buyer.prefs){
+      buyer.prefs.forEach(pref=>{
+        const commCode=commMap[pref.comm]||pref.comm;
+        const g=groups[commCode];
+        if(!g)return;
+        if(g.items.some(s=>matchScore(s,pref)==='exact'&&s.flr>0))hasExact++;
+        else if(g.items.some(s=>matchScore(s,pref)==='close'&&s.flr>0))hasClose++;
+      });
+    }
+    const matchPri=hasExact>0?3:hasClose>0?2:0;
+    const buysTodayBonus=buyer.buyingDays&&buyer.buyingDays[todayDow]?1:0;
+    return {...buyer,_sort:matchPri*100000+(buyer.spend||0)/100+buysTodayBonus*10};
+  }).sort((a,b)=>b._sort-a._sort);
+
+  document.getElementById("match-grid").innerHTML=scoredBuyers.map(buyer=>{
+    if(!buyer.prefs||!buyer.prefs.length)return'';
+    const bid='mbuyer-'+Math.random().toString(36).slice(2);
+    const commSections=buyer.prefs.map(pref=>{
+      const commCode=commMap[pref.comm]||pref.comm;
+      const g=groups[commCode];
+      if(!g){
+        return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;padding:10px 13px;background:#fafafa">
+          <div style="font-weight:700;font-size:13px;color:var(--muted)">${pref.comm}</div>
+          <div class="no-match">⚠ No stock on floor</div>
+        </div>`;
+      }
+      const exact=g.items.filter(s=>matchScore(s,pref)==='exact'&&s.flr>0);
+      const close=g.items.filter(s=>matchScore(s,pref)==='close'&&s.flr>0);
+      const ind=exact.length>0?'dot-e':close.length>0?'dot-c':'dot-n';
+      const indLabel=exact.length>0?'Exact':close.length>0?'Close':'No Match';
+      const indBadge=exact.length>0?'bg':close.length>0?'ba':'br';
+      const lines=[...exact,...close].slice(0,3);
+      return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f7fbf7">
+          <span class="dot ${ind}" style="flex-shrink:0"></span>
+          <span style="font-weight:700;font-size:13px;color:var(--moss);flex:1">${pref.comm}</span>
+          <span class="b ${indBadge}" style="font-size:10px">${indLabel}</span>
+          <span style="font-size:11px;color:var(--muted)">R ${pref.revenue.toLocaleString()}</span>
+        </div>
+        <div style="padding:10px 12px;border-top:1px solid var(--border)">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            <span class="b bb">${pref.pack||'—'}</span>
+            <span class="b ${pref.cls==='CL 1'?'bg':'ba'}">${pref.cls}</span>
+            <span class="b bt">sz ${pref.sizes.join(', ')}</span>
+            <span class="b" style="background:#f0f4f0;color:var(--muted)">avg R ${buyer.txns>0?Math.round(buyer.spend/buyer.txns).toLocaleString():'—'}/order</span>
+          </div>
+          ${lines.length>0?`<div class="smatch-title">Matching Stock on Floor</div>${lines.map(s=>{
+            const sc=matchScore(s,pref);
+            return`<div class="smatch-row"><div class="smatch-top"><span class="dot ${sc==='exact'?'dot-e':'dot-c'}" style="margin-right:6px;flex-shrink:0"></span><span class="smatch-prod">${s.producer}</span><span class="smatch-units">${s.flr} units</span></div><div class="smatch-tags"><span class="b bb">${pn(s.pack)}</span><span class="b ${s.grade==='1'?'bg':'ba'}">CL ${s.grade}</span><span class="b bt">sz ${s.size}</span>${s.variety&&s.variety!=='*'?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:''}</div><div class="smatch-grn">GRN ${s.grn} · Arrived ${s.arrived||s.date||'—'}</div></div>`;
+          }).join('')}${[...exact,...close].filter(s=>s.flr>0).length>3?`<div style="font-size:11px;color:var(--muted);padding-top:4px">+${[...exact,...close].filter(s=>s.flr>0).length-3} more lines</div>`:''}`:
+          `<div class="no-match">⚠ No matching stock on floor</div>`}
+        </div>
+      </div>`;
+    }).join('');
+    const buysTodayBadge=buyer.buyingDays&&buyer.buyingDays[todayDow]?`<span class="b" style="background:rgba(255,255,255,0.25);color:#fff;font-size:10px">🛒 Today</span>`:'';
+    return`<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">
+      <div onclick="toggleSection('${bid}')" style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:var(--moss);cursor:pointer;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:15px;color:#fff;word-break:break-word">${buyer.name}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">${buyer.prefs.length} commodity${buyer.prefs.length>1?'ies':''} · ${buyer.txns} txns</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          ${buysTodayBadge}
+          <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:5px 10px;text-align:center">
+            <div style="font-size:16px;font-weight:800;color:#fff;line-height:1">R ${(buyer.spend||0).toLocaleString()}</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">revenue</div>
+          </div>
+          <div id="arr-${bid}" style="color:#fff;font-size:14px;transition:transform .2s">▼</div>
+        </div>
+      </div>
+      <div id="${bid}" style="display:none;padding:10px">
+        ${buyer.buyingDays?renderDayBadges(buyer.buyingDays)+'<div style="margin-bottom:8px"></div>':''}
+        ${commSections}
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty">No buyers found</div>';
+  document.getElementById('match-result').textContent=scoredBuyers.length+' buyers · '+Object.keys(groups).length+' commodities on floor';
+}
+
+// ── AI MATCHER ────────────────────────────────────────────────────────────────
+// ► FIX: robust JSON extraction that handles Gemini wrapping text around the JSON
+//         and sanitises control characters that cause unterminated string errors
+function extractJSON(raw) {
+  // Strip markdown fences
+  var s = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  // Find the outermost { ... } block
+  var start = s.indexOf('{');
+  if (start === -1) throw new Error('No JSON object found in response');
+  var depth = 0;
+  var end = -1;
+  for (var i = start; i < s.length; i++) {
+    if (s[i] === '{') depth++;
+    else if (s[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
   }
+  if (end === -1) throw new Error('Unterminated JSON object in response');
+  var jsonStr = s.slice(start, end + 1);
+  // Remove control characters (ASCII 0-31 except \t \n \r) that break JSON.parse
+  jsonStr = jsonStr.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+  return JSON.parse(jsonStr);
+}
 
-  // ── 404 ────────────────────────────────────────────────────────────────────
-  res.writeHead(404);
-  res.end("Not found");
-});
+const AI_CN={AVOS:'Avocados',LEMS:'Lemons',FIGS:'Figs',KIWI:'Kiwifruit',ORGS:'Oranges',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',PAPO:'Papino'};
+const AI_PN={TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
+const AI_VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',NV:'Navel'};
 
-server.listen(process.env.PORT || 3000);
-console.log(`🚀 jdw-sync v8 starting — polling every ${POLL_MINUTES} min + /trigger-stock endpoint`);
-sync();
-cron.schedule(`*/${POLL_MINUTES} * * * *`, sync);
+async function runAIMatch(){
+  const btn=document.getElementById('ai-match-btn');
+  const loading=document.getElementById('ai-loading');
+  const summaryEl=document.getElementById('ai-summary');
+  const summaryText=document.getElementById('ai-summary-text');
+  const errEl=document.getElementById('ai-error');
+  const resultsDiv=document.getElementById('ai-results');
+  const cardsDiv=document.getElementById('ai-cards');
+  const countEl=document.getElementById('ai-result-count');
+  const manualDiv=document.getElementById('manual-match');
+
+  btn.disabled=true;
+  btn.textContent='Analysing...';
+  loading.style.display='block';
+  summaryEl.style.display='none';
+  errEl.style.display='none';
+  resultsDiv.style.display='none';
+
+  try{
+    var stock=(allLiveStockData&&allLiveStockData.length?allLiveStockData:stockData).filter(function(s){return s.flr>0;});
+    if(!stock.length)throw new Error('No stock on floor. Check stock tab first.');
+    var buyers=liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;
+    if(!buyers.length)throw new Error('No buyer history. Check buyers tab first.');
+
+    var today=new Date().toLocaleDateString('en-ZA',{weekday:'long'});
+    var dow=new Date().getDay();
+    var todayDow=dow===0?6:dow-1;
+
+    var stockLines=stock.slice(0,30).map(function(s){
+      var v=s.variety!=='*'?(AI_VN[s.variety]||s.variety):'';
+      return (AI_CN[s.commodity]||s.commodity)+' '+(AI_PN[s.pack]||s.pack)+' '+v+' CL'+s.grade+' sz'+s.size+' '+s.flr+'u ('+s.producer+')';
+    }).join('\n');
+
+    var buyerLines=buyers.slice(0,15).map(function(b){
+      var comms=b.prefs.slice(0,3).map(function(p){
+        return p.comm+'('+(p.pack||'any')+' '+p.cls+' sz'+p.sizes.join('/')+' R'+Math.round(p.revenue)+')';
+      }).join(', ');
+      var bt=b.buyingDays&&b.buyingDays[todayDow]?' [BUYS TODAY]':'';
+      return b.name+bt+': R'+b.spend+' | '+comms;
+    }).join('\n');
+
+    var prompt='You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: '+today+'\n\nFLOOR STOCK ('+stock.length+' lines):\n'+stockLines+'\n\nBUYERS (by revenue):\n'+buyerLines+'\n\nReturn ONLY raw JSON (no markdown, no explanation) with this exact structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"name","score":88,"commodity":"Avocados","stockLine":"producer name","reason":"why this buyer","tip":"call tip","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH/MEDIUM/LOW, max 10 matches sorted by score desc. Score based on: 1st stock match quality (commodity/pack/size), 2nd buyer revenue, 3rd buying day. Only include genuine matches with stock on floor. Do not include any text outside the JSON object.';
+
+    var response=await fetch('https://jdw-sync.onrender.com/ai-match',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:prompt})
+    });
+
+    // ► FIX: robust error handling — read body as text first, then try JSON
+    if(!response.ok){
+      var errText=await response.text();
+      var errMsg='API error '+response.status;
+      try{var errJson=JSON.parse(errText);errMsg=errJson.error||errMsg;}catch(e){}
+      throw new Error(errMsg);
+    }
+
+    var data=await response.json();
+    var text=(data.content&&data.content[0]&&data.content[0].text)||'';
+    if(!text)throw new Error('Empty response from AI');
+
+    // ► FIX: use extractJSON instead of simple JSON.parse(clean)
+    var parsed=extractJSON(text);
+
+    if(parsed.summary){
+      summaryText.textContent=parsed.summary;
+      summaryEl.style.display='block';
+    }
+
+    var matches=parsed.matches||[];
+    countEl.textContent=matches.length+' AI-ranked matches · sorted by confidence'+(data.model?' · '+data.model:'');
+
+    cardsDiv.innerHTML=matches.map(function(m,i){
+      var score=Number(m.score)||0;
+      var scoreBg=score>=80?'#fff0e0':score>=60?'#e8f5ec':'#f0f0f0';
+      var scoreColor=score>=80?'#c9882a':score>=60?'#1a5c2a':'#888';
+      var priLabel=m.priority||'LOW';
+      var priBg=priLabel==='HIGH'?'var(--gold-light)':priLabel==='MEDIUM'?'var(--sage-light)':'#f0f0f0';
+      var priColor=priLabel==='HIGH'?'#8a5a00':priLabel==='MEDIUM'?'#1a5c2a':'#888';
+      var todayHtml=m.buysToday?'<span class="b bg" style="font-size:10px">Buys today</span>':'';
+      var reasonHtml=m.reason?'<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">'+m.reason+'</div>':'';
+      var tipHtml=m.tip?'<div style="font-size:12px;color:var(--muted)">Call tip: '+m.tip+'</div>':'';
+      return '<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden">'
+        +'<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)">'
+        +'<div style="width:46px;height:46px;border-radius:10px;background:'+scoreBg+';color:'+scoreColor+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">'+score+'</div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:800;font-size:14px;word-break:break-word">'+(m.buyer||'')+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(m.commodity||'')+' · '+(m.stockLine||'')+'</div>'
+        +'</div>'
+        +'<span style="background:'+priBg+';color:'+priColor+';font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0">'+priLabel+'</span>'
+        +'</div>'
+        +'<div style="padding:10px 14px">'
+        +(todayHtml?'<div style="margin-bottom:8px">'+todayHtml+'</div>':'')
+        +reasonHtml+tipHtml
+        +'</div></div>';
+    }).join('');
+
+    manualDiv.style.display='none';
+    resultsDiv.style.display='block';
+
+  }catch(e){
+    errEl.textContent=e.message;
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;
+    btn.textContent='Run AI';
+    loading.style.display='none';
+  }
+}
+
+function filterMatches(){
+  const src=allLiveStockData&&allLiveStockData.length?allLiveStockData:stockData;
+  renderMatchPage(src);
+}
+
+// ── BUYERS ────────────────────────────────────────────────────────────────────
+let liveBuyerData=[];
+
+async function loadBuyersFromFirebase(){
+  const el=document.getElementById('buyer-list');
+  if(el)el.innerHTML='<div class="empty">Loading buyers…</div>';
+  try{
+    const r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');
+    if(!r.ok)throw new Error('fetch failed');
+    const raw=await r.json();
+    if(!raw){renderBuyers([]);return;}
+    const history=Array.isArray(raw)?raw:Object.values(raw);
+    liveBuyerData=buildBuyerProfiles(history);
+    renderBuyers(liveBuyerData);
+  }catch(e){liveBuyerData=buyerData;renderBuyers(buyerData);}
+}
+
+function buildBuyerProfiles(history){
+  const map={};
+  const CN={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown',SATS:'Satsumas',PAPO:'Papino',BERS:'Berries'};
+  const PG={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
+  for(const h of history){
+    if(!h.buyer||h.buyer==='UNKNOWN')continue;
+    const name=h.buyer;
+    if(!map[name])map[name]={name,acc:h.account||'',card:h.card||'',txns:0,spend:0,prefs:{},lastDate:'',dates:[]};
+    const b=map[name];
+    const lineTotal=Number(h.total)||(Number(h.price||0)*Number(h.qty||0))||0;
+    b.txns++;b.spend+=lineTotal;
+    if(h.date)b.dates.push(h.date);
+    if(!b.acc&&h.account)b.acc=h.account;
+    if(!b.card&&h.card)b.card=h.card;
+    if(!b.lastDate||h.date>b.lastDate)b.lastDate=h.date;
+    const comm=h.commodity||'UNK';
+    if(!map[name].prefs[comm])map[name].prefs[comm]={comm:CN[comm]||comm,pack:PG[comm]||'',cls:'CL '+(h.cls||'1'),sizes:new Set(),txns:0,totalQty:0,revenue:0};
+    const p=map[name].prefs[comm];
+    p.txns++;p.totalQty+=Number(h.qty)||0;p.revenue+=lineTotal;
+    if(h.size&&h.size!=='*')p.sizes.add(h.size);
+  }
+  return Object.values(map).map(b=>({
+    name:b.name,acc:b.acc,card:b.card,tx
