@@ -184,8 +184,6 @@ main{padding:14px 12px}
 <main>
 <!-- DASHBOARD -->
 <div class="page active" id="page-dashboard">
-
-  <!-- KPI ROW 1: Revenue + Floor Stock -->
   <div class="kpi-row" style="margin-bottom:10px">
     <div class="kpi gold">
       <div class="kpi-lbl">Revenue This Week</div>
@@ -198,8 +196,6 @@ main{padding:14px 12px}
       <div class="kpi-sub" id="kpi-floor-sub">Loading…</div>
     </div>
   </div>
-
-  <!-- KPI ROW 2: Clearance + Urgent -->
   <div class="kpi-row" style="margin-bottom:14px">
     <div class="kpi">
       <div class="kpi-lbl">Clearance Rate</div>
@@ -212,14 +208,10 @@ main{padding:14px 12px}
       <div class="kpi-sub" id="kpi-urgent-sub">lines 14+ days old</div>
     </div>
   </div>
-
-  <!-- DUE TODAY -->
   <div id="dash-due-today" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:14px">
     <div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:8px">📦 Collections Due Today</div>
     <div id="dash-due-list" style="font-size:13px;color:#8a5a00"></div>
   </div>
-
-  <!-- CALL LIST -->
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
     <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">
       📞 Call List — Top Buyers Today
@@ -227,19 +219,14 @@ main{padding:14px 12px}
     </div>
     <div id="dash-call-list"><div class="empty" style="padding:12px 0">Loading stock data…</div></div>
   </div>
-
-  <!-- SELL-THROUGH CHART -->
   <div class="stitle">Sell-Through by Commodity</div>
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
-
-  <!-- LATEST SALES -->
   <div class="stitle">Latest Sales</div>
   <div id="sale-list"></div>
 </div>
 
 <!-- MATCHER -->
 <div class="page" id="page-matching">
-  <!-- AI Banner -->
   <div style="background:linear-gradient(120deg,#1e4d2b,#3a7a4a);border-radius:14px;padding:14px 16px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div>
@@ -255,7 +242,6 @@ main{padding:14px 12px}
     </div>
     <div id="ai-error" style="display:none;margin-top:10px;background:rgba(192,57,43,0.3);border-radius:8px;padding:8px 12px;color:#ffcccc;font-size:12px"></div>
   </div>
-  <!-- AI Results -->
   <div id="ai-results" style="display:none;margin-bottom:14px">
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px" id="ai-result-count"></div>
     <div id="ai-cards"></div>
@@ -263,7 +249,6 @@ main{padding:14px 12px}
       <button onclick="document.getElementById('ai-results').style.display='none';document.getElementById('manual-match').style.display='block';" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:7px 14px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Show manual view</button>
     </div>
   </div>
-  <!-- Manual Match -->
   <div id="manual-match">
     <div class="legend">
       <span><span class="dot dot-e"></span>Exact</span>
@@ -346,15 +331,13 @@ main{padding:14px 12px}
     </div>
   </div>
 </div>
+
 <!-- ORDERS -->
 <div class="page" id="page-orders">
-  <!-- Alert banner for flagged orders -->
   <div id="orders-alert" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:12px 14px;margin-bottom:14px">
     <div style="font-weight:700;font-size:13px;color:#8a5a00;margin-bottom:4px">🔔 Stock Available for Orders!</div>
     <div id="orders-alert-text" style="font-size:12px;color:#8a5a00"></div>
   </div>
-
-  <!-- New Order Form -->
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border-top:3px solid var(--gold)">
     <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">📋 Record New Order</div>
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -445,8 +428,6 @@ main{padding:14px 12px}
       <div id="order-status" style="font-size:12px;color:var(--sage);min-height:1em;text-align:center"></div>
     </div>
   </div>
-
-  <!-- Orders List -->
   <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">
     Open Orders
     <span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span>
@@ -546,7 +527,6 @@ function matchScore(s,p){
   return"none";
 }
 
-// ── TOGGLE DROPDOWN ───────────────────────────────────────────────────────────
 function toggleSection(id){
   const el=document.getElementById(id);
   const arr=document.getElementById('arr-'+id);
@@ -556,10 +536,8 @@ function toggleSection(id){
   if(arr)arr.style.transform=open?'':'rotate(180deg)';
 }
 
-// ── DAY OF WEEK HELPERS ───────────────────────────────────────────────────────
 const DAY_LABELS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-// Parse date string DD/MM/YYYY or YYYY-MM-DD → JS Date
 function parseHistoryDate(dateStr){
   if(!dateStr)return null;
   try{
@@ -575,23 +553,19 @@ function parseHistoryDate(dateStr){
   return null;
 }
 
-// Returns array of 7 booleans [Mon,Tue,Wed,Thu,Fri,Sat,Sun]
-// true = buyer bought on this day at least once
 function calcBuyingDays(dates){
-  const counts=[0,0,0,0,0,0,0]; // Mon=0 ... Sun=6
+  const counts=[0,0,0,0,0,0,0];
   for(const d of dates){
     const dt=parseHistoryDate(d);
     if(!dt)continue;
-    let dow=dt.getDay(); // 0=Sun,1=Mon...6=Sat
-    dow=dow===0?6:dow-1; // convert to Mon=0...Sun=6
+    let dow=dt.getDay();
+    dow=dow===0?6:dow-1;
     counts[dow]++;
   }
   const max=Math.max(...counts)||1;
-  // Active if bought on this day >= 20% of max frequency
   return counts.map(c=>c>0&&(c/max)>=0.2);
 }
 
-// Render day badges HTML — highlight today
 function renderDayBadges(activeDays){
   const todayDow=(()=>{let d=new Date().getDay();return d===0?6:d-1;})();
   return`<div class="day-row">${DAY_LABELS.map((lbl,i)=>{
@@ -626,8 +600,6 @@ async function loadDashboard(){
       fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json'),
       fetch(FB_ORDERS+'.json?auth='+FB_SECRET)
     ]);
-
-    // ── STOCK ──────────────────────────────────────────────────────────────
     if(stockRes.ok){
       const stockRaw=await stockRes.json();
       const allStock=[];
@@ -635,21 +607,15 @@ async function loadDashboard(){
         for(const e of Object.values(uval||{}))
           allStock.push({...firebaseToItem(e),user:e.user||ukey});
       allLiveStockData=allStock;
-
-      // Floor stock total
       const totalFlr=allStock.reduce((s,e)=>s+(Number(e.flr)||0),0);
       const totalRec=allStock.reduce((s,e)=>s+(Number(e.rec)||0),0);
       const totalSold=allStock.reduce((s,e)=>s+(Number(e.sold)||0),0);
       document.getElementById('kpi-floor').textContent=totalFlr.toLocaleString();
       document.getElementById('kpi-floor-sub').textContent='units on floor';
-
-      // Clearance rate
-      const clearPct = totalRec>0?Math.round(totalSold/totalRec*100):0;
+      const clearPct=totalRec>0?Math.round(totalSold/totalRec*100):0;
       document.getElementById('kpi-clearance').textContent=clearPct+'%';
       document.getElementById('kpi-clearance-sub').textContent='of all stock sold';
-
-      // Urgent stock (14+ days)
-      const urgentCount = allStock.filter(s=>{
+      const urgentCount=allStock.filter(s=>{
         if(!s.flr||s.flr<1)return false;
         const days=daysOnFloor(s.arrived||s.date||'');
         return days>=14;
@@ -657,11 +623,7 @@ async function loadDashboard(){
       document.getElementById('kpi-urgent').textContent=urgentCount;
       document.getElementById('kpi-urgent-sub').textContent='lines '+(urgentCount>0?'— needs pushing':'on floor');
       if(urgentCount>0) document.getElementById('kpi-urgent').parentElement.style.borderTopColor='var(--red)';
-
       renderStockChart(allStock);
-
-      // ── CALL LIST ────────────────────────────────────────────────────────
-      // Build call list: buyers sorted by stock match first, then revenue, then buying day
       const todayDow=(()=>{var d=new Date().getDay();return d===0?6:d-1;})();
       const buyers=liveBuyerData&&liveBuyerData.length?liveBuyerData:[];
       const callList=[];
@@ -682,7 +644,6 @@ async function loadDashboard(){
         callList.push({name:buyer.name,spend:buyer.spend,matchDesc,matchScore2,buysToday,lastDate:buyer.lastDate});
       }
       callList.sort((a,b)=>b.matchScore2-a.matchScore2||(b.spend||0)-(a.spend||0));
-
       const callEl=document.getElementById('dash-call-list');
       if(callList.length===0){
         callEl.innerHTML='<div style="font-size:13px;color:var(--muted)">No strong matches today — check Stock tab for new arrivals.</div>';
@@ -703,8 +664,6 @@ async function loadDashboard(){
         }).join('');
       }
     }
-
-    // ── ORDERS DUE TODAY ─────────────────────────────────────────────────────
     if(ordersRes.ok){
       const ordersRaw=await ordersRes.json();
       const todayISO=new Date().toISOString().slice(0,10);
@@ -725,8 +684,6 @@ async function loadDashboard(){
         dueEl.style.display='none';
       }
     }
-
-    // ── HISTORY / REVENUE ─────────────────────────────────────────────────────
     if(histRes.ok){
       const raw=await histRes.json();
       if(raw){
@@ -804,15 +761,13 @@ function renderSalesFromHistory(data){
   }).join("");
 }
 
-// ── MATCHER — buyers sorted by revenue, all commodities per buyer ────────────
+// ── MATCHER ───────────────────────────────────────────────────────────────────
 const commCodeToName={AVOS:"Avocados",LEMS:"Lemons",NAAR:"Naartjies",ORGS:"Oranges",CLTM:"Clementines",KIWI:"Kiwifruit",STRS:"Strawberries",FIGS:"Figs",GVS:"Guavas",DRAG:"Dragon Fruit",MANG:"Mangoes",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
 function getMatcherBuyers(){return liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;}
 
 function renderMatchPage(data){
   const allBuyers=getMatcherBuyers();
   const q=(document.getElementById('match-search').value||'').toLowerCase();
-
-  // Build stock groups by commodity for matching
   const groups={};
   data.filter(s=>s.flr>0).forEach(s=>{
     if(!groups[s.commodity])groups[s.commodity]={items:[],totalFlr:0,totalRec:0,totalSold:0};
@@ -821,20 +776,11 @@ function renderMatchPage(data){
     groups[s.commodity].totalRec+=s.rec;
     groups[s.commodity].totalSold+=s.sold;
   });
-
-  // Filter buyers by search
-  const filteredBuyers = q
-    ? allBuyers.filter(b=>b.name.toLowerCase().includes(q)||
-        b.prefs.some(p=>p.comm.toLowerCase().includes(q)))
-    : allBuyers;
-
-  // Sort buyers: 1st by stock match quality, 2nd by revenue, 3rd buying day
-  const today = new Date().getDay();
-  const todayDow = today===0?6:today-1;
-
-  // Score each buyer for sorting
-  const scoredBuyers = filteredBuyers.map(buyer=>{
-    var hasExact=0, hasClose=0;
+  const filteredBuyers=q?allBuyers.filter(b=>b.name.toLowerCase().includes(q)||b.prefs.some(p=>p.comm.toLowerCase().includes(q))):allBuyers;
+  const today=new Date().getDay();
+  const todayDow=today===0?6:today-1;
+  const scoredBuyers=filteredBuyers.map(buyer=>{
+    var hasExact=0,hasClose=0;
     if(buyer.prefs){
       buyer.prefs.forEach(pref=>{
         const commCode=commMap[pref.comm]||pref.comm;
@@ -844,35 +790,29 @@ function renderMatchPage(data){
         else if(g.items.some(s=>matchScore(s,pref)==='close'&&s.flr>0))hasClose++;
       });
     }
-    const matchPri = hasExact>0?3:hasClose>0?2:0;
-    const buysTodayBonus = buyer.buyingDays&&buyer.buyingDays[todayDow]?1:0;
-    return {...buyer, _sort: matchPri*100000 + (buyer.spend||0)/100 + buysTodayBonus*10};
+    const matchPri=hasExact>0?3:hasClose>0?2:0;
+    const buysTodayBonus=buyer.buyingDays&&buyer.buyingDays[todayDow]?1:0;
+    return {...buyer,_sort:matchPri*100000+(buyer.spend||0)/100+buysTodayBonus*10};
   }).sort((a,b)=>b._sort-a._sort);
 
   document.getElementById("match-grid").innerHTML=scoredBuyers.map(buyer=>{
     if(!buyer.prefs||!buyer.prefs.length)return'';
-
     const bid='mbuyer-'+Math.random().toString(36).slice(2);
-
-    // Build commodity sections for this buyer
-    const commSections = buyer.prefs.map(pref=>{
-      const commCode = commMap[pref.comm]||pref.comm;
-      const g = groups[commCode];
-
+    const commSections=buyer.prefs.map(pref=>{
+      const commCode=commMap[pref.comm]||pref.comm;
+      const g=groups[commCode];
       if(!g){
         return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;padding:10px 13px;background:#fafafa">
           <div style="font-weight:700;font-size:13px;color:var(--muted)">${pref.comm}</div>
           <div class="no-match">⚠ No stock on floor</div>
         </div>`;
       }
-
       const exact=g.items.filter(s=>matchScore(s,pref)==='exact'&&s.flr>0);
       const close=g.items.filter(s=>matchScore(s,pref)==='close'&&s.flr>0);
       const ind=exact.length>0?'dot-e':close.length>0?'dot-c':'dot-n';
       const indLabel=exact.length>0?'Exact':close.length>0?'Close':'No Match';
       const indBadge=exact.length>0?'bg':close.length>0?'ba':'br';
       const lines=[...exact,...close].slice(0,3);
-
       return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
         <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f7fbf7">
           <span class="dot ${ind}" style="flex-shrink:0"></span>
@@ -895,12 +835,7 @@ function renderMatchPage(data){
         </div>
       </div>`;
     }).join('');
-
-    // Check if buyer buys today
-    const buysTodayBadge = buyer.buyingDays&&buyer.buyingDays[todayDow]
-      ? `<span class="b" style="background:rgba(255,255,255,0.25);color:#fff;font-size:10px">🛒 Today</span>`
-      : '';
-
+    const buysTodayBadge=buyer.buyingDays&&buyer.buyingDays[todayDow]?`<span class="b" style="background:rgba(255,255,255,0.25);color:#fff;font-size:10px">🛒 Today</span>`:'';
     return`<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">
       <div onclick="toggleSection('${bid}')" style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:var(--moss);cursor:pointer;gap:10px">
         <div style="flex:1;min-width:0">
@@ -921,119 +856,143 @@ function renderMatchPage(data){
         ${commSections}
       </div>
     </div>`;
-  }).join('') || '<div class="empty">No buyers found</div>';
-
+  }).join('')||'<div class="empty">No buyers found</div>';
   document.getElementById('match-result').textContent=scoredBuyers.length+' buyers · '+Object.keys(groups).length+' commodities on floor';
 }
 
 // ── AI MATCHER ────────────────────────────────────────────────────────────────
-// API calls routed through Render server (key stored securely as env var)
-const AI_CN = {AVOS:'Avocados',LEMS:'Lemons',FIGS:'Figs',KIWI:'Kiwifruit',ORGS:'Oranges',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',PAPO:'Papino'};
-const AI_PN = {TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
-const AI_VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',NV:'Navel'};
+// ► FIX: robust JSON extraction that handles Gemini wrapping text around the JSON
+//         and sanitises control characters that cause unterminated string errors
+function extractJSON(raw) {
+  // Strip markdown fences
+  var s = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  // Find the outermost { ... } block
+  var start = s.indexOf('{');
+  if (start === -1) throw new Error('No JSON object found in response');
+  var depth = 0;
+  var end = -1;
+  for (var i = start; i < s.length; i++) {
+    if (s[i] === '{') depth++;
+    else if (s[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end === -1) throw new Error('Unterminated JSON object in response');
+  var jsonStr = s.slice(start, end + 1);
+  // Remove control characters (ASCII 0-31 except \t \n \r) that break JSON.parse
+  jsonStr = jsonStr.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+  return JSON.parse(jsonStr);
+}
+
+const AI_CN={AVOS:'Avocados',LEMS:'Lemons',FIGS:'Figs',KIWI:'Kiwifruit',ORGS:'Oranges',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',PAPO:'Papino'};
+const AI_PN={TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
+const AI_VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',NV:'Navel'};
 
 async function runAIMatch(){
-  const btn = document.getElementById('ai-match-btn');
-  const loading = document.getElementById('ai-loading');
-  const summaryEl = document.getElementById('ai-summary');
-  const summaryText = document.getElementById('ai-summary-text');
-  const errEl = document.getElementById('ai-error');
-  const resultsDiv = document.getElementById('ai-results');
-  const cardsDiv = document.getElementById('ai-cards');
-  const countEl = document.getElementById('ai-result-count');
-  const manualDiv = document.getElementById('manual-match');
+  const btn=document.getElementById('ai-match-btn');
+  const loading=document.getElementById('ai-loading');
+  const summaryEl=document.getElementById('ai-summary');
+  const summaryText=document.getElementById('ai-summary-text');
+  const errEl=document.getElementById('ai-error');
+  const resultsDiv=document.getElementById('ai-results');
+  const cardsDiv=document.getElementById('ai-cards');
+  const countEl=document.getElementById('ai-result-count');
+  const manualDiv=document.getElementById('manual-match');
 
-  btn.disabled = true;
-  btn.textContent = 'Analysing...';
-  loading.style.display = 'block';
-  summaryEl.style.display = 'none';
-  errEl.style.display = 'none';
-  resultsDiv.style.display = 'none';
+  btn.disabled=true;
+  btn.textContent='Analysing...';
+  loading.style.display='block';
+  summaryEl.style.display='none';
+  errEl.style.display='none';
+  resultsDiv.style.display='none';
 
-  try {
-    var stock = (allLiveStockData && allLiveStockData.length ? allLiveStockData : stockData).filter(function(s){return s.flr > 0;});
-    if (!stock.length) throw new Error('No stock on floor. Check stock tab first.');
-    var buyers = liveBuyerData && liveBuyerData.length ? liveBuyerData : buyerData;
-    if (!buyers.length) throw new Error('No buyer history. Check buyers tab first.');
+  try{
+    var stock=(allLiveStockData&&allLiveStockData.length?allLiveStockData:stockData).filter(function(s){return s.flr>0;});
+    if(!stock.length)throw new Error('No stock on floor. Check stock tab first.');
+    var buyers=liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;
+    if(!buyers.length)throw new Error('No buyer history. Check buyers tab first.');
 
-    var today = new Date().toLocaleDateString('en-ZA',{weekday:'long'});
-    var dow = new Date().getDay();
-    var todayDow = dow === 0 ? 6 : dow - 1;
+    var today=new Date().toLocaleDateString('en-ZA',{weekday:'long'});
+    var dow=new Date().getDay();
+    var todayDow=dow===0?6:dow-1;
 
-    var stockLines = stock.slice(0,30).map(function(s){
-      var v = s.variety !== '*' ? (AI_VN[s.variety] || s.variety) : '';
-      return (AI_CN[s.commodity]||s.commodity) + ' ' + (AI_PN[s.pack]||s.pack) + ' ' + v + ' CL' + s.grade + ' sz' + s.size + ' ' + s.flr + 'u (' + s.producer + ')';
+    var stockLines=stock.slice(0,30).map(function(s){
+      var v=s.variety!=='*'?(AI_VN[s.variety]||s.variety):'';
+      return (AI_CN[s.commodity]||s.commodity)+' '+(AI_PN[s.pack]||s.pack)+' '+v+' CL'+s.grade+' sz'+s.size+' '+s.flr+'u ('+s.producer+')';
     }).join('\n');
 
-    var buyerLines = buyers.slice(0,15).map(function(b){
-      var comms = b.prefs.slice(0,3).map(function(p){
-        return p.comm + '(' + (p.pack||'any') + ' ' + p.cls + ' sz' + p.sizes.join('/') + ' R' + Math.round(p.revenue) + ')';
+    var buyerLines=buyers.slice(0,15).map(function(b){
+      var comms=b.prefs.slice(0,3).map(function(p){
+        return p.comm+'('+(p.pack||'any')+' '+p.cls+' sz'+p.sizes.join('/')+' R'+Math.round(p.revenue)+')';
       }).join(', ');
-      var bt = b.buyingDays && b.buyingDays[todayDow] ? ' [BUYS TODAY]' : '';
-      return b.name + bt + ': R' + b.spend + ' | ' + comms;
+      var bt=b.buyingDays&&b.buyingDays[todayDow]?' [BUYS TODAY]':'';
+      return b.name+bt+': R'+b.spend+' | '+comms;
     }).join('\n');
 
-    var prompt = 'You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: ' + today + '\n\nFLOOR STOCK (' + stock.length + ' lines):\n' + stockLines + '\n\nBUYERS (by revenue):\n' + buyerLines + '\n\nReturn ONLY raw JSON (no markdown) with this structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"name","score":88,"commodity":"Avocados","stockLine":"stock","reason":"why","tip":"call tip","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH/MEDIUM/LOW, max 10 matches by score desc. Score based on: 1st stock match quality (commodity/pack/size = most important), 2nd buyer total revenue (higher spend = higher score), 3rd buying day pattern (today is a bonus not a requirement). Only include genuine matches with stock on floor.';
+    var prompt='You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: '+today+'\n\nFLOOR STOCK ('+stock.length+' lines):\n'+stockLines+'\n\nBUYERS (by revenue):\n'+buyerLines+'\n\nReturn ONLY raw JSON (no markdown, no explanation) with this exact structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"name","score":88,"commodity":"Avocados","stockLine":"producer name","reason":"why this buyer","tip":"call tip","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH/MEDIUM/LOW, max 10 matches sorted by score desc. Score based on: 1st stock match quality (commodity/pack/size), 2nd buyer revenue, 3rd buying day. Only include genuine matches with stock on floor. Do not include any text outside the JSON object.';
 
-    var response = await fetch('https://jdw-sync.onrender.com/ai-match', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt })
+    var response=await fetch('https://jdw-sync.onrender.com/ai-match',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:prompt})
     });
 
-    if (!response.ok) {
-      var err = await response.json();
-      throw new Error((err.error && err.error.message) || 'API error ' + response.status);
+    // ► FIX: robust error handling — read body as text first, then try JSON
+    if(!response.ok){
+      var errText=await response.text();
+      var errMsg='API error '+response.status;
+      try{var errJson=JSON.parse(errText);errMsg=errJson.error||errMsg;}catch(e){}
+      throw new Error(errMsg);
     }
 
-    var data = await response.json();
-    var text = (data.content && data.content[0] && data.content[0].text) || '';
-    var clean = text.replace(/```json|```/g,'').trim();
-    var parsed = JSON.parse(clean);
+    var data=await response.json();
+    var text=(data.content&&data.content[0]&&data.content[0].text)||'';
+    if(!text)throw new Error('Empty response from AI');
 
-    if (parsed.summary) {
-      summaryText.textContent = parsed.summary;
-      summaryEl.style.display = 'block';
+    // ► FIX: use extractJSON instead of simple JSON.parse(clean)
+    var parsed=extractJSON(text);
+
+    if(parsed.summary){
+      summaryText.textContent=parsed.summary;
+      summaryEl.style.display='block';
     }
 
-    var matches = parsed.matches || [];
-    countEl.textContent = matches.length + ' AI-ranked matches · sorted by confidence';
+    var matches=parsed.matches||[];
+    countEl.textContent=matches.length+' AI-ranked matches · sorted by confidence'+(data.model?' · '+data.model:'');
 
-    cardsDiv.innerHTML = matches.map(function(m,i){
-      var score = Number(m.score)||0;
-      var scoreBg = score>=80 ? '#fff0e0' : score>=60 ? '#e8f5ec' : '#f0f0f0';
-      var scoreColor = score>=80 ? '#c9882a' : score>=60 ? '#1a5c2a' : '#888';
-      var priLabel = m.priority || 'LOW';
-      var priBg = priLabel==='HIGH' ? 'var(--gold-light)' : priLabel==='MEDIUM' ? 'var(--sage-light)' : '#f0f0f0';
-      var priColor = priLabel==='HIGH' ? '#8a5a00' : priLabel==='MEDIUM' ? '#1a5c2a' : '#888';
-      var todayHtml = m.buysToday ? '<span class="b bg" style="font-size:10px">Buys today</span>' : '';
-      var reasonHtml = m.reason ? '<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">' + m.reason + '</div>' : '';
-      var tipHtml = m.tip ? '<div style="font-size:12px;color:var(--muted)">Call tip: ' + m.tip + '</div>' : '';
+    cardsDiv.innerHTML=matches.map(function(m,i){
+      var score=Number(m.score)||0;
+      var scoreBg=score>=80?'#fff0e0':score>=60?'#e8f5ec':'#f0f0f0';
+      var scoreColor=score>=80?'#c9882a':score>=60?'#1a5c2a':'#888';
+      var priLabel=m.priority||'LOW';
+      var priBg=priLabel==='HIGH'?'var(--gold-light)':priLabel==='MEDIUM'?'var(--sage-light)':'#f0f0f0';
+      var priColor=priLabel==='HIGH'?'#8a5a00':priLabel==='MEDIUM'?'#1a5c2a':'#888';
+      var todayHtml=m.buysToday?'<span class="b bg" style="font-size:10px">Buys today</span>':'';
+      var reasonHtml=m.reason?'<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">'+m.reason+'</div>':'';
+      var tipHtml=m.tip?'<div style="font-size:12px;color:var(--muted)">Call tip: '+m.tip+'</div>':'';
       return '<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden">'
-        + '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)">'
-        + '<div style="width:46px;height:46px;border-radius:10px;background:' + scoreBg + ';color:' + scoreColor + ';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">' + score + '</div>'
-        + '<div style="flex:1;min-width:0">'
-        + '<div style="font-weight:800;font-size:14px;word-break:break-word">' + (m.buyer||'') + '</div>'
-        + '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + (m.commodity||'') + ' · ' + (m.stockLine||'') + '</div>'
-        + '</div>'
-        + '<span style="background:' + priBg + ';color:' + priColor + ';font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0">' + priLabel + '</span>'
-        + '</div>'
-        + '<div style="padding:10px 14px">'
-        + (todayHtml ? '<div style="margin-bottom:8px">' + todayHtml + '</div>' : '')
-        + reasonHtml + tipHtml
-        + '</div></div>';
+        +'<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)">'
+        +'<div style="width:46px;height:46px;border-radius:10px;background:'+scoreBg+';color:'+scoreColor+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">'+score+'</div>'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:800;font-size:14px;word-break:break-word">'+(m.buyer||'')+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(m.commodity||'')+' · '+(m.stockLine||'')+'</div>'
+        +'</div>'
+        +'<span style="background:'+priBg+';color:'+priColor+';font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0">'+priLabel+'</span>'
+        +'</div>'
+        +'<div style="padding:10px 14px">'
+        +(todayHtml?'<div style="margin-bottom:8px">'+todayHtml+'</div>':'')
+        +reasonHtml+tipHtml
+        +'</div></div>';
     }).join('');
 
-    manualDiv.style.display = 'none';
-    resultsDiv.style.display = 'block';
+    manualDiv.style.display='none';
+    resultsDiv.style.display='block';
 
-  } catch(e) {
-    errEl.textContent = e.message;
-    errEl.style.display = 'block';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Run AI';
-    loading.style.display = 'none';
+  }catch(e){
+    errEl.textContent=e.message;
+    errEl.style.display='block';
+  }finally{
+    btn.disabled=false;
+    btn.textContent='Run AI';
+    loading.style.display='none';
   }
 }
 
@@ -1081,620 +1040,4 @@ function buildBuyerProfiles(history){
     if(h.size&&h.size!=='*')p.sizes.add(h.size);
   }
   return Object.values(map).map(b=>({
-    name:b.name,acc:b.acc,card:b.card,txns:b.txns,spend:Math.round(b.spend),lastDate:b.lastDate,
-    buyingDays:calcBuyingDays(b.dates),
-    prefs:Object.values(b.prefs)
-      .sort((a,c)=>c.revenue-a.revenue)
-      .map(p=>({comm:p.comm,pack:p.pack,cls:p.cls,sizes:p.sizes.size>0?[...p.sizes].sort():['*'],revenue:Math.round(p.revenue),note:`${p.txns} txn${p.txns>1?'s':''} · avg ${Math.round(p.totalQty/p.txns)} units`}))
-  })).sort((a,b)=>b.spend-a.spend);
-}
-
-function renderBuyers(data){
-  const el=document.getElementById('buyer-list');
-  if(!data||!data.length){el.innerHTML='<div class="empty">No buyers found</div>';return;}
-  const todayDow=(()=>{let d=new Date().getDay();return d===0?6:d-1;})();
-  el.innerHTML=data.map(b=>{
-    const bid='buyer-'+b.name.replace(/\W/g,'-')+'-'+Math.random().toString(36).slice(2);
-    const buysTodayBadge=b.buyingDays&&b.buyingDays[todayDow]?`<span class="b bg" style="font-size:10px;margin-top:4px;display:inline-flex">🛒 Buys today</span>`:'';
-    const prefsHTML=b.prefs.map(p=>{
-      const pid='pref-'+Math.random().toString(36).slice(2);
-      return`<div style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:7px;overflow:hidden">
-        <div onclick="toggleSection('${pid}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--paper);cursor:pointer">
-          <div>
-            <div style="font-weight:700;font-size:13px;color:var(--moss)">${p.comm}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px">${p.note}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="text-align:right">
-              <div style="font-size:15px;font-weight:800;color:var(--moss)">R ${p.revenue.toLocaleString()}</div>
-              <div style="font-size:9px;color:var(--muted);text-transform:uppercase">revenue</div>
-            </div>
-            <div id="arr-${pid}" style="color:var(--muted);font-size:13px;transition:transform .2s">▼</div>
-          </div>
-        </div>
-        <div id="${pid}" style="display:none;padding:10px 12px;border-top:1px solid var(--border)">
-          <div style="display:flex;flex-wrap:wrap;gap:6px">
-            <span class="b bb">${p.pack||'—'}</span>
-            <span class="b ${p.cls==='CL 1'?'bg':'ba'}">${p.cls}</span>
-            <span class="b bt">sz ${p.sizes.join(', ')}</span>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-    return`<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">
-      <div onclick="toggleSection('${bid}')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--moss);cursor:pointer">
-        <div>
-          <div style="font-weight:800;font-size:15px;color:#fff">${b.name}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">Acc ${b.acc||'—'} · ${b.txns} txn${b.txns>1?'s':''}${b.lastDate?' · '+b.lastDate:''}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center">
-            <div style="font-size:18px;font-weight:800;color:#fff;line-height:1">R ${(b.spend||0).toLocaleString()}</div>
-            <div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">total spend</div>
-          </div>
-          <div id="arr-${bid}" style="color:#fff;font-size:14px;transition:transform .2s">▼</div>
-        </div>
-      </div>
-      <div id="${bid}" style="display:none;padding:10px">
-        ${b.buyingDays?renderDayBadges(b.buyingDays):''}
-        ${buysTodayBadge?`<div style="margin:6px 0 10px">${buysTodayBadge}</div>`:''}
-        ${prefsHTML}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function filterBuyers(){
-  const q=document.getElementById('buyer-search').value.toLowerCase();
-  const src=liveBuyerData&&liveBuyerData.length?liveBuyerData:buyerData;
-  renderBuyers(src.filter(b=>b.name.toLowerCase().includes(q)||(b.acc&&b.acc.includes(q))));
-}
-
-// ── STOCK ─────────────────────────────────────────────────────────────────────
-function daysOnFloor(dateStr){
-  if(!dateStr)return 0;
-  try{
-    const now=new Date();now.setHours(0,0,0,0);let d;
-    if(/^\d{4}-\d{2}-\d{2}/.test(dateStr)){const p=dateStr.slice(0,10).split('-');d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}
-    else if(/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)){const p=dateStr.split('/');d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}
-    else if(/^\d{2}\/\d{2}$/.test(dateStr)){const p=dateStr.split('/');const yr=now.getFullYear();d=new Date(yr,parseInt(p[1])-1,parseInt(p[0]));if(d>now)d.setFullYear(yr-1);}
-    else return 0;
-    d.setHours(0,0,0,0);return Math.max(0,Math.floor((now-d)/(1000*60*60*24)));
-  }catch(e){return 0;}
-}
-function fmtArrived(dateStr){
-  if(!dateStr)return'—';
-  if(/^\d{4}-\d{2}-\d{2}/.test(dateStr))return dateStr.slice(5).replace('-','/');
-  return dateStr;
-}
-
-function renderStock(data){
-  const el=document.getElementById('stock-list');
-  if(!data||data.length===0){el.innerHTML='<div class="empty">No stock found</div>';return;}
-  const byComm={};
-  data.forEach(s=>{
-    const comm=s.commodity||'UNK';
-    if(!byComm[comm])byComm[comm]={};
-    const prod=s.producer||'Unknown';
-    if(!byComm[comm][prod])byComm[comm][prod]=[];
-    byComm[comm][prod].push(s);
-  });
-  const commNames={AVOS:'Avocados',BERS:'Berries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwi',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',ORGS:'Oranges',PAPO:'Papino',SATS:'Satsumas',UNK:'Unknown'};
-  const sortedComms=Object.keys(byComm).sort((a,b)=>(commNames[a]||a).localeCompare(commNames[b]||b));
-  el.innerHTML=sortedComms.map(comm=>{
-    const commLabel=commNames[comm]||comm;
-    const producers=byComm[comm];
-    const sortedProds=Object.keys(producers).sort((a,b)=>a.localeCompare(b));
-    const totalFlr=sortedProds.reduce((sum,p)=>sum+producers[p].reduce((s,e)=>s+(Number(e.flr)||0),0),0);
-    const commId='comm-'+comm+'-'+Math.random().toString(36).slice(2);
-    const producerHTML=sortedProds.map(prod=>{
-      const lines=producers[prod];
-      const prodFlr=lines.reduce((s,e)=>s+(Number(e.flr)||0),0);
-      const prodRec=lines.reduce((s,e)=>s+(Number(e.rec)||0),0);
-      const prodId='prod-'+prod.replace(/\s+/g,'-')+'-'+Math.random().toString(36).slice(2);
-      const linesHTML=lines.sort((a,b)=>(Number(b.flr)||0)-(Number(a.flr)||0)).map(s=>{
-        const pct=s.rec>0?Math.round(s.sold/s.rec*100):0;
-        const bc=s.flr===0?'br':pct>80?'ba':'bg';
-        const bl=s.flr===0?'Cleared':pct>80?'Low Stock':'In Stock';
-        const days=daysOnFloor(s.arrived||s.date||'');
-        const isOld=s.flr>0&&days>=14;
-        const oldBadge=isOld?`<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ${days}d</span>`:'';
-        const arrivedLabel=fmtArrived(s.arrived||s.date||'');
-        const sizeLabel=s.size&&s.size!=='*'?s.size:'—';
-        return`<div style="background:#fff;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1.5px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">
-            <div style="font-size:11px;color:var(--muted)">GRN ${s.grn} · Arrived ${arrivedLabel}</div>
-            <span class="b ${bc}">${bl} ${pct}%</span>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">
-            <span class="b bb">${pn(s.pack)}</span>
-            <span class="b ${s.grade==='1'?'bg':'ba'}">CL ${s.grade}</span>
-            ${sizeLabel!=='—'?`<span class="b bt">sz ${sizeLabel}</span>`:''}
-            ${s.variety&&s.variety!=='*'?`<span class="b" style="background:#f0f4f0;color:var(--muted)">${varName[s.variety]||s.variety}</span>`:''}
-            ${oldBadge}
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-            <div style="background:var(--paper);border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Rec</div><div style="font-size:16px;font-weight:800;color:var(--blue)">${s.rec}</div></div>
-            <div style="background:var(--paper);border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Sold</div><div style="font-size:16px;font-weight:800;color:var(--sage)">${s.sold}</div></div>
-            <div style="background:var(--paper);border-radius:8px;padding:6px;text-align:center"><div style="font-size:9px;font-weight:600;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Floor</div><div style="font-size:16px;font-weight:800;color:${s.flr===0?'var(--red)':s.flr<20?'var(--gold)':'var(--moss)'}">${s.flr}</div></div>
-          </div>
-        </div>`;
-      }).join('');
-      return`<div style="border:1.5px solid var(--border);border-radius:11px;margin-bottom:8px;overflow:hidden">
-        <div onclick="toggleSection('${prodId}')" style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--paper);cursor:pointer">
-          <div>
-            <div style="font-weight:700;font-size:13.5px">${prod}</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:1px">${lines.length} line${lines.length>1?'s':''} · ${prodRec.toLocaleString()} rec</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="text-align:right">
-              <div style="font-size:18px;font-weight:800;color:var(--moss)">${prodFlr.toLocaleString()}</div>
-              <div style="font-size:9px;color:var(--muted);text-transform:uppercase">floor</div>
-            </div>
-            <div id="arr-${prodId}" style="color:var(--muted);font-size:14px;transition:transform .2s">▼</div>
-          </div>
-        </div>
-        <div id="${prodId}" style="display:none;padding:10px 10px 2px">${linesHTML}</div>
-      </div>`;
-    }).join('');
-    return`<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden">
-      <div onclick="toggleSection('${commId}')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--moss);cursor:pointer">
-        <div>
-          <div style="font-weight:800;font-size:16px;color:#fff">${commLabel}</div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">${sortedProds.length} producer${sortedProds.length>1?'s':''}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center">
-            <div style="font-size:20px;font-weight:800;color:#fff;line-height:1">${totalFlr.toLocaleString()}</div>
-            <div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">on floor</div>
-          </div>
-          <div id="arr-${commId}" style="color:#fff;font-size:14px;transition:transform .2s">▼</div>
-        </div>
-      </div>
-      <div id="${commId}" style="display:none;padding:10px">${producerHTML}</div>
-    </div>`;
-  }).join('');
-}
-
-function filterStock(){
-  const src=(document.getElementById('stock-search').value||document.getElementById('stock-filter').value)
-    ?(allLiveStockData&&allLiveStockData.length?allLiveStockData:liveStockData.length?liveStockData:stockData)
-    :(liveStockData&&liveStockData.length?liveStockData:stockData);
-  const q=document.getElementById('stock-search').value.toLowerCase();
-  const f=document.getElementById('stock-filter').value;
-  renderStock(src.filter(s=>(!f||s.commodity===f)&&(!q||s.producer.toLowerCase().includes(q)||s.commodity.toLowerCase().includes(q))));
-}
-
-function showPage(id,el){
-  if(id==='commodities'){
-    document.getElementById('comm-summary-list').innerHTML='<div class="empty">Loading…</div>';
-    document.getElementById('comm-detail').style.display='none';
-    document.getElementById('comm-summary-list').style.display='block';
-    fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json')
-      .then(r=>r.json()).then(d=>{
-        const all=[];
-        for(const [ukey,uval] of Object.entries(d||{}))
-          for(const e of Object.values(uval||{}))
-            all.push({...firebaseToItem(e),user:e.user||ukey});
-        allLiveStockData=all;renderCommodities(buildCommoditySummary());
-      }).catch(()=>{document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load stock data.</div>';});
-  }
-  if(id==='stock'){var activeTab=document.querySelector('.stock-tab.active');var u=activeTab?activeTab.id.replace('tab-',''):'RJ';loadStockFromFirebase(u);loadAllStockForMatcher();}
-  if(id==='buyers')loadBuyersFromFirebase();
-  if(id==='matching'){if(!liveBuyerData||!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();}
-  if(id==='dashboard')loadDashboard();
-  if(id==='orders'){loadOrders();populateBuyerSuggestions();}
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  el.classList.add('active');
-  window.scrollTo(0,0);
-}
-
-const SYNC='https://jdw-sync.onrender.com';
-let liveStockData=[];
-let allLiveStockData=[];
-
-function firebaseToItem(e){
-  const comm=(e.commodity||'').split(',')[0]||'';
-  const rec=Number(e.qtyRec)||Number(e.qty_rec)||0;
-  const flr=Number(e.qtyFlr)||Number(e.qty_sort)||0;
-  const sold=Number(e.qtySold)||Math.max(0,rec-flr);
-  const packDefault={AVOS:'TR040',LEMS:'CTT150',ORGS:'CTT150',KIWI:'PTB005',FIGS:'PTB002',GVS:'TR040',CLTM:'DL076',NAAR:'CTT150',STRS:'PTB005',MANG:'TR040',DRAG:'TR040',GFT:'CTT150'}[comm]||'*';
-  const pack=e.pack||packDefault;
-  const grade=String(e.grade||e.cls||'1');
-  const size=String(e.size||e.count||'*');
-  const arrived=e.arriveDate||e.date||'';
-  return{producer:e.producer||'',grn:String(e.grn||''),commodity:comm,pack,variety:e.variety||'*',grade,size,arrived,rec,sold,flr,user:e.user||''};
-}
-
-async function loadStockFromFirebase(user){
-  try{
-    const r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock/'+user+'.json');
-    if(!r.ok)throw new Error('Firebase fetch failed');
-    const d=await r.json();
-    liveStockData=Object.values(d||{}).map(firebaseToItem);
-    filterStock();
-  }catch(e){
-    const el=document.getElementById('stock-list');
-    if(el)el.innerHTML='<div class="empty">Could not load stock: '+e.message+'</div>';
-  }
-}
-
-async function loadAllStockForMatcher(){
-  try{
-    const r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json');
-    if(!r.ok)throw new Error();
-    const d=await r.json();
-    const all=[];
-    for(const u of Object.values(d||{}))for(const e of Object.values(u||{}))all.push(firebaseToItem(e));
-    allLiveStockData=all;
-    renderMatchPage(all);
-    const el=document.getElementById('match-result');
-    if(el)el.textContent=all.length+' stock lines · all salesmen';
-    checkOrdersAgainstStock(all);
-  }catch(e){renderMatchPage(stockData);}
-}
-
-function switchStockTab(user,btn){
-  document.querySelectorAll('.stock-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  liveStockData=[];
-  const el=document.getElementById('stock-list');
-  if(el)el.innerHTML='<div class="empty">Loading…</div>';
-  loadStockFromFirebase(user);
-}
-
-async function doStockUpload(clearFirst){
-  const input=document.getElementById('stockFile');
-  const file=input&&input.files&&input.files[0];
-  const stat=document.getElementById('uploadStatus');
-  if(!file){stat.textContent='Please choose a PDF first.';stat.style.color='var(--red)';return;}
-  stat.style.color='var(--muted)';stat.textContent=clearFirst?'Clearing & uploading…':'Uploading…';
-  try{
-    const form=new FormData();
-    form.append('pdf',file,file.name);
-    const r=await fetch(SYNC+'/'+(clearFirst?'clear-and-upload':'upload-stock'),{method:'POST',body:form});
-    const result=await r.json();
-    if(!r.ok)throw new Error(result.error||'Upload failed');
-    stat.style.color='var(--sage)';
-    stat.textContent='✓ '+result.count+' entries loaded for '+result.user;
-    input.value='';document.getElementById('stockFileName').textContent='No file chosen';
-    document.querySelectorAll('.stock-tab').forEach(b=>b.classList.toggle('active',b.id==='tab-'+result.user));
-    loadStockFromFirebase(result.user);loadAllStockForMatcher();
-  }catch(e){stat.style.color='var(--red)';stat.textContent='✗ '+e.message;}
-}
-
-// ── COMMODITIES TAB ───────────────────────────────────────────────────────────
-const COMM_NAMES={AVOS:'Avocados',BERS:'Strawberries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwi',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',ORGS:'Oranges',PAPO:'Papino',SATS:'Satsumas',UNK:'Unknown'};
-
-function buildCommoditySummary(){
-  const src=allLiveStockData.length?allLiveStockData:[];
-  const map={};
-  for(const e of src){
-    const code=e.commodity||'UNK';
-    if(!map[code])map[code]={code,name:COMM_NAMES[code]||code,flr:0,rec:0,lines:[],users:new Set()};
-    map[code].flr+=Number(e.flr)||0;map[code].rec+=Number(e.rec)||0;
-    map[code].lines.push(e);if(e.user)map[code].users.add(e.user);
-  }
-  return Object.values(map).sort((a,b)=>b.flr-a.flr);
-}
-
-function renderCommodities(data){
-  const el=document.getElementById('comm-summary-list');
-  if(!el)return;
-  if(!data||data.length===0){el.innerHTML='<div class="empty">No stock data available.</div>';return;}
-  el.innerHTML=data.map(c=>`
-    <div class="comm-card" onclick="showCommodityDetail('${c.code}')">
-      <div class="comm-card-left">
-        <div class="comm-name">${c.name}</div>
-        <div class="comm-code">${c.code} · ${c.lines.length} lines · ${[...c.users].join(', ')}</div>
-        <div class="comm-meta">Received: ${c.rec.toLocaleString()} units</div>
-      </div>
-      <div class="comm-card-right">
-        <div class="comm-flr">${c.flr.toLocaleString()}</div>
-        <div class="comm-flr-label">ON FLOOR</div>
-      </div>
-    </div>`).join('');
-}
-
-function filterCommodities(){
-  const q=document.getElementById('comm-search').value.toLowerCase();
-  renderCommodities(buildCommoditySummary().filter(c=>!q||c.name.toLowerCase().includes(q)||c.code.toLowerCase().includes(q)));
-}
-
-function showCommodityDetail(code){
-  const src=allLiveStockData.length?allLiveStockData:[];
-  const lines=src.filter(e=>e.commodity===code);
-  const name=COMM_NAMES[code]||code;
-  const flr=lines.reduce((s,e)=>s+(Number(e.flr)||0),0);
-  const rec=lines.reduce((s,e)=>s+(Number(e.rec)||0),0);
-  const users=[...new Set(lines.map(e=>e.user).filter(Boolean))];
-  document.getElementById('comm-detail-title').textContent=name+' ('+code+')';
-  document.getElementById('comm-detail-stats').innerHTML=`
-    <div class="comm-stat-box"><div class="comm-stat-val">${flr.toLocaleString()}</div><div class="comm-stat-lbl">On Floor</div></div>
-    <div class="comm-stat-box"><div class="comm-stat-val">${rec.toLocaleString()}</div><div class="comm-stat-lbl">Received</div></div>
-    <div class="comm-stat-box"><div class="comm-stat-val">${lines.length}</div><div class="comm-stat-lbl">Lines</div></div>
-    <div class="comm-stat-box"><div class="comm-stat-val">${users.join('/')}</div><div class="comm-stat-lbl">Salesmen</div></div>`;
-  const sorted=[...lines].sort((a,b)=>(Number(b.flr)||0)-(Number(a.flr)||0));
-  document.getElementById('comm-detail-lines').innerHTML=sorted.map(e=>`
-    <div class="comm-line">
-      <div class="comm-line-top"><span>${e.producer||e.grn||'—'}</span><span style="color:var(--moss)">${(Number(e.flr)||0).toLocaleString()} FLR</span></div>
-      <div class="comm-line-bot"><span class="comm-badge">${e.user||''}</span>GRN ${e.grn||'—'} · Arrived ${e.arrived||e.date||'—'} · Rec ${Number(e.rec)||0}</div>
-    </div>`).join('');
-  document.getElementById('comm-summary-list').style.display='none';
-  document.getElementById('comm-detail').style.display='block';
-}
-
-function closeCommodityDetail(){
-  document.getElementById('comm-summary-list').style.display='block';
-  document.getElementById('comm-detail').style.display='none';
-}
-
-// ── ORDERS TAB ────────────────────────────────────────────────────────────────
-const FB_ORDERS = 'https://jdw-crm-default-rtdb.firebaseio.com/orders';
-const FB_SECRET = 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs';
-const COMM_FULL = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas'};
-const PACK_FULL = {TR040:'4KG Tray',BG150:'15KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL 076 Carton',PC030:'3KG Pocket'};
-
-async function saveOrder(){
-  const buyer    = document.getElementById('order-buyer').value.trim().toUpperCase();
-  const commodity= document.getElementById('order-commodity').value;
-  const pack     = document.getElementById('order-pack').value;
-  const size     = document.getElementById('order-size').value.trim()||'*';
-  const grade    = document.getElementById('order-grade').value;
-  const qty      = parseInt(document.getElementById('order-qty').value)||0;
-  const price    = parseFloat(document.getElementById('order-price').value)||0;
-  const notes       = document.getElementById('order-notes').value.trim();
-  const collectDate = document.getElementById('order-collect-date').value;
-  const collectTime = document.getElementById('order-collect-time').value;
-  const stat        = document.getElementById('order-status');
-
-  if(!buyer||!commodity){stat.style.color='var(--red)';stat.textContent='⚠ Buyer name and commodity are required';return;}
-
-  const order = {
-    buyer, commodity, pack, size, grade, qty, price, notes,
-    collectDate: collectDate||null,
-    collectTime: collectTime||null,
-    status: 'open',
-    createdAt: new Date().toISOString(),
-    flagged: false,
-    matchedStock: null,
-  };
-
-  stat.textContent='Saving…';stat.style.color='var(--muted)';
-  try{
-    const res = await fetch(`${FB_ORDERS}.json?auth=${FB_SECRET}`,{
-      method:'POST',contentType:'application/json',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(order)
-    });
-    if(!res.ok)throw new Error('Save failed');
-    stat.style.color='var(--sage)';stat.textContent='✅ Order saved!';
-    // Clear form
-    ['order-buyer','order-size','order-qty','order-price','order-notes','order-collect-date','order-collect-time'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('order-commodity').value='';
-    document.getElementById('order-pack').value='';
-    document.getElementById('order-grade').value='1';
-    setTimeout(()=>{stat.textContent='';},2000);
-    loadOrders();
-  }catch(e){stat.style.color='var(--red)';stat.textContent='⚠ '+e.message;}
-}
-
-async function loadOrders(){
-  const el = document.getElementById('orders-list');
-  el.innerHTML='<div class="empty">Loading...</div>';
-  try{
-    const res = await fetch(FB_ORDERS+'.json?auth='+FB_SECRET);
-    const raw = await res.json();
-    if(!raw){el.innerHTML='<div class="empty">No open orders</div>';document.getElementById('orders-count').textContent='0';return;}
-    const orders = Object.entries(raw)
-      .map(function(e){return Object.assign({id:e[0]},e[1]);})
-      .filter(function(o){return o.status==='open';})
-      .sort(function(a,b){
-        var da=a.collectDate||'9999';var db=b.collectDate||'9999';
-        if(da!==db)return da.localeCompare(db);
-        return new Date(b.createdAt)-new Date(a.createdAt);
-      });
-    document.getElementById('orders-count').textContent=orders.length;
-    var flagged=orders.filter(function(o){return o.flagged;});
-    var alertEl=document.getElementById('orders-alert');
-    if(flagged.length>0){
-      alertEl.style.display='block';
-      document.getElementById('orders-alert-text').textContent=flagged.length+' order'+(flagged.length>1?'s':'')+' have matching stock!';
-      document.getElementById('orders-badge').style.display='block';
-    }else{alertEl.style.display='none';document.getElementById('orders-badge').style.display='none';}
-    if(orders.length===0){el.innerHTML='<div class="empty">No open orders</div>';return;}
-    var todayISO=new Date().toISOString().slice(0,10);
-    var tomorrowISO=new Date(Date.now()+86400000).toISOString().slice(0,10);
-    var grp={today:[],tomorrow:[],later:[],nodate:[]};
-    orders.forEach(function(o){
-      if(!o.collectDate)grp.nodate.push(o);
-      else if(o.collectDate===todayISO)grp.today.push(o);
-      else if(o.collectDate===tomorrowISO)grp.tomorrow.push(o);
-      else grp.later.push(o);
-    });
-    function card(o){
-      var cf=COMM_FULL[o.commodity]||o.commodity;
-      var pf=PACK_FULL[o.pack]||o.pack||'Any';
-      var fl=o.flagged;
-      var cs=o.collectDate?new Date(o.collectDate+'T12:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'}):'No date';
-      if(o.collectTime)cs+=' @ '+o.collectTime;
-      return '<div style="border-radius:12px;margin-bottom:10px;overflow:hidden;border:'+(fl?'2px solid var(--gold)':'1.5px solid var(--border)')+';">'
-        +'<div style="padding:12px 14px;background:'+(fl?'var(--gold-light)':'var(--paper)')+';">'
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
-        +'<div style="flex:1;min-width:0">'
-        +(fl?'<div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:3px">STOCK AVAILABLE!</div>':'')
-        +'<div style="font-weight:700;font-size:14px;word-break:break-word">'+o.buyer+'</div>'
-        +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Collect: '+cs+'</div>'
-        +'</div>'
-        +'<div style="text-align:right;flex-shrink:0">'
-        +'<div style="font-weight:800;font-size:15px;color:var(--moss)">'+cf+'</div>'
-        +'<div style="font-size:11px;color:var(--muted)">'+(o.qty||'?')+' units</div>'
-        +'</div></div></div>'
-        +'<div style="padding:10px 14px;background:#fff;border-top:1px solid var(--border)">'
-        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'
-        +'<span class="b bb">'+pf+'</span>'
-        +(o.grade?'<span class="b bg">CL '+o.grade+'</span>':'')
-        +(o.size&&o.size!=='*'?'<span class="b bt">sz '+o.size+'</span>':'')
-        +(o.price?'<span class="b" style="background:#f0f0f0;color:var(--muted)">R '+o.price+'/u</span>':'')
-        +'</div>'
-        +(o.notes?'<div style="font-size:12px;color:var(--muted);font-style:italic;margin-bottom:8px">'+o.notes+'</div>':'')
-        +(fl&&o.matchedStock?'<div style="background:var(--gold-light);border-radius:8px;padding:8px;font-size:12px;color:#8a5a00;margin-bottom:8px">'+o.matchedStock+'</div>':'')
-        +'<div style="display:flex;gap:8px">'
-        +'<button onclick="fulfillOrder(this.dataset.id)" data-id="'+o.id+'" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer">Fulfilled</button>'
-        +'<button onclick="cancelOrder(this.dataset.id)" data-id="'+o.id+'" style="flex:1;padding:9px;border:1.5px solid var(--border);border-radius:8px;background:#fff;color:var(--muted);font-family:inherit;font-weight:700;font-size:12px;cursor:pointer">Cancel</button>'
-        +'</div></div></div>';
-    }
-    function sec(label,color,items){
-      if(!items.length)return '';
-      return '<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:'+color+';margin:12px 0 8px;display:flex;align-items:center;gap:8px">'
-        +label+' <span style="background:'+color+';color:#fff;border-radius:20px;padding:1px 8px;font-size:10px">'+items.length+'</span>'
-        +'<span style="flex:1;height:1px;background:var(--border)"></span></div>'
-        +items.map(card).join('');
-    }
-    el.innerHTML=sec('Due Today','#c9882a',grp.today)+sec('Due Tomorrow','#1e4d2b',grp.tomorrow)+sec('Later','#6b7c6c',grp.later)+sec('No Date','#aaa',grp.nodate);
-  }catch(e){el.innerHTML='<div class="empty">Error: '+e.message+'</div>';}
-}
-async function fulfillOrder(id){
-  await fetch(`${FB_ORDERS}/${id}.json?auth=${FB_SECRET}`,{
-    method:'PATCH',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({status:'fulfilled',fulfilledAt:new Date().toISOString()})
-  });
-  loadOrders();
-}
-
-async function cancelOrder(id){
-  await fetch(`${FB_ORDERS}/${id}.json?auth=${FB_SECRET}`,{
-    method:'PATCH',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({status:'cancelled',cancelledAt:new Date().toISOString()})
-  });
-  loadOrders();
-}
-
-// Check open orders against current stock — called after stock loads
-async function checkOrdersAgainstStock(stockItems){
-  if(!stockItems||!stockItems.length)return;
-  try{
-    const res = await fetch(`${FB_ORDERS}.json?auth=${FB_SECRET}`);
-    const raw = await res.json();
-    if(!raw)return;
-    const orders = Object.entries(raw).map(([id,o])=>({id,...o})).filter(o=>o.status==='open');
-    if(!orders.length)return;
-
-    for(const order of orders){
-      // Find matching stock
-      const matches = stockItems.filter(s=>{
-        if(s.commodity !== order.commodity)return false;
-        if(s.flr < 1)return false;
-        if(order.pack && s.pack !== order.pack)return false;
-        if(order.grade && s.grade !== order.grade)return false;
-        if(order.size && order.size !== '*' && s.size !== '*' && s.size !== order.size)return false;
-        return true;
-      });
-
-      const wasAlreadyFlagged = order.flagged;
-      const shouldBeFlagged = matches.length > 0;
-
-      if(shouldBeFlagged !== wasAlreadyFlagged){
-        const matchDesc = matches.length > 0
-          ? `${matches[0].producer} — ${matches[0].flr} units on floor (GRN ${matches[0].grn})`
-          : null;
-        await fetch(`${FB_ORDERS}/${order.id}.json?auth=${FB_SECRET}`,{
-          method:'PATCH',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({flagged:shouldBeFlagged, matchedStock:matchDesc})
-        });
-      }
-    }
-
-    // Reload orders display if on orders page
-    const ordersPage = document.getElementById('page-orders');
-    if(ordersPage&&ordersPage.classList.contains('active'))loadOrders();
-
-    // Show badge if any flagged
-    const anyFlagged = orders.some(o=>o.flagged) || orders.filter(o=>!o.flagged).some(()=>false);
-    // Re-fetch to get updated flags
-    const res2 = await fetch(`${FB_ORDERS}.json?auth=${FB_SECRET}`);
-    const raw2 = await res2.json();
-    const updatedFlagged = raw2 ? Object.values(raw2).filter(o=>o.status==='open'&&o.flagged).length : 0;
-    const badge = document.getElementById('orders-badge');
-    if(badge) badge.style.display = updatedFlagged > 0 ? 'block' : 'none';
-
-  }catch(e){console.warn('Order check error:',e.message);}
-}
-
-// Print open orders
-async function printOrders(){
-  try{
-    const res = await fetch(FB_ORDERS+'.json?auth='+FB_SECRET);
-    const raw = await res.json();
-    if(!raw){alert('No open orders to print.');return;}
-    const orders = Object.entries(raw)
-      .map(([id,o])=>({id,...o}))
-      .filter(o=>o.status==='open')
-      .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-    if(!orders.length){alert('No open orders to print.');return;}
-
-    const now = new Date().toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-    const rows = orders.map((o,i)=>{
-      const commFull = COMM_FULL[o.commodity]||o.commodity;
-      const packFull = PACK_FULL[o.pack]||o.pack||'Any';
-      const dateStr  = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) : '—';
-      const flagged  = o.flagged ? '<span style="color:#c9882a;font-weight:bold"> 🔔 STOCK AVAILABLE</span>' : '';
-      return `<tr style="border-bottom:1px solid #ddd">
-        <td style="padding:8px 6px;font-weight:600">${i+1}</td>
-        <td style="padding:8px 6px;font-weight:700">${o.buyer}${flagged}</td>
-        <td style="padding:8px 6px">${commFull}</td>
-        <td style="padding:8px 6px">${packFull}</td>
-        <td style="padding:8px 6px">${o.size&&o.size!=='*'?o.size:'Any'}</td>
-        <td style="padding:8px 6px">${o.grade?'CL '+o.grade:'Any'}</td>
-        <td style="padding:8px 6px">${o.qty||'—'}</td>
-        <td style="padding:8px 6px">${o.price?'R'+o.price:'—'}</td>
-        <td style="padding:8px 6px;font-size:11px;color:#666">${o.notes||''}</td>
-        <td style="padding:8px 6px;font-size:11px;color:#888">${dateStr}</td>
-      </tr>`;
-    }).join('');
-
-    const printHtml = `<!DOCTYPE html><html><head>
-      <meta charset="UTF-8"/>
-      <meta name="viewport" content="width=device-width,initial-scale=1"/>
-      <title>SubTrop RSA — Open Orders</title>
-      <style>
-        body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:16px;margin:0}
-        h1{font-size:18px;color:#1e4d2b;margin-bottom:4px}
-        .sub{font-size:12px;color:#888;margin-bottom:16px}
-        table{width:100%;border-collapse:collapse;font-size:12px}
-        th{background:#1e4d2b;color:#fff;padding:8px 6px;text-align:left;font-size:11px}
-        tr:nth-child(even){background:#f3f7f3}
-        @media print{body{padding:8px}button{display:none}}
-      </style>
-    </head><body>
-      <h1>SubTrop RSA — Open Orders</h1>
-      <div class="sub">Printed: ${now} · ${orders.length} open order${orders.length>1?'s':''}</div>
-      <table>
-        <thead><tr>
-          <th>#</th><th>Buyer</th><th>Commodity</th><th>Pack</th>
-          <th>Size</th><th>Class</th><th>Qty</th><th>Price</th>
-          <th>Notes</th><th>Date</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </body></html>`;
-
-    const win = window.open('','_blank','width=800,height=600');
-    win.document.write(printHtml);
-    win.document.close();
-    win.focus();
-    setTimeout(()=>win.print(), 600);
-  }catch(e){alert('Could not load orders: '+e.message);}
-}
-
-// Populate buyer autocomplete when orders tab opens
-function populateBuyerSuggestions(){
-  const dl = document.getElementById('buyer-suggestions');
-  if(!dl||!liveBuyerData||!liveBuyerData.length)return;
-  dl.innerHTML = liveBuyerData.map(b=>`<option value="${b.name}">`).join('');
-}
-</script>
-</body>
-</html>
+    name:b.name,acc:b.acc,card:b.card,tx
