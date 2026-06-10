@@ -86,6 +86,7 @@ main{padding:14px 12px}
 .prog-bar{height:8px;background:#e0ece0;border-radius:4px;overflow:hidden}
 .prog-fill{height:100%;border-radius:4px;transition:width .6s}
 .pf-g{background:var(--sage)}.pf-a{background:var(--gold)}.pf-r{background:var(--red)}
+@keyframes spin{to{transform:rotate(360deg)}}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
 .dot-e{background:#1a6e30}.dot-c{background:var(--gold)}.dot-n{background:var(--red)}
 .smatch-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:7px}
@@ -733,6 +734,141 @@ function renderMatchPage(data){
   }).join('') || '<div class="empty">No buyers found</div>';
 
   document.getElementById("match-result").textContent=`${filteredBuyers.length} buyers · ${Object.keys(groups).length} commodities on floor`;
+}
+
+// ── AI MATCHER ────────────────────────────────────────────────────────────────
+const ANTHROPIC_KEY = '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';
+const AI_CN = {AVOS:'Avocados',LEMS:'Lemons',FIGS:'Figs',KIWI:'Kiwifruit',ORGS:'Oranges',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',PAPO:'Papino'};
+const AI_PN = {TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
+const AI_VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',NV:'Navel'};
+
+async function runAIMatch(){
+  const btn = document.getElementById('ai-match-btn');
+  const loading = document.getElementById('ai-loading');
+  const summaryEl = document.getElementById('ai-summary');
+  const summaryText = document.getElementById('ai-summary-text');
+  const errEl = document.getElementById('ai-error');
+  const resultsDiv = document.getElementById('ai-results');
+  const cardsDiv = document.getElementById('ai-cards');
+  const countEl = document.getElementById('ai-result-count');
+  const manualDiv = document.getElementById('manual-match');
+
+  btn.disabled = true;
+  btn.textContent = 'Analysing...';
+  loading.style.display = 'block';
+  summaryEl.style.display = 'none';
+  errEl.style.display = 'none';
+  resultsDiv.style.display = 'none';
+
+  try {
+    var stock = (allLiveStockData && allLiveStockData.length ? allLiveStockData : stockData).filter(function(s){return s.flr > 0;});
+    if (!stock.length) throw new Error('No stock on floor. Check stock tab first.');
+    var buyers = liveBuyerData && liveBuyerData.length ? liveBuyerData : buyerData;
+    if (!buyers.length) throw new Error('No buyer history. Check buyers tab first.');
+
+    var today = new Date().toLocaleDateString('en-ZA',{weekday:'long'});
+    var dow = new Date().getDay();
+    var todayDow = dow === 0 ? 6 : dow - 1;
+
+    var stockLines = stock.slice(0,50).map(function(s){
+      var v = s.variety !== '*' ? (AI_VN[s.variety] || s.variety) : '';
+      return (AI_CN[s.commodity]||s.commodity) + ' ' + (AI_PN[s.pack]||s.pack) + ' ' + v + ' CL' + s.grade + ' sz' + s.size + ' ' + s.flr + 'u (' + s.producer + ')';
+    }).join('
+');
+
+    var buyerLines = buyers.slice(0,25).map(function(b){
+      var comms = b.prefs.slice(0,3).map(function(p){
+        return p.comm + '(' + (p.pack||'any') + ' ' + p.cls + ' sz' + p.sizes.join('/') + ' R' + Math.round(p.revenue) + ')';
+      }).join(', ');
+      var bt = b.buyingDays && b.buyingDays[todayDow] ? ' [BUYS TODAY]' : '';
+      return b.name + bt + ': R' + b.spend + ' | ' + comms;
+    }).join('
+');
+
+    var prompt = 'You are an expert fresh produce market analyst at JHB Fresh Produce Market.
+
+TODAY: ' + today + '
+
+FLOOR STOCK (' + stock.length + ' lines):
+' + stockLines + '
+
+BUYERS (by revenue):
+' + buyerLines + '
+
+Return ONLY raw JSON (no markdown) with this structure:
+{"summary":"2-sentence market insight","matches":[{"buyer":"exact name","score":88,"commodity":"Avocados","stockLine":"brief description","reason":"max 15 words","tip":"max 12 words","buysToday":true,"priority":"HIGH"}]}
+
+Rules: score 1-100, priority HIGH(80+)/MEDIUM(60-79)/LOW(<60), max 15 matches sorted by score desc, only genuine matches with stock on floor.';
+
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1500,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+
+    if (!response.ok) {
+      var err = await response.json();
+      throw new Error((err.error && err.error.message) || 'API error ' + response.status);
+    }
+
+    var data = await response.json();
+    var text = (data.content && data.content[0] && data.content[0].text) || '';
+    var clean = text.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+
+    if (parsed.summary) {
+      summaryText.textContent = parsed.summary;
+      summaryEl.style.display = 'block';
+    }
+
+    var matches = parsed.matches || [];
+    countEl.textContent = matches.length + ' AI-ranked matches · sorted by confidence';
+
+    cardsDiv.innerHTML = matches.map(function(m,i){
+      var score = Number(m.score)||0;
+      var scoreBg = score>=80 ? '#fff0e0' : score>=60 ? '#e8f5ec' : '#f0f0f0';
+      var scoreColor = score>=80 ? '#c9882a' : score>=60 ? '#1a5c2a' : '#888';
+      var priLabel = m.priority || 'LOW';
+      var priBg = priLabel==='HIGH' ? 'var(--gold-light)' : priLabel==='MEDIUM' ? 'var(--sage-light)' : '#f0f0f0';
+      var priColor = priLabel==='HIGH' ? '#8a5a00' : priLabel==='MEDIUM' ? '#1a5c2a' : '#888';
+      var todayHtml = m.buysToday ? '<span class="b bg" style="font-size:10px">Buys today</span>' : '';
+      var reasonHtml = m.reason ? '<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">' + m.reason + '</div>' : '';
+      var tipHtml = m.tip ? '<div style="font-size:12px;color:var(--muted)">Call tip: ' + m.tip + '</div>' : '';
+      return '<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden">'
+        + '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)">'
+        + '<div style="width:46px;height:46px;border-radius:10px;background:' + scoreBg + ';color:' + scoreColor + ';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">' + score + '</div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-weight:800;font-size:14px;word-break:break-word">' + (m.buyer||'') + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + (m.commodity||'') + ' · ' + (m.stockLine||'') + '</div>'
+        + '</div>'
+        + '<span style="background:' + priBg + ';color:' + priColor + ';font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0">' + priLabel + '</span>'
+        + '</div>'
+        + '<div style="padding:10px 14px">'
+        + (todayHtml ? '<div style="margin-bottom:8px">' + todayHtml + '</div>' : '')
+        + reasonHtml + tipHtml
+        + '</div></div>';
+    }).join('');
+
+    manualDiv.style.display = 'none';
+    resultsDiv.style.display = 'block';
+
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run AI';
+    loading.style.display = 'none';
+  }
 }
 
 function filterMatches(){
