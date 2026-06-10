@@ -923,7 +923,7 @@ function renderMatchPage(data){
     </div>`;
   }).join('') || '<div class="empty">No buyers found</div>';
 
-  document.getElementById("match-result").textContent=`${scoredBuyers.length} buyers · ${Object.keys(groups).length} commodities on floor`;
+  document.getElementById('match-result').textContent=scoredBuyers.length+' buyers · '+Object.keys(groups).length+' commodities on floor';
 }
 
 // ── AI MATCHER ────────────────────────────────────────────────────────────────
