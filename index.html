@@ -764,7 +764,7 @@ function renderMatchPage(data){
 }
 
 // ── AI MATCHER ────────────────────────────────────────────────────────────────
-const ANTHROPIC_KEY = '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';
+// API calls routed through Render server (key stored securely as env var)
 const AI_CN = {AVOS:'Avocados',LEMS:'Lemons',FIGS:'Figs',KIWI:'Kiwifruit',ORGS:'Oranges',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',PAPO:'Papino'};
 const AI_PN = {TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
 const AI_VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',NV:'Navel'};
@@ -812,19 +812,10 @@ async function runAIMatch(){
 
     var prompt = 'You are an expert fresh produce market analyst at JHB Fresh Produce Market.\n\nTODAY: ' + today + '\n\nFLOOR STOCK (' + stock.length + ' lines):\n' + stockLines + '\n\nBUYERS (by revenue):\n' + buyerLines + '\n\nReturn ONLY raw JSON (no markdown) with this structure:\n{"summary":"2-sentence market insight","matches":[{"buyer":"exact name","score":88,"commodity":"Avocados","stockLine":"brief description","reason":"max 15 words","tip":"max 12 words","buysToday":true,"priority":"HIGH"}]}\n\nRules: score 1-100, priority HIGH(80+)/MEDIUM(60-79)/LOW(<60), max 15 matches sorted by score desc, only genuine matches with stock on floor.';
 
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
+    var response = await fetch('https://jdw-sync.onrender.com/ai-match', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1500,
-        messages: [{role:'user', content: prompt}]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
     });
 
     if (!response.ok) {
