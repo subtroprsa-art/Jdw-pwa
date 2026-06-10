@@ -1100,7 +1100,7 @@ function showPage(id,el){
   }
   if(id==='stock'){var activeTab=document.querySelector('.stock-tab.active');var u=activeTab?activeTab.id.replace('tab-',''):'RJ';loadStockFromFirebase(u);loadAllStockForMatcher();}
   if(id==='buyers')loadBuyersFromFirebase();
-  if(id==='matching')loadAllStockForMatcher();
+  if(id==='matching'){if(!liveBuyerData||!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();}
   if(id==='dashboard')loadDashboard();
   if(id==='orders'){loadOrders();populateBuyerSuggestions();}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
