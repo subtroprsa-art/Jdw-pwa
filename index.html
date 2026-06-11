@@ -243,8 +243,8 @@ window.addEventListener('load',function(){var s=loadSession();if(s&&USERS[s.u])s
 const commName={AVOS:"Avocados",LEMS:"Lemons",FIGS:"Figs",KIWI:"Kiwifruit",ORGS:"Oranges",GVS:"Guavas",CLTM:"Clementines",NAAR:"Naartjies",STRS:"Strawberries",MANG:"Mangoes",DRAG:"Dragon Fruit",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
 const packName={TR040:"4KG TRAY",BG150:"15KG BAG",CTT150:"CTT 150 CARTON",PTB005:"500G PUNNET",PTB002:"160G PUNNET",DL076:"DL 076 CARTON",PC030:"3KG POCKET",PC060:"6KG POCKET",CO100:"10KG CARTON"};
 const varName={AF:"Fuerte",AH:"Hass",AK:"Pinkerton",MA:"Maluma",MD:"Mendez",NV:"Navel","*":"Open"};
-const commMap={"Avocados":"AVOS","Lemons":"LEMS","Figs":"FIGS","Kiwifruit":"KIWI","Oranges":"ORGS","Guavas":"GVS","Clementines":"CLTM","Naartjies":"NAAR","Strawberries":"STRS","Dragon Fruit":"DRAG","Mangoes":"MANG","Grapefruit":"GFT","Satsumas":"SATS","Papino":"PAPO"};
-const packMap={"4KG TRAY":["TR040"],"15KG CARTON":["CTT150"],"500G PUNNET":["PTB005"],"160G PUNNET":["PTB002"],"3KG POCKET":["PC030"]};
+const commMap={"Avocados":"AVOS","Lemons":"LEMS","Figs":"FIGS","Kiwifruit":"KIWI","Oranges":"ORGS","Guavas":"GVS","Clementines":"CLTM","Naartjies":"NAAR","Strawberries":"BERS","Berries":"BERS","Dragon Fruit":"DRAG","Mangoes":"MANG","Grapefruit":"GFT","Satsumas":"SATS","Papino":"PAPO"};
+const packMap={"4KG TRAY":["TR040"],"15KG CARTON":["CTT150"],"500G PUNNET":["PTB005"],"250G PUNNET":["PTB002"],"160G PUNNET":["PTB002"],"3KG POCKET":["PC030"]};
 const pn=c=>packName[c]||c;
 const DAY_LABELS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const FB_ORDERS='https://jdw-crm-default-rtdb.firebaseio.com/orders';
