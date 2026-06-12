@@ -274,6 +274,14 @@ function daysOnFloor(ds){if(!ds)return 0;try{var now=new Date();now.setHours(0,0
 function fmtArrived(d){if(!d)return'—';if(/^\d{4}-\d{2}-\d{2}/.test(d))return d.slice(5).replace('-','/');return d;}
 function firebaseToItem(e){var comm=(e.commodity||'').split(',')[0]||'';var rec=Number(e.qtyRec)||Number(e.qty_rec)||0;var flr=Number(e.qtyFlr)||Number(e.qty_sort)||0;var sold=Number(e.qtySold)||Math.max(0,rec-flr);var pd={AVOS:'TR040',LEMS:'CTT150',ORGS:'CTT150',KIWI:'PTB005',FIGS:'PTB002',GVS:'TR040',CLTM:'DL076',NAAR:'CTT150',STRS:'PTB005',MANG:'TR040',DRAG:'TR040',GFT:'CTT150'}[comm]||'*';return{producer:e.producer||'',grn:String(e.grn||''),commodity:comm,pack:e.pack||pd,variety:e.variety||'*',grade:String(e.grade||e.cls||'1'),size:String(e.size||e.count||'*'),arrived:e.arriveDate||e.date||'',rec,sold,flr,user:e.user||''};}
 
+function toggleCalled(name){
+  var k='calls-'+new Date().toISOString().slice(0,10);
+  var c=JSON.parse(sessionStorage.getItem(k)||'{}');
+  c[name]=!c[name];
+  sessionStorage.setItem(k,JSON.stringify(c));
+  loadDashboard();
+}
+
 function renderStockChart(src){
   src=src||(allLiveStockData.length?allLiveStockData:[]);
   var comms=["AVOS","ORGS","LEMS","KIWI","FIGS","GVS","CLTM","NAAR","STRS","MANG","DRAG"];
@@ -313,13 +321,7 @@ async function loadDashboard(){
       else{
         var todayKey='calls-'+new Date().toISOString().slice(0,10);
         var called=JSON.parse(sessionStorage.getItem(todayKey)||'{}');
-        function toggleCalled(name){
-          var k='calls-'+new Date().toISOString().slice(0,10);
-          var c=JSON.parse(sessionStorage.getItem(k)||'{}');
-          c[name]=!c[name];
-          sessionStorage.setItem(k,JSON.stringify(c));
-          loadDashboard();
-        }
+
         ce.innerHTML=cl.slice(0,8).map((c,i)=>{
           var isCalled=!!called[c.name];
           var cbId='cb-'+i;
