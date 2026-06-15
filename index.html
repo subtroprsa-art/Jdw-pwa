@@ -154,23 +154,43 @@ main{padding:14px 12px}
 <main>
 <div class="page active" id="page-dashboard">
   <div class="kpi-row" style="margin-bottom:10px">
-    <div class="kpi gold"><div class="kpi-lbl">Revenue This Week</div><div class="kpi-val" id="kpi-revenue">—</div><div class="kpi-sub" id="kpi-revenue-sub">Loading…</div></div>
-    <div class="kpi red"><div class="kpi-lbl">Floor Stock</div><div class="kpi-val" id="kpi-floor">—</div><div class="kpi-sub" id="kpi-floor-sub">Loading…</div></div>
-  </div>
-  <div class="kpi-row" style="margin-bottom:14px">
+    <div class="kpi red"><div class="kpi-lbl">Floor Stock</div><div class="kpi-val" id="kpi-floor">—</div><div class="kpi-sub" id="kpi-floor-sub">units on floor</div></div>
     <div class="kpi"><div class="kpi-lbl">Clearance Rate</div><div class="kpi-val" id="kpi-clearance">—</div><div class="kpi-sub" id="kpi-clearance-sub">% stock sold</div></div>
-    <div class="kpi red"><div class="kpi-lbl">Urgent Stock</div><div class="kpi-val" id="kpi-urgent">—</div><div class="kpi-sub" id="kpi-urgent-sub">lines 14+ days old</div></div>
+  </div>
+  <div id="kpi-urgent-banner" onclick="printUrgentStock()" style="display:none;background:var(--red-light);border:1.5px solid var(--red);border-radius:12px;padding:14px 16px;margin-bottom:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font-weight:800;font-size:15px;color:var(--red)">⚠️ Urgent Stock</div><div style="font-size:12px;color:var(--red);margin-top:2px" id="kpi-urgent-sub">lines 14+ days — tap to print</div></div>
+    <div style="font-size:32px;font-weight:800;color:var(--red)" id="kpi-urgent">—</div>
   </div>
   <div id="dash-due-today" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:14px"><div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:8px">📦 Collections Due Today</div><div id="dash-due-list" style="font-size:13px;color:#8a5a00"></div></div>
-  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px"><div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:10px">📞 Call List — Top Buyers Today</div><div id="dash-call-list"><div class="empty" style="padding:12px 0">Loading…</div></div></div>
-  <div class="stitle">Sell-Through by Commodity</div>
-  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
-  <div class="stitle">Latest Sales</div>
-  <div id="sale-list"></div>
-  <div style="text-align:center;margin:18px 0 8px">
-    <button onclick="printWeeklyReport()" style="background:var(--moss);border:none;border-radius:10px;padding:12px 24px;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer">📊 Print Weekly Summary Report</button>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
+    <button onclick="goToTab('matching')" style="padding:16px;border:none;border-radius:12px;background:var(--moss);color:#fff;font-family:inherit;font-weight:800;font-size:16px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px"><span style="font-size:22px">🔁</span><div><div>Sell Now</div><div style="font-size:11px;font-weight:400;opacity:.75">Open sales pipeline</div></div></button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="goToTab('stock')" style="padding:14px;border:none;border-radius:12px;background:var(--sage);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">📦</div>Search Stock</button>
+      <button onclick="goToTab('buyers')" style="padding:14px;border:none;border-radius:12px;background:var(--blue);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">👥</div>Search Buyers</button>
+      <button onclick="showTodayOrders()" style="padding:14px;border:none;border-radius:12px;background:var(--gold);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">📋</div>Today's Orders</button>
+      <button onclick="showOutstandingOrders()" style="padding:14px;border:none;border-radius:12px;background:#6b4c9a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">⏳</div>Outstanding Orders</button>
+      <button onclick="toggleReportsMenu()" style="padding:14px;border:none;border-radius:12px;background:#2c5f7a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;grid-column:span 2"><div style="font-size:20px;margin-bottom:4px">📊</div>Reports</button>
+    </div>
   </div>
-</div>
+  <div id="reports-menu" style="display:none;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px;border-top:3px solid #2c5f7a">
+    <div style="font-weight:700;font-size:14px;color:#2c5f7a;margin-bottom:12px">📊 Reports</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onclick="printSalesReport('week')" style="padding:12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);text-align:left"><div style="font-size:18px;margin-bottom:3px">💰</div>Sales — Weekly</button>
+      <button onclick="printSalesReport('month')" style="padding:12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);text-align:left"><div style="font-size:18px;margin-bottom:3px">💰</div>Sales — Monthly</button>
+      <button onclick="printBuyersReport('week')" style="padding:12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);text-align:left"><div style="font-size:18px;margin-bottom:3px">👥</div>Buyers — Weekly</button>
+      <button onclick="printBuyersReport('month')" style="padding:12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);text-align:left"><div style="font-size:18px;margin-bottom:3px">👥</div>Buyers — Monthly</button>
+      <button onclick="printUrgentStock()" style="padding:12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--red);text-align:left"><div style="font-size:18px;margin-bottom:3px">⚠️</div>Urgent Stock</button>
+      <button onclick="printWeeklyReport()" style="padding:12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);text-align:left"><div style="font-size:18px;margin-bottom:3px">📋</div>Weekly Summary</button>
+    </div>
+  </div>
+  <div id="dash-orders-panel" style="display:none;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-weight:700;font-size:14px;color:var(--moss)" id="dash-orders-title">Orders</div>
+      <button onclick="document.getElementById('dash-orders-panel').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted)">×</button>
+    </div>
+    <div id="dash-orders-list"><div class="empty">Loading…</div></div>
+  </div>
+  
 <div class="page" id="page-matching">
   <!-- PIPELINE STEPS -->
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
@@ -179,15 +199,11 @@ main{padding:14px 12px}
       <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↺ Reset</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-
-      <!-- STEP 1: AI MATCH -->
       <div class="pipeline-step" id="ps1" onclick="runAIFromPipeline()">
         <div class="ps-num">1</div>
         <div class="ps-body"><div class="ps-title">AI Match</div><div class="ps-sub">Analyse stock vs buyer history</div></div>
         <div style="flex-shrink:0;background:var(--gold);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc1">Run</div>
       </div>
-
-      <!-- STEP 2: CALL BUYERS -->
       <div class="pipeline-step" id="ps2" onclick="togglePipelineCallList()">
         <div class="ps-num">2</div>
         <div class="ps-body"><div class="ps-title">Call Buyers</div><div class="ps-sub">Work through top 20 buyers</div></div>
@@ -196,15 +212,11 @@ main{padding:14px 12px}
       <div id="pipeline-call-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px">
         <div id="pipeline-buyers" style="font-size:13px;color:var(--muted)">Loading buyers…</div>
       </div>
-
-      <!-- STEP 3: TYPE ORDERS -->
       <div class="pipeline-step" id="ps3" onclick="goToOrders()">
         <div class="ps-num">3</div>
         <div class="ps-body"><div class="ps-title">Type in Orders</div><div class="ps-sub">Record confirmed orders</div></div>
         <div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px">→ Orders</div>
       </div>
-
-      <!-- STEP 4: RESERVE STOCK -->
       <div class="pipeline-step" id="ps4" onclick="togglePipelineStep(4)">
         <div class="ps-num">4</div>
         <div class="ps-body"><div class="ps-title">Reserve Stock</div><div class="ps-sub">Book on market workstation</div></div>
@@ -214,8 +226,6 @@ main{padding:14px 12px}
         <div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:4px">🖥️ Go to Booking Clerk Workstation</div>
         <div style="font-size:12px;color:#8a5a00">Reserve the stock on the market sales system before continuing. Once done, tick step 4 above.</div>
       </div>
-
-      <!-- STEP 5: CHECK PAYMENT -->
       <div class="pipeline-step" id="ps5" onclick="togglePipelinePayment()">
         <div class="ps-num">5</div>
         <div class="ps-body"><div class="ps-title">Check Payment</div><div class="ps-sub">Confirm reservations are paid</div></div>
@@ -225,8 +235,6 @@ main{padding:14px 12px}
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Tap order to mark as paid</div>
         <div id="pipeline-orders" style="font-size:13px;color:var(--muted)">Loading orders…</div>
       </div>
-
-      <!-- STEP 6: FLOOR PACKERS -->
       <div class="pipeline-step" id="ps6" onclick="togglePipelinePackers()">
         <div class="ps-num">6</div>
         <div class="ps-body"><div class="ps-title">Floor Packers</div><div class="ps-sub">Confirm orders are packed</div></div>
@@ -236,21 +244,16 @@ main{padding:14px 12px}
         <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Check floor packers have packed these orders</div>
         <div id="pipeline-packers" style="font-size:13px;color:var(--muted)">Loading orders…</div>
       </div>
-
     </div>
   </div>
-
-  <!-- AI status elements (hidden, used by runAIMatch) -->
   <div id="ai-loading" style="display:none;text-align:center;color:var(--muted);font-size:13px;padding:10px">Analysing...</div>
   <div id="ai-summary" style="display:none;background:var(--sage-light);border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="color:var(--moss);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">AI Summary</div><div id="ai-summary-text" style="color:var(--ink);font-size:13px;line-height:1.5"></div></div>
   <div id="ai-error" style="display:none;background:var(--red-light);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;margin-bottom:10px"></div>
   <button id="ai-match-btn" style="display:none" onclick="runAIMatch()">Run AI</button>
-  <!-- AI Results -->
   <div id="ai-results" style="display:none;margin-bottom:14px">
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px" id="ai-result-count"></div>
     <div id="ai-cards"></div>
   </div>
-  <!-- Hidden elements needed by JS -->
   <div id="manual-match" style="display:none">
     <div id="match-search-hidden"></div>
     <div id="match-result"></div>
@@ -261,9 +264,8 @@ main{padding:14px 12px}
 <div class="page" id="page-stock">
   <div class="upload-box"><div class="upload-title">📄 Upload Stock PDF</div><div class="upload-hint">POT.pdf · CDW.pdf · RIAAN.pdf</div><label class="upload-file-btn">📎 Choose PDF<input type="file" id="stockFile" accept=".pdf" style="display:none" onchange="document.getElementById('stockFileName').textContent=this.files[0]?.name||'No file chosen'"/></label><span id="stockFileName" class="upload-fname">No file chosen</span><div class="upload-btn-row"><button class="upload-btn" onclick="doStockUpload(false)">Upload</button><button class="upload-btn upload-btn-red" onclick="doStockUpload(true)">🔄 Clear &amp; Re-upload</button></div><div id="uploadStatus" class="upload-status"></div></div>
   <div class="stock-tabs"><button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button><button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button><button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button></div>
-  <div class="ctrl-row"><input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/><select <select id="stock-filter" onchange="filterStock()"><option value="">All commodities</option></select></div>
-  <div id="stock-salesman-note" style="display:none;font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600"></div>
-<div id="stock-list"></div>
+  <div class="ctrl-row"><input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/><select id="stock-filter" onchange="filterStock()"><option value="">All</option><option value="AVOS">Avocados</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwi</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="ORGS">Oranges</option><option value="SATS">Satsumas</option><option value="STRS">Strawberries</option></select></div>
+  <div id="stock-list"></div>
 </div>
 <div class="page" id="page-commodities"><div class="ctrl-row"><input type="text" id="comm-search" placeholder="🔍 Search commodity…" oninput="filterCommodities()"/></div><div id="comm-summary-list"></div><div id="comm-detail" style="display:none"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button onclick="closeCommodityDetail()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:13px;cursor:pointer">← Back</button><div id="comm-detail-title" style="font-weight:700;font-size:16px;color:var(--moss)"></div></div><div id="comm-detail-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div><div id="comm-detail-lines"></div></div></div>
 <div class="page" id="page-orders">
@@ -272,77 +274,27 @@ main{padding:14px 12px}
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border-top:3px solid var(--gold)">
     <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">📋 New Order — Floor Stock</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Buyer Name</label>
-        <input id="order-buyer" list="buyer-suggestions" type="text" placeholder="e.g. MANDELA MARKET" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-        <datalist id="buyer-suggestions"></datalist>
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Commodity</label>
-        <select id="order-commodity" onchange="onOrderCommodityChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-          <option value="">Select commodity…</option>
-        </select>
-      </div>
-      <div id="order-variety-row" style="display:none">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Variety</label>
-        <select id="order-variety" onchange="onOrderVarietyChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-          <option value="">Select variety…</option>
-        </select>
-      </div>
-      <div id="order-pack-row" style="display:none">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Pack</label>
-        <select id="order-pack" onchange="onOrderPackChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-          <option value="">Select pack…</option>
-        </select>
-      </div>
-      <div id="order-class-row" style="display:none">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Class</label>
-        <select id="order-grade" onchange="onOrderGradeChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-          <option value="">Select class…</option>
-        </select>
-      </div>
-      <div id="order-size-row" style="display:none">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Size / Count</label>
-        <select id="order-size" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-          <option value="">Select size…</option>
-        </select>
-      </div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Buyer Name</label><input id="order-buyer" list="buyer-suggestions" type="text" placeholder="e.g. MANDELA MARKET" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/><datalist id="buyer-suggestions"></datalist></div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Commodity</label><select id="order-commodity" onchange="onOrderCommodityChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select commodity…</option></select></div>
+      <div id="order-variety-row" style="display:none"><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Variety</label><select id="order-variety" onchange="onOrderVarietyChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select variety…</option></select></div>
+      <div id="order-pack-row" style="display:none"><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Pack</label><select id="order-pack" onchange="onOrderPackChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select pack…</option></select></div>
+      <div id="order-class-row" style="display:none"><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Class</label><select id="order-grade" onchange="onOrderGradeChange()" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select class…</option></select></div>
+      <div id="order-size-row" style="display:none"><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Size / Count</label><select id="order-size" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select size…</option></select></div>
       <div id="order-stock-info" style="display:none;background:var(--sage-light);border-radius:10px;padding:10px 13px;font-size:12px;color:#1a5c2a"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Qty (units)</label>
-          <input id="order-qty" type="number" placeholder="e.g. 50" min="1" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Price (R)</label>
-          <input id="order-price" type="number" placeholder="e.g. 120" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-        </div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Qty (units)</label><input id="order-qty" type="number" placeholder="e.g. 50" min="1" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Price (R)</label><input id="order-price" type="number" placeholder="e.g. 120" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Collection Date</label>
-          <input id="order-collect-date" type="date" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Collection Time</label>
-          <select id="order-collect-time" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-            <option value="">Any time</option>
-            <option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option>
-            <option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option>
-            <option value="11:00">11:00</option><option value="12:00">12:00</option>
-          </select>
-        </div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Collection Date</label><input id="order-collect-date" type="date" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Collection Time</label><select id="order-collect-time" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Any time</option><option value="05:00">05:00</option><option value="06:00">06:00</option><option value="07:00">07:00</option><option value="08:00">08:00</option><option value="09:00">09:00</option><option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option></select></div>
       </div>
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Notes</label>
-        <input id="order-notes" type="text" placeholder="e.g. Westfalia only" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-      </div>
+      <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Notes</label><input id="order-notes" type="text" placeholder="e.g. Westfalia only" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
       <button onclick="saveOrder()" style="padding:13px;border:none;border-radius:10px;background:var(--gold);color:#fff;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer">📋 Save Order</button>
       <div id="order-status" style="font-size:12px;color:var(--sage);min-height:1em;text-align:center"></div>
     </div>
   </div>
-
-  <!-- MANUAL ORDER FORM (stock not on floor) -->
+  <!-- MANUAL ORDER FORM -->
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px;border-top:3px solid var(--muted)">
     <div onclick="toggleSection('manual-order-form')" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
       <div style="font-weight:700;font-size:14px;color:var(--muted)">✏️ Manual Order (stock not on floor)</div>
@@ -350,70 +302,26 @@ main{padding:14px 12px}
     </div>
     <div id="manual-order-form" style="display:none;margin-top:12px">
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Buyer Name</label>
-          <input id="m-order-buyer" list="buyer-suggestions" type="text" placeholder="e.g. MANDELA MARKET" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-        </div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Buyer Name</label><input id="m-order-buyer" list="buyer-suggestions" type="text" placeholder="e.g. MANDELA MARKET" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Commodity</label>
-            <select id="m-order-commodity" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-              <option value="">Select…</option>
-              <option value="AVOS">Avocados</option><option value="BERS">Strawberries</option>
-              <option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option>
-              <option value="FIGS">Figs</option><option value="GFT">Grapefruit</option>
-              <option value="GVS">Guavas</option><option value="KIWI">Kiwifruit</option>
-              <option value="LEMS">Lemons</option><option value="MANG">Mangoes</option>
-              <option value="NAAR">Naartjies</option><option value="NOVA">Nova</option>
-              <option value="ORGS">Oranges</option><option value="PAPO">Papino</option>
-              <option value="POME">Pomegranate</option><option value="SATS">Satsumas</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Variety</label>
-            <input id="m-order-variety" type="text" placeholder="e.g. Hass" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Pack</label>
-            <input id="m-order-pack" type="text" placeholder="e.g. 4KG Tray" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Class</label>
-            <select id="m-order-grade" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
-              <option value="1">CL 1</option><option value="2">CL 2</option><option value="">Any</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Size / Count</label>
-            <input id="m-order-size" type="text" placeholder="e.g. 14" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Qty</label>
-            <input id="m-order-qty" type="number" placeholder="e.g. 50" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Price (R)</label>
-            <input id="m-order-price" type="number" placeholder="e.g. 120" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Collection Date</label>
-            <input id="m-order-collect-date" type="date" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-          </div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Commodity</label><select id="m-order-commodity" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select…</option><option value="AVOS">Avocados</option><option value="BERS">Strawberries</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwifruit</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="NOVA">Nova</option><option value="ORGS">Oranges</option><option value="PAPO">Papino</option><option value="POME">Pomegranate</option><option value="SATS">Satsumas</option></select></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Variety</label><input id="m-order-variety" type="text" placeholder="e.g. Hass" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Pack</label><input id="m-order-pack" type="text" placeholder="e.g. 4KG Tray" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Class</label><select id="m-order-grade" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="1">CL 1</option><option value="2">CL 2</option><option value="">Any</option></select></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Size / Count</label><input id="m-order-size" type="text" placeholder="e.g. 14" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Qty</label><input id="m-order-qty" type="number" placeholder="e.g. 50" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Price (R)</label><input id="m-order-price" type="number" placeholder="e.g. 120" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
+          <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Collection Date</label><input id="m-order-collect-date" type="date" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Notes</label>
-          <input id="m-order-notes" type="text" placeholder="e.g. Expected next week" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/>
-        </div>
+        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Notes</label><input id="m-order-notes" type="text" placeholder="e.g. Expected next week" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
         <button onclick="saveManualOrder()" style="padding:13px;border:none;border-radius:10px;background:var(--muted);color:#fff;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer">✏️ Save Manual Order</button>
         <div id="m-order-status" style="font-size:12px;color:var(--sage);min-height:1em;text-align:center"></div>
       </div>
     </div>
   </div>
-
     <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">Open Orders<span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span><span style="flex:1;height:1px;background:var(--border);display:block"></span><button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">🖨 Print</button><button onclick="loadOrders()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↻</button></div>
   <div id="orders-list"><div class="empty">No open orders</div></div>
 </div>
-<!-- FLOOR BALANCE -->
 <div class="page" id="page-floor">
   <div class="stock-tabs">
     <button class="stock-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ',this)">Riaan (RJ)</button>
@@ -422,10 +330,24 @@ main{padding:14px 12px}
   </div>
   <div class="ctrl-row">
     <input type="text" id="floor-search" placeholder="🔍 Search producer or commodity…" oninput="filterFloor()"/>
-    <select <select id="floor-filter" onchange="filterFloor()"><option value="">All commodities</option></select>
+    <select id="floor-filter" onchange="filterFloor()">
+      <option value="">All commodities</option>
+      <option value="AVOS">Avocados</option>
+      <option value="CLTM">Clementines</option>
+      <option value="DRAG">Dragon Fruit</option>
+      <option value="FIGS">Figs</option>
+      <option value="GFT">Grapefruit</option>
+      <option value="GVS">Guavas</option>
+      <option value="KIWI">Kiwi</option>
+      <option value="LEMS">Lemons</option>
+      <option value="MANG">Mangoes</option>
+      <option value="NAAR">Naartjies</option>
+      <option value="NOVA">Nova</option>
+      <option value="ORGS">Oranges</option>
+      <option value="BERS">Strawberries</option>
+    </select>
   </div>
   <div id="floor-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
-  <div id="floor-salesman-note" style="display:none;font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600"></div>
   <div id="floor-list"></div>
 </div>
 </main>
@@ -462,7 +384,7 @@ window.addEventListener('load',function(){var s=loadSession();if(s&&USERS[s.u])s
 
 const commName={AVOS:"Avocados",LEMS:"Lemons",FIGS:"Figs",KIWI:"Kiwifruit",ORGS:"Oranges",GVS:"Guavas",CLTM:"Clementines",NAAR:"Naartjies",STRS:"Strawberries",MANG:"Mangoes",DRAG:"Dragon Fruit",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
 const packName={TR040:"4KG TRAY",BG150:"15KG BAG",CTT150:"CTT 150 CARTON",PTB005:"500G PUNNET",PTB002:"160G PUNNET",DL076:"DL 076 CARTON",PC030:"3KG POCKET",PC060:"6KG POCKET",CO100:"10KG CARTON"};
-const varName={AF:"Fuerte",AH:"Hass",AK:"Pinkerton",MA:"Maluma",MAH:"Maluma",MD:"Mendez",NV:"Navel",CN:"Cara Cara",AX:"Mixed",SZ:"Sizewell","*":"Open"};
+const varName={AF:"Fuerte",AH:"Hass",AK:"Pinkerton",MA:"Maluma",MD:"Mendez",NV:"Navel","*":"Open"};
 const commMap={"Avocados":"AVOS","Lemons":"LEMS","Figs":"FIGS","Kiwifruit":"KIWI","Oranges":"ORGS","Guavas":"GVS","Clementines":"CLTM","Naartjies":"NAAR","Strawberries":"BERS","Berries":"BERS","Dragon Fruit":"DRAG","Mangoes":"MANG","Grapefruit":"GFT","Satsumas":"SATS","Papino":"PAPO"};
 const packMap={"4KG TRAY":["TR040"],"15KG CARTON":["CTT150"],"500G PUNNET":["PTB005"],"250G PUNNET":["PTB002"],"160G PUNNET":["PTB002"],"3KG POCKET":["PC030"]};
 const pn=c=>packName[c]||c;
@@ -471,7 +393,7 @@ const FB_ORDERS='https://jdw-crm-default-rtdb.firebaseio.com/orders';
 const FB_SECRET='RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs';
 const COMM_FULL={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas'};
 const PACK_FULL={TR040:'4KG Tray',BG150:'15KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL 076 Carton',PC030:'3KG Pocket'};
-const COMM_NAMES={AVOS:'Avocados',BERS:'Berries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwi',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',ORGS:'Oranges',PAPO:'Papino',SATS:'Satsumas',POME:'Pomegranate',UNK:'Unknown'};
+const COMM_NAMES={AVOS:'Avocados',BERS:'Berries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwi',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',ORGS:'Oranges',PAPO:'Papino',SATS:'Satsumas',UNK:'Unknown'};
 const SYNC='https://jdw-sync.onrender.com';
 let liveStockData=[],allLiveStockData=[],liveBuyerData=[];
 
@@ -488,15 +410,6 @@ function matchScore(s,p){
 }
 function toggleSection(id){var el=document.getElementById(id),arr=document.getElementById('arr-'+id);if(!el)return;var o=el.style.display!=='none';el.style.display=o?'none':'block';if(arr)arr.style.transform=o?'':'rotate(180deg)';}
 function parseHistoryDate(d){if(!d)return null;try{if(/^\d{2}\/\d{2}\/\d{4}$/.test(d)){var p=d.split('/');return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}if(/^\d{4}-\d{2}-\d{2}/.test(d)){var p=d.slice(0,10).split('-');return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}}catch(e){}return null;}
-function calcAvgFreq(dates){
-  if(!dates||dates.length<2)return null;
-  var parsed=dates.map(parseHistoryDate).filter(Boolean).sort(function(a,b){return a-b;});
-  if(parsed.length<2)return null;
-  var gaps=[];
-  for(var i=1;i<parsed.length;i++){var g=Math.round((parsed[i]-parsed[i-1])/86400000);if(g>0&&g<=30)gaps.push(g);}
-  if(!gaps.length)return null;
-  return Math.round(gaps.reduce(function(s,g){return s+g;},0)/gaps.length);
-}
 function calcBuyingDays(dates){var c=[0,0,0,0,0,0,0];for(var d of dates){var dt=parseHistoryDate(d);if(!dt)continue;var dow=dt.getDay();dow=dow===0?6:dow-1;c[dow]++;}var mx=Math.max(...c)||1;return c.map(x=>x>0&&(x/mx)>=0.2);}
 function renderDayBadges(a){var td=(()=>{var d=new Date().getDay();return d===0?6:d-1;})();return'<div class="day-row">'+DAY_LABELS.map((l,i)=>'<span class="day-badge '+(i===td?'day-today':a[i]?'day-active':'day-inactive')+'">'+l+'</span>').join('')+'</div>';}
 function daysOnFloor(ds){if(!ds)return 0;try{var now=new Date();now.setHours(0,0,0,0);var d;if(/^\d{4}-\d{2}-\d{2}/.test(ds)){var p=ds.slice(0,10).split('-');d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));}else if(/^\d{2}\/\d{2}\/\d{4}$/.test(ds)){var p=ds.split('/');d=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));}else if(/^\d{2}\/\d{2}$/.test(ds)){var p=ds.split('/');d=new Date(now.getFullYear(),parseInt(p[1])-1,parseInt(p[0]));if(d>now)d.setFullYear(now.getFullYear()-1);}else return 0;d.setHours(0,0,0,0);return Math.max(0,Math.floor((now-d)/86400000));}catch(e){return 0;}}
@@ -533,8 +446,7 @@ async function loadDashboard(){
       document.getElementById('kpi-floor').textContent=tf.toLocaleString();document.getElementById('kpi-floor-sub').textContent='units on floor';
       var cp=tr>0?Math.round(ts/tr*100):0;document.getElementById('kpi-clearance').textContent=cp+'%';document.getElementById('kpi-clearance-sub').textContent='of all stock sold';
       var uc=allStock.filter(s=>s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14).length;
-      document.getElementById('kpi-urgent').textContent=uc;document.getElementById('kpi-urgent-sub').textContent='lines '+(uc>0?'— needs pushing':'on floor');
-      if(uc>0)document.getElementById('kpi-urgent').parentElement.style.borderTopColor='var(--red)';
+      var ub=document.getElementById('kpi-urgent-banner');if(ub)ub.style.display=uc>0?'flex':'none';var ku=document.getElementById('kpi-urgent');if(ku)ku.textContent=uc;var ks=document.getElementById('kpi-urgent-sub');if(ks)ks.textContent=uc+' lines 14+ days — tap to print';
       renderStockChart(allStock);
       var td=(()=>{var d=new Date().getDay();return d===0?6:d-1;})(),cl=[];
       for(var buyer of (liveBuyerData.length?liveBuyerData:[]).slice(0,30)){
@@ -630,7 +542,7 @@ async function runAIMatch(){
     var buyers=liveBuyerData.length?liveBuyerData:[];
     if(!buyers.length)throw new Error('No buyer history.');
     var today=new Date().toLocaleDateString('en-ZA',{weekday:'long'}),dow=new Date().getDay(),td=dow===0?6:dow-1;
-    var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',MD:'Mendez',NV:'Navel',CN:'Cara Cara',AX:'Mixed'},PN={TR040:'4KG Tray',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
+    var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',NV:'Navel'},PN={TR040:'4KG Tray',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
     var sl=stock.filter(s=>s.flr>0).sort((a,b)=>b.flr-a.flr).slice(0,20).map(s=>{var v=s.variety!=='*'?(VN[s.variety]||s.variety):'';return s.commodity+'|'+(PN[s.pack]||s.pack)+(v?'|'+v:'')+'|CL'+s.grade+'|sz'+s.size+'|'+s.flr+'u|'+s.producer.split(' ').slice(0,2).join(' ');}).join('\n');
     var sc=new Set(stock.map(s=>s.commodity));
     var bl=buyers.filter(b=>b.prefs.some(p=>sc.has(commMap[p.comm]||p.comm))).slice(0,10).map(b=>{var bt=b.buyingDays&&b.buyingDays[td]?'*':'';var pr=b.prefs.filter(p=>sc.has(commMap[p.comm]||p.comm)).slice(0,2).map(p=>p.comm+'|'+(p.pack||'any')+'|'+p.cls+'|sz'+p.sizes[0]+'|R'+Math.round(p.revenue)).join(',');return b.name+bt+'|R'+b.spend+'|'+pr;}).join('\n');
@@ -653,7 +565,7 @@ function filterMatches(){renderMatchPage(allLiveStockData.length?allLiveStockDat
 
 async function loadBuyersFromFirebase(){
   var el=document.getElementById('buyer-list');if(el)el.innerHTML='<div class="empty">Loading buyers…</div>';
-  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');if(!r.ok)throw new Error('fetch failed');var raw=await r.json();if(!raw){renderBuyers([]);return;}var hist=Array.isArray(raw)?raw:Object.values(raw);liveBuyerData=buildBuyerProfiles(hist);renderBuyers(liveBuyerData);mergeBuyerPrefs(liveBuyerData);var dp=document.getElementById('page-dashboard');if(dp&&dp.classList.contains('active'))loadDashboard();}
+  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');if(!r.ok)throw new Error('fetch failed');var raw=await r.json();if(!raw){renderBuyers([]);return;}var hist=Array.isArray(raw)?raw:Object.values(raw);liveBuyerData=buildBuyerProfiles(hist);renderBuyers(liveBuyerData);var dp=document.getElementById('page-dashboard');if(dp&&dp.classList.contains('active'))loadDashboard();}
   catch(e){liveBuyerData=[];renderBuyers([]);}
 }
 
@@ -684,59 +596,22 @@ function renderStock(data){
     return'<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden"><div onclick="toggleSection(\''+cid+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--moss);cursor:pointer"><div><div style="font-weight:800;font-size:16px;color:#fff">'+cl+'</div><div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">'+sP.length+' producer'+(sP.length>1?'s':'')+'</div></div><div style="display:flex;align-items:center;gap:10px"><div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center"><div style="font-size:20px;font-weight:800;color:#fff;line-height:1">'+tf.toLocaleString()+'</div><div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">on floor</div></div><div id="arr-'+cid+'" style="color:#fff;font-size:14px;transition:transform .2s">▼</div></div></div><div id="'+cid+'" style="display:none;padding:10px">'+ph+'</div></div>';}).join('');
 }
 
-function populateStockFilter(data) {
-  var sel = document.getElementById('stock-filter');
-  if(!sel) return;
-  var current = sel.value;
-  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
-  var codes = [...new Set((allLiveStockData.length?allLiveStockData:data).map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));
-  sel.innerHTML = '<option value="">All commodities</option>' + codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');
-}
-
-function populateFloorFilter(data) {
-  var sel = document.getElementById('floor-filter');
-  if(!sel) return;
-  var current = sel.value;
-  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
-  var src = allLiveFloorData.length ? allLiveFloorData : (data||liveFloorData);
-  var codes = [...new Set(src.map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));
-  sel.innerHTML = '<option value="">All commodities</option>' + codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');
-}
-
 function filterStock(){
-  var q=document.getElementById('stock-search').value.toLowerCase().trim();
-  var f=document.getElementById('stock-filter').value;
+  var q=document.getElementById('stock-search').value.toLowerCase().trim(),f=document.getElementById('stock-filter').value;
   var src=(allLiveStockData.length?allLiveStockData:(liveStockData.length?liveStockData:[]));
   var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino'};
   var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MAH:'maluma',MD:'mendez',NV:'navel',CN:'cara cara',AX:'mixed'};
   var PN={TR040:'4kg tray',BG150:'15kg bag',BG160:'16kg bag',CTT150:'15kg carton',PTB005:'500g punnet',PTB025:'250g punnet',PTB002:'160g punnet',DL076:'dl076',PC030:'3kg pocket',PC060:'6kg pocket',CO100:'10kg carton',CO150:'15kg carton',SP170:'17kg sack'};
-  var filtered=src.filter(s=>{
-    if(f&&s.commodity!==f)return false;
-    if(!q)return true;
-    var terms=q.split(/\s+/);
-    var searchStr=[
-      s.producer,
-      CN[s.commodity]||s.commodity,
-      VN[s.variety]||s.variety,
-      s.size&&s.size!=='*'?s.size:'',
-      s.count&&s.count!=='*'?s.count:'',
-      PN[s.pack]||s.pack,
-      s.grade,
-      s.grn
-    ].join(' ').toLowerCase();
-    return terms.every(function(t){return searchStr.includes(t);});
-  });
-  if(f) filtered=filtered.sort((a,b)=>a.producer.localeCompare(b.producer));
+  var filtered=src.filter(function(s){if(f&&s.commodity!==f)return false;if(!q)return true;var terms=q.split(' ');var searchStr=[s.producer,CN[s.commodity]||s.commodity,VN[s.variety]||s.variety,s.size&&s.size!=='*'?s.size:'',s.count&&s.count!=='*'?s.count:'',PN[s.pack]||s.pack,s.grade,s.grn].join(' ').toLowerCase();return terms.every(function(t){return searchStr.includes(t);});});
+  if(f)filtered=filtered.sort(function(a,b){return a.producer.localeCompare(b.producer);});
   renderStock(filtered);
-  var su=document.getElementById('stock-salesman-note');
-  if(su){su.textContent=f?'Showing all salesmen':'';su.style.display=f?'block':'none';}
-}
+  var su=document.getElementById('stock-salesman-note');if(su){su.textContent=f?'Showing all salesmen':'';su.style.display=f?'block':'none';}}
 
 function showPage(id,el){
   if(id==='commodities'){document.getElementById('comm-summary-list').innerHTML='<div class="empty">Loading…</div>';document.getElementById('comm-detail').style.display='none';document.getElementById('comm-summary-list').style.display='block';fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json').then(r=>r.json()).then(d=>{var all=[];for(var [uk,uv] of Object.entries(d||{}))for(var e of Object.values(uv||{}))all.push({...firebaseToItem(e),user:e.user||uk});allLiveStockData=all;renderCommodities(buildCommoditySummary());}).catch(()=>{document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load data.</div>';});}
   if(id==='stock'){var at=document.querySelector('.stock-tab.active');loadStockFromFirebase(at?at.id.replace('tab-',''):'RJ');loadAllStockForMatcher();}
   if(id==='buyers')loadBuyersFromFirebase();
-  if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();setTimeout(loadPipelineState,100);}
+  if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();}
   if(id==='dashboard')loadDashboard();
   if(id==='orders'){loadOrders();populateBuyerSuggestions();initOrderCommodityDropdown();}
   if(id==='floor'){var at=document.querySelector('[id^="ftab-"].active');loadFloorFromFirebase(at?at.id.replace('ftab-',''):'RJ');}
@@ -832,10 +707,10 @@ async function printOrders(){try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_
 
 // ── FLOOR BALANCE ────────────────────────────────────────────────────────────
 let liveFloorData = [];
-let allLiveFloorData = [];
 
 async function loadFloorFromFirebase(user) {
   var el = document.getElementById('floor-list');
+  var su = document.getElementById('floor-summary');
   if(el) el.innerHTML = '<div class="empty">Loading…</div>';
   try {
     var r = await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor/' + user + '.json');
@@ -843,24 +718,12 @@ async function loadFloorFromFirebase(user) {
     var d = await r.json();
     if(!d) { el.innerHTML = '<div class="empty">No floor balance data. Upload a floor balance PDF.</div>'; return; }
     liveFloorData = Object.values(d);
-    // Also load all salesmen for commodity filter
     loadAllFloorData().then(function(){populateFloorFilter();});
     populateFloorFilter(liveFloorData);
     filterFloor();
   } catch(e) {
     if(el) el.innerHTML = '<div class="empty">Could not load floor balance: ' + e.message + '</div>';
   }
-}
-
-async function loadAllFloorData() { // returns promise
-  try {
-    var r = await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor.json');
-    if(!r.ok) return;
-    var d = await r.json();
-    var all = [];
-    for(var u of Object.values(d||{})) for(var e of Object.values(u||{})) all.push(e);
-    allLiveFloorData = all;
-  } catch(e) { console.warn('loadAllFloorData:', e.message); }
 }
 
 function switchFloorTab(user, btn) {
@@ -874,37 +737,16 @@ function switchFloorTab(user, btn) {
   loadFloorFromFirebase(user);
 }
 
-function filterFloor() {
-  var q = (document.getElementById('floor-search').value || '').toLowerCase().trim();
-  var f = document.getElementById('floor-filter').value;
-  // Always search all salesmen
-  var src = allLiveFloorData.length ? allLiveFloorData : liveFloorData;
+function filterFloor(){
+  var q=(document.getElementById('floor-search').value||'').toLowerCase().trim(),f=document.getElementById('floor-filter').value;
+  var src=allLiveFloorData.length?allLiveFloorData:liveFloorData;
   var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino'};
   var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MAH:'maluma',MD:'mendez',NV:'navel',CN:'cara cara',AX:'mixed'};
   var PN={TR040:'4kg tray',BG150:'15kg bag',BG160:'16kg bag',CTT150:'15kg carton',PTB005:'500g punnet',PTB025:'250g punnet',PTB002:'160g punnet',DL076:'dl076',PC030:'3kg pocket',PC060:'6kg pocket',CO100:'10kg carton',CO150:'15kg carton',SP170:'17kg sack'};
-  var data = src.filter(function(s) {
-    if(f && s.commodity !== f) return false;
-    if(!q) return true;
-    var terms = q.split(/\s+/);
-    var searchStr = [
-      s.producer,
-      CN[s.commodity]||s.commodity,
-      VN[s.variety]||s.variety,
-      s.size && s.size !== '*' ? s.size : '',
-      s.count && s.count !== '*' ? s.count : '',
-      PN[s.pack]||s.pack,
-      s.grade,
-      s.grn,
-      s.seq,
-      s.loc
-    ].join(' ').toLowerCase();
-    return terms.every(function(t){ return searchStr.includes(t); });
-  });
-  if(f || q) data = data.sort(function(a,b){return (a.producer||'').localeCompare(b.producer||'');});
+  var data=src.filter(function(s){if(f&&s.commodity!==f)return false;if(!q)return true;var terms=q.split(/\s+/);var searchStr=[s.producer,CN[s.commodity]||s.commodity,VN[s.variety]||s.variety,s.size&&s.size!=='*'?s.size:'',s.count&&s.count!=='*'?s.count:'',PN[s.pack]||s.pack,s.grade,s.grn,s.seq,s.loc].join(' ').toLowerCase();return terms.every(function(t){return searchStr.includes(t);});});
+  if(f||q)data=data.sort(function(a,b){return (a.producer||'').localeCompare(b.producer||'');});
   renderFloor(data);
-  var su = document.getElementById('floor-salesman-note');
-  if(su){su.textContent=(f||q)?'Showing all salesmen':'';su.style.display=(f||q)?'block':'none';}
-}
+  var su=document.getElementById('floor-salesman-note');if(su){su.textContent=(f||q)?'Showing all salesmen':'';su.style.display=(f||q)?'block':'none';}}
 
 function renderFloor(data) {
   var el = document.getElementById('floor-list');
@@ -934,7 +776,7 @@ function renderFloor(data) {
 
   var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pome',GFT:'Grapefruit'};
   var PN = {TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB025:'250G Punnet',PTB002:'160G Punnet',DL076:'DL076',PC030:'3KG Pocket',PC060:'6KG Pocket',PC020:'2KG Pocket',PC100:'10KG Pocket',CO100:'10KG Carton',CO150:'15KG Carton',SP170:'17KG Sack',BX040:'4KG Box',CR:'Crate'};
-  var VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',AX:'Mixed',NV:'Navel',CN:'Cara Cara',MD:'Mendez'};
+  var VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',AX:'Mixed',NV:'Navel',CN:'Cara Cara'};
 
   el.innerHTML = Object.keys(byProd).sort().map(prod => {
     var lines = byProd[prod];
@@ -965,7 +807,6 @@ function renderFloor(data) {
         + (variety ? '<span class="b" style="background:#f0f4f0;color:var(--muted)">' + variety + '</span>' : '')
         + (grade ? '<span class="b ' + gradeColor + '">' + grade + '</span>' : '')
         + (size ? '<span class="b bt">sz ' + size + '</span>' : '')
-        + (s.count && s.count !== '*' ? '<span class="b" style="background:#f0f4f0;color:var(--muted)">cnt ' + s.count + '</span>' : '')
         + oldBadge
         + '</div>'
         + '<div style="font-size:10px;color:var(--muted)">Arrived: ' + (s.arrived||'—') + ' · Rec: ' + (s.received||'—') + '</div>'
@@ -973,7 +814,7 @@ function renderFloor(data) {
     }).join('');
 
     return '<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">'
-      + '<div data-pid="' + pid + '" onclick="toggleSection(this.dataset.pid)" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--moss);cursor:pointer">'
+      + '<div onclick="toggleSection(\'+pid+\')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--moss);cursor:pointer">'
       + '<div style="flex:1;min-width:0">'
       + '<div style="font-weight:800;font-size:14px;color:#fff;word-break:break-word">' + prod + (hasOld ? ' <span style="font-size:10px;background:rgba(192,57,43,0.3);padding:2px 6px;border-radius:4px">⚠️ OLD</span>' : '') + '</div>'
       + '<div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">' + lines.length + ' line' + (lines.length>1?'s':'') + '</div>'
@@ -990,525 +831,129 @@ function renderFloor(data) {
   }).join('');
 }
 
-// ── BUYER PREFERENCE EDITOR ──────────────────────────────────────────────────
-const FB_PREFS = 'https://jdw-crm-default-rtdb.firebaseio.com/preferences';
-
-async function loadBuyerPrefs() {
-  var buyer = document.getElementById('pref-buyer').value.trim().toUpperCase();
-  var tagsEl = document.getElementById('pref-tags');
-  var currentEl = document.getElementById('pref-current');
-  if (!buyer) { currentEl.style.display='none'; return; }
-  try {
-    var r = await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET);
-    var data = await r.json();
-    var prefs = (data && data.commodities) ? data.commodities : [];
-    renderPrefTags(buyer, prefs);
-    currentEl.style.display = prefs.length > 0 ? 'block' : 'none';
-  } catch(e) { console.warn('Pref load error:', e.message); }
+// ── DASHBOARD FUNCTIONS ──────────────────────────────────────────────────────
+function goToTab(id){
+  var navMap={dashboard:0,matching:1,buyers:2,stock:3,orders:4,commodities:5,floor:6};
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.bnav-item').forEach(function(n){n.classList.remove('active');});
+  document.getElementById('page-'+id).classList.add('active');
+  var ni=document.querySelectorAll('.bnav-item');if(ni[navMap[id]])ni[navMap[id]].classList.add('active');
+  if(id==='stock'){var at=document.querySelector('.stock-tab.active');loadStockFromFirebase(at?at.id.replace('tab-',''):'RJ');loadAllStockForMatcher();}
+  if(id==='buyers')loadBuyersFromFirebase();
+  if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();setTimeout(loadPipelineState,100);}
+  if(id==='orders'){loadOrders();populateBuyerSuggestions();initOrderCommodityDropdown();}
+  if(id==='floor'){var at=document.querySelector('[id^="ftab-"].active');loadFloorFromFirebase(at?at.id.replace('ftab-',''):'RJ');}
+  window.scrollTo(0,0);
 }
-
-function renderPrefTags(buyer, prefs) {
-  var CN = {AVOS:'Avocados',BERS:'Strawberries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwifruit',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',NOVA:'Nova',ORGS:'Oranges',SATS:'Satsumas'};
-  var tagsEl = document.getElementById('pref-tags');
-  var currentEl = document.getElementById('pref-current');
-  if (!prefs.length) { currentEl.style.display='none'; return; }
-  currentEl.style.display = 'block';
-  tagsEl.innerHTML = prefs.map(function(code) {
-    return '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--blue-light);color:var(--blue);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700">'
-      + (CN[code]||code)
-      + '<span data-buyer="'+buyer+'" data-code="'+code+'" onclick="removeBuyerPrefEl(this)" style="cursor:pointer;font-size:14px;color:var(--blue);font-weight:900;line-height:1;margin-left:2px">×</span>'
-      + '</div>';
-  }).join('');
+function toggleReportsMenu(){var m=document.getElementById('reports-menu');m.style.display=m.style.display==='none'?'block':'none';}
+async function showTodayOrders(){
+  var panel=document.getElementById('dash-orders-panel'),title=document.getElementById('dash-orders-title'),list=document.getElementById('dash-orders-list');
+  panel.style.display='block';title.textContent="📋 Today's Orders";list.innerHTML='Loading…';
+  try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_SECRET),raw=await res.json();
+    var today=new Date().toISOString().slice(0,10);
+    var orders=raw?Object.values(raw).filter(function(o){return o.status==='open'&&o.collectDate===today;}):[];
+    if(!orders.length){list.innerHTML='<div class="empty">No orders due today</div>';return;}
+    list.innerHTML=orders.map(function(o){var cf=COMM_FULL[o.commodity]||o.commodity;return'<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between"><div><div style="font-weight:700;font-size:13px">'+o.buyer+'</div><div style="font-size:11px;color:var(--muted)">'+cf+' · '+(o.qty||'?')+' units'+(o.collectTime?' @ '+o.collectTime:'')+'</div></div></div>';}).join('');}
+  catch(e){list.innerHTML='<div class="empty">Error: '+e.message+'</div>';}
 }
-
-async function addBuyerPref() {
-  var buyer = document.getElementById('pref-buyer').value.trim().toUpperCase();
-  var comm  = document.getElementById('pref-commodity').value;
-  var stat  = document.getElementById('pref-status');
-  if (!buyer) { stat.style.color='var(--red)'; stat.textContent='⚠ Enter a buyer name first'; return; }
-  if (!comm)  { stat.style.color='var(--red)'; stat.textContent='⚠ Select a commodity'; return; }
-  stat.textContent='Saving…'; stat.style.color='var(--muted)';
-  try {
-    // Get existing prefs
-    var r = await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET);
-    var data = await r.json();
-    var prefs = (data && data.commodities) ? data.commodities : [];
-    if (prefs.includes(comm)) { stat.style.color='var(--gold)'; stat.textContent='Already added'; return; }
-    prefs.push(comm);
-    await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET, {
-      method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({buyer:buyer, commodities:prefs, updatedAt:new Date().toISOString()})
-    });
-    stat.style.color='var(--sage)'; stat.textContent='✅ Saved!';
-    renderPrefTags(buyer, prefs);
-    document.getElementById('pref-commodity').value='';
-    document.getElementById('pref-current').style.display='block';
-    // Refresh buyer profiles to include new pref
-    if(liveBuyerData.length) mergeBuyerPrefs(liveBuyerData);
-    setTimeout(function(){stat.textContent='';},2000);
-  } catch(e) { stat.style.color='var(--red)'; stat.textContent='⚠ '+e.message; }
+async function showOutstandingOrders(){
+  var panel=document.getElementById('dash-orders-panel'),title=document.getElementById('dash-orders-title'),list=document.getElementById('dash-orders-list');
+  panel.style.display='block';title.textContent='⏳ Outstanding Orders';list.innerHTML='Loading…';
+  try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_SECRET),raw=await res.json();
+    var orders=raw?Object.values(raw).filter(function(o){return o.status==='open';}).sort(function(a,b){return (a.collectDate||'9999').localeCompare(b.collectDate||'9999');}):[];
+    if(!orders.length){list.innerHTML='<div class="empty">No outstanding orders</div>';return;}
+    list.innerHTML=orders.map(function(o){var cf=COMM_FULL[o.commodity]||o.commodity,dt=o.collectDate?new Date(o.collectDate+'T12:00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'}):'No date';return'<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between"><div><div style="font-weight:700;font-size:13px">'+o.buyer+'</div><div style="font-size:11px;color:var(--muted)">'+cf+' · '+(o.qty||'?')+' units · '+dt+'</div></div>'+(o.flagged?'<span class="b ba" style="font-size:10px;align-self:center">STOCK READY</span>':'')+'</div>';}).join('');}
+  catch(e){list.innerHTML='<div class="empty">Error: '+e.message+'</div>';}
 }
-
-function removeBuyerPrefEl(el) {
-  var buyer = el.getAttribute('data-buyer');
-  var comm  = el.getAttribute('data-code');
-  removeBuyerPref(buyer, comm);
+async function printUrgentStock(){
+  var stock=allLiveStockData.length?allLiveStockData:[];
+  var urgent=stock.filter(function(s){return s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14;}).sort(function(a,b){return (a.producer||'').localeCompare(b.producer||'');});
+  if(!urgent.length){alert('No urgent stock.');return;}
+  var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino'};
+  var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',MD:'Mendez',NV:'Navel',CN:'Cara Cara',AX:'Mixed'};
+  var now=new Date().toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var rows=urgent.map(function(s,i){var days=daysOnFloor(s.arrived||s.date||'');return'<tr style="border-bottom:1px solid #ddd"><td style="padding:7px 8px">'+(i+1)+'</td><td style="padding:7px 8px;font-weight:600">'+s.producer+'</td><td style="padding:7px 8px">'+(CN[s.commodity]||s.commodity)+'</td><td style="padding:7px 8px">'+(VN[s.variety]||s.variety||'—')+'</td><td style="padding:7px 8px">'+s.grade+'</td><td style="padding:7px 8px">'+s.size+'</td><td style="padding:7px 8px;text-align:right">'+s.flr+'</td><td style="padding:7px 8px;text-align:right;color:#c0392b;font-weight:700">'+days+'d</td><td style="padding:7px 8px">'+s.user+'</td></tr>';}).join('');
+  var win=window.open('','_blank','width=900,height=700');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Urgent Stock</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:16px}h1{font-size:18px;color:#c0392b;margin-bottom:4px}.sub{font-size:11px;color:#888;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#c0392b;color:#fff;padding:7px 8px;text-align:left;font-size:11px}tr:nth-child(even){background:#fdf0f0}@media print{button{display:none}}</style></head><body><h1>⚠️ Urgent Stock</h1><div class="sub">14+ days · Printed: '+now+' · '+urgent.length+' lines</div><table><thead><tr><th>#</th><th>Producer</th><th>Commodity</th><th>Variety</th><th>Grade</th><th>Size</th><th style="text-align:right">Floor</th><th style="text-align:right">Days</th><th>SM</th></tr></thead><tbody>'+rows+'</tbody></table><div style="text-align:center;margin-top:16px"><button onclick="window.print()" style="background:#c0392b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:700">🖨 Print</button></div></body></html>');
+  win.document.close();win.focus();
 }
-async function removeBuyerPref(buyer, comm) {
-  try {
-    var r = await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET);
-    var data = await r.json();
-    var prefs = (data && data.commodities) ? data.commodities.filter(function(c){return c!==comm;}) : [];
-    await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET, {
-      method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({buyer:buyer, commodities:prefs, updatedAt:new Date().toISOString()})
-    });
-    renderPrefTags(buyer, prefs);
-    if(liveBuyerData.length) mergeBuyerPrefs(liveBuyerData);
-  } catch(e) { console.warn('Remove pref error:', e.message); }
-}
-
-// Merge manual preferences into buyer profiles for matcher + call list
-async function mergeBuyerPrefs(buyers) {
-  try {
-    var r = await fetch(FB_PREFS+'.json?auth='+FB_SECRET);
-    var allPrefs = await r.json();
-    if (!allPrefs) return;
-    var CN = {AVOS:'Avocados',BERS:'Strawberries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwifruit',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',NOVA:'Nova',ORGS:'Oranges',SATS:'Satsumas'};
-    buyers.forEach(function(b) {
-      var key = b.name.toUpperCase();
-      if (!allPrefs[key] || !allPrefs[key].commodities) return;
-      var existingComms = b.prefs.map(function(p){return p.comm;});
-      allPrefs[key].commodities.forEach(function(code) {
-        var commName = CN[code]||code;
-        if (!existingComms.includes(commName)) {
-          b.prefs.push({comm:commName, pack:'', cls:'CL 1', sizes:['*'], revenue:0, note:'Manual preference'});
-        }
-      });
-    });
-  } catch(e) { console.warn('mergeBuyerPrefs error:', e.message); }
-}
-
-async function printWeeklyReport(){
-  try{
-    var [histRes,stockRes,ordersRes]=await Promise.all([
-      fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json'),
-      fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json'),
-      fetch(FB_ORDERS+'.json?auth='+FB_SECRET)
-    ]);
-
-    // ── HISTORY ───────────────────────────────────────────────
-    var history=[];
-    if(histRes.ok){var raw=await histRes.json();if(raw)history=Array.isArray(raw)?raw:Object.values(raw);}
-    var now=new Date(),weekAgo=new Date(now-7*24*60*60*1000);
-    var weekSales=history.filter(function(h){
-      if(!h.date)return false;
-      var p=h.date.split('/');if(p.length<3)return false;
-      return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]))>=weekAgo;
-    });
-    var totalRev=weekSales.reduce(function(s,h){return s+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0;},0);
-    var buyerSpend={};
-    weekSales.forEach(function(h){if(!h.buyer)return;buyerSpend[h.buyer]=(buyerSpend[h.buyer]||0)+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0;});
-    var top5=Object.entries(buyerSpend).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-
-    // ── STOCK ─────────────────────────────────────────────────
-    var allStock=[];
-    if(stockRes.ok){var sd=await stockRes.json();for(var u of Object.values(sd||{}))for(var e of Object.values(u||{}))allStock.push(firebaseToItem(e));}
+async function printSalesReport(period){
+  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');var raw=await r.json();if(!raw){alert('No sales data.');return;}
+    var history=Array.isArray(raw)?raw:Object.values(raw);var now=new Date(),cutoff=new Date(now-(period==='week'?7:30)*24*60*60*1000);
+    var sales=history.filter(function(h){if(!h.date)return false;var p=h.date.split('/');if(p.length<3)return false;return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]))>=cutoff;});
+    if(!sales.length){alert('No sales in this period.');return;}
     var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas'};
-    var commStats={};
-    allStock.forEach(function(s){
-      var c=s.commodity||'UNK';
-      if(!commStats[c])commStats[c]={name:CN[c]||c,rec:0,sold:0,flr:0,urgent:0};
-      commStats[c].rec+=Number(s.rec)||0;
-      commStats[c].sold+=Number(s.sold)||0;
-      commStats[c].flr+=Number(s.flr)||0;
-      if(s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14)commStats[c].urgent++;
-    });
-    var totalFlr=allStock.reduce(function(s,e){return s+(Number(e.flr)||0);},0);
-    var totalRec=allStock.reduce(function(s,e){return s+(Number(e.rec)||0);},0);
-    var totalSold=allStock.reduce(function(s,e){return s+(Number(e.sold)||0);},0);
-    var urgentTotal=allStock.filter(function(s){return s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14;}).length;
-
-    // ── ORDERS ────────────────────────────────────────────────
-    var orders=[];
-    if(ordersRes.ok){var od=await ordersRes.json();if(od)orders=Object.values(od);}
-    var openOrders=orders.filter(function(o){return o.status==='open';}).length;
-    var fulfilledOrders=orders.filter(function(o){return o.status==='fulfilled';}).length;
-
-    // ── BUILD HTML ────────────────────────────────────────────
-    var dateStr=now.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-    var weekStr=weekAgo.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' – '+now.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
-    var clearPct=totalRec>0?Math.round(totalSold/totalRec*100):0;
-
-    var commRows=Object.values(commStats).filter(function(c){return c.rec>0;}).sort(function(a,b){return b.flr-a.flr;}).map(function(c){
-      var pct=c.rec>0?Math.round(c.sold/c.rec*100):0;
-      var urgBadge=c.urgent>0?'<span style="color:#c0392b;font-weight:700"> ('+c.urgent+' urgent)</span>':'';
-      return '<tr><td style="padding:7px 8px">'+c.name+'</td><td style="padding:7px 8px;text-align:right">'+c.rec.toLocaleString()+'</td><td style="padding:7px 8px;text-align:right">'+c.sold.toLocaleString()+'</td><td style="padding:7px 8px;text-align:right">'+c.flr.toLocaleString()+urgBadge+'</td><td style="padding:7px 8px;text-align:right">'+pct+'%</td></tr>';
-    }).join('');
-
-    var buyerRows=top5.map(function(e,i){
-      return '<tr><td style="padding:7px 8px">'+(i+1)+'</td><td style="padding:7px 8px;font-weight:600">'+e[0]+'</td><td style="padding:7px 8px;text-align:right">R '+Math.round(e[1]).toLocaleString()+'</td></tr>';
-    }).join('');
-
-    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SubTrop RSA — Weekly Report</title><style>'
-      +'body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:20px;margin:0}'
-      +'h1{font-size:20px;color:#1e4d2b;margin-bottom:2px}'
-      +'.sub{font-size:12px;color:#888;margin-bottom:20px}'
-      +'.section{margin-bottom:24px}'
-      +'h2{font-size:14px;color:#1e4d2b;border-bottom:2px solid #1e4d2b;padding-bottom:4px;margin-bottom:10px}'
-      +'.kpi-row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}'
-      +'.kpi{background:#f3f7f3;border-radius:8px;padding:12px 16px;min-width:120px;border-top:3px solid #1e4d2b}'
-      +'.kpi.gold{border-top-color:#c9882a}.kpi.red{border-top-color:#c0392b}'
-      +'.kpi-val{font-size:22px;font-weight:800;color:#141f15}'
-      +'.kpi-lbl{font-size:10px;color:#6b7c6c;text-transform:uppercase;margin-top:2px}'
-      +'table{width:100%;border-collapse:collapse;font-size:12px}'
-      +'th{background:#1e4d2b;color:#fff;padding:8px;text-align:left;font-size:11px}'
-      +'tr:nth-child(even){background:#f3f7f3}'
-      +'@media print{button{display:none}}'
-      +'</style></head><body>'
-      +'<h1>SubTrop RSA — Weekly Summary Report</h1>'
-      +'<div class="sub">Period: '+weekStr+' · Printed: '+dateStr+'</div>'
-
-      +'<div class="section">'
-      +'<h2>Revenue & Sales</h2>'
-      +'<div class="kpi-row">'
-      +'<div class="kpi gold"><div class="kpi-val">R '+Math.round(totalRev).toLocaleString()+'</div><div class="kpi-lbl">Week Revenue</div></div>'
-      +'<div class="kpi"><div class="kpi-val">'+weekSales.length+'</div><div class="kpi-lbl">Transactions</div></div>'
-      +'<div class="kpi"><div class="kpi-val">'+Object.keys(buyerSpend).length+'</div><div class="kpi-lbl">Active Buyers</div></div>'
-      +'</div></div>'
-
-      +'<div class="section">'
-      +'<h2>Top 5 Buyers This Week</h2>'
-      +'<table><thead><tr><th>#</th><th>Buyer</th><th>Revenue</th></tr></thead><tbody>'+buyerRows+'</tbody></table>'
-      +'</div>'
-
-      +'<div class="section">'
-      +'<h2>Stock Overview</h2>'
-      +'<div class="kpi-row">'
-      +'<div class="kpi"><div class="kpi-val">'+totalFlr.toLocaleString()+'</div><div class="kpi-lbl">Units on Floor</div></div>'
-      +'<div class="kpi"><div class="kpi-val">'+clearPct+'%</div><div class="kpi-lbl">Clearance Rate</div></div>'
-      +'<div class="kpi red"><div class="kpi-val">'+urgentTotal+'</div><div class="kpi-lbl">Urgent Lines (14d+)</div></div>'
-      +'</div>'
-      +'<table><thead><tr><th>Commodity</th><th style="text-align:right">Received</th><th style="text-align:right">Sold</th><th style="text-align:right">On Floor</th><th style="text-align:right">Clearance</th></tr></thead><tbody>'+commRows+'</tbody></table>'
-      +'</div>'
-
-      +'<div class="section">'
-      +'<h2>Orders</h2>'
-      +'<div class="kpi-row">'
-      +'<div class="kpi gold"><div class="kpi-val">'+openOrders+'</div><div class="kpi-lbl">Open Orders</div></div>'
-      +'<div class="kpi"><div class="kpi-val">'+fulfilledOrders+'</div><div class="kpi-lbl">Fulfilled This Week</div></div>'
-      +'</div></div>'
-
-      +'<div style="text-align:center;margin-top:20px"><button onclick="window.print()" style="background:#1e4d2b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:700">🖨 Print</button></div>'
-      +'</body></html>';
-
+    var total=sales.reduce(function(s,h){return s+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0;},0);
+    var periodStr=period==='week'?'Last 7 Days':'Last 30 Days';var dateStr=now.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    var rows=sales.sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).map(function(h,i){var t=Number(h.total)||(Number(h.price||0)*Number(h.qty||0))||0;return'<tr><td style="padding:6px 8px">'+(i+1)+'</td><td style="padding:6px 8px;font-weight:600">'+(h.buyer||'—')+'</td><td style="padding:6px 8px">'+(CN[h.commodity]||h.commodity||'—')+'</td><td style="padding:6px 8px">'+(h.variety||'—')+'</td><td style="padding:6px 8px;text-align:right">'+(h.qty||'—')+'</td><td style="padding:6px 8px;text-align:right;font-weight:700">R '+Math.round(t).toLocaleString()+'</td><td style="padding:6px 8px">'+(h.date||'—')+'</td></tr>';}).join('');
     var win=window.open('','_blank','width=900,height=700');
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-  }catch(e){alert('Could not generate report: '+e.message);}
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Sales Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:16px}h1{font-size:18px;color:#1e4d2b;margin-bottom:4px}.sub{font-size:11px;color:#888;margin-bottom:8px}.total{font-size:16px;font-weight:800;color:#1e4d2b;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#1e4d2b;color:#fff;padding:7px 8px;text-align:left;font-size:11px}tr:nth-child(even){background:#f3f7f3}@media print{button{display:none}}</style></head><body><h1>Sales Report — '+periodStr+'</h1><div class="sub">Printed: '+dateStr+'</div><div class="total">Total: R '+Math.round(total).toLocaleString()+' · '+sales.length+' transactions</div><table><thead><tr><th>#</th><th>Buyer</th><th>Commodity</th><th>Variety</th><th style="text-align:right">Qty</th><th style="text-align:right">Revenue</th><th>Date</th></tr></thead><tbody>'+rows+'</tbody></table><div style="text-align:center;margin-top:16px"><button onclick="window.print()" style="background:#1e4d2b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:700">🖨 Print</button></div></body></html>');
+    win.document.close();win.focus();}catch(e){alert('Error: '+e.message);}
+}
+async function printBuyersReport(period){
+  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');var raw=await r.json();if(!raw){alert('No data.');return;}
+    var history=Array.isArray(raw)?raw:Object.values(raw);var now=new Date(),cutoff=new Date(now-(period==='week'?7:30)*24*60*60*1000);
+    var sales=history.filter(function(h){if(!h.date)return false;var p=h.date.split('/');if(p.length<3)return false;return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]))>=cutoff;});
+    var buyerMap={};sales.forEach(function(h){if(!h.buyer)return;if(!buyerMap[h.buyer])buyerMap[h.buyer]={name:h.buyer,txns:0,revenue:0,commodities:new Set(),lastDate:''};var t=Number(h.total)||(Number(h.price||0)*Number(h.qty||0))||0;buyerMap[h.buyer].txns++;buyerMap[h.buyer].revenue+=t;if(h.commodity)buyerMap[h.buyer].commodities.add(h.commodity);if(!buyerMap[h.buyer].lastDate||h.date>buyerMap[h.buyer].lastDate)buyerMap[h.buyer].lastDate=h.date;});
+    var buyers=Object.values(buyerMap).sort(function(a,b){return b.revenue-a.revenue;});if(!buyers.length){alert('No buyer data.');return;}
+    var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas'};
+    var periodStr=period==='week'?'Last 7 Days':'Last 30 Days';var dateStr=now.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    var rows=buyers.map(function(b,i){var comms=[...b.commodities].map(function(c){return CN[c]||c;}).join(', ');return'<tr><td style="padding:7px 8px">'+(i+1)+'</td><td style="padding:7px 8px;font-weight:600">'+b.name+'</td><td style="padding:7px 8px;text-align:right">'+b.txns+'</td><td style="padding:7px 8px;text-align:right;font-weight:700">R '+Math.round(b.revenue).toLocaleString()+'</td><td style="padding:7px 8px">'+comms+'</td><td style="padding:7px 8px">'+b.lastDate+'</td></tr>';}).join('');
+    var win=window.open('','_blank','width=900,height=700');
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Buyers Report</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:16px}h1{font-size:18px;color:#1e4d2b;margin-bottom:4px}.sub{font-size:11px;color:#888;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#1e4d2b;color:#fff;padding:7px 8px;text-align:left;font-size:11px}tr:nth-child(even){background:#f3f7f3}@media print{button{display:none}}</style></head><body><h1>Buyers Report — '+periodStr+'</h1><div class="sub">Printed: '+dateStr+' · '+buyers.length+' buyers</div><table><thead><tr><th>#</th><th>Buyer</th><th style="text-align:right">Txns</th><th style="text-align:right">Revenue</th><th>Commodities</th><th>Last Purchase</th></tr></thead><tbody>'+rows+'</tbody></table><div style="text-align:center;margin-top:16px"><button onclick="window.print()" style="background:#1e4d2b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:700">🖨 Print</button></div></body></html>');
+    win.document.close();win.focus();}catch(e){alert('Error: '+e.message);}
 }
 
 // ── PIPELINE ─────────────────────────────────────────────────────────────────
 var pipelineKey = 'pipeline-'+new Date().toISOString().slice(0,10);
-
-function loadPipelineState() {
-  var state = JSON.parse(sessionStorage.getItem(pipelineKey) || '{}');
-  for (var i = 1; i <= 6; i++) {
-    if (state[i]) {
-      var el = document.getElementById('ps'+i);
-      var ch = document.getElementById('psc'+i);
-      if (el) el.classList.add('done');
-      if (ch) ch.textContent = '✓';
-    }
-  }
+function loadPipelineState(){var state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');for(var i=1;i<=6;i++){if(state[i]){var el=document.getElementById('ps'+i),ch=document.getElementById('psc'+i);if(el)el.classList.add('done');if(ch)ch.textContent='✓';}}}
+function goToOrders(){togglePipelineStep(3);var nav=document.querySelectorAll('.bnav-item')[4];document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.bnav-item').forEach(function(n){n.classList.remove('active');});document.getElementById('page-orders').classList.add('active');if(nav)nav.classList.add('active');loadOrders();window.scrollTo(0,0);}
+function togglePipelineCallList(){var list=document.getElementById('pipeline-call-list'),btn=document.getElementById('psc2'),isOpen=list.style.display!=='none';list.style.display=isOpen?'none':'block';btn.textContent=isOpen?'▼ Show':'▲ Hide';if(!isOpen)renderPipelineBuyers();}
+function renderPipelineBuyers(){
+  var el=document.getElementById('pipeline-buyers'),todayKey='pipeline-calls-'+new Date().toISOString().slice(0,10),called=JSON.parse(sessionStorage.getItem(todayKey)||'{}'),buyers=liveBuyerData.length?liveBuyerData:[],todayDow=(function(){var d=new Date().getDay();return d===0?6:d-1;})();
+  if(!buyers.length){el.innerHTML='<div style="color:var(--muted)">No buyer data.</div>';return;}
+  var stock=allLiveStockData.length?allLiveStockData:[];
+  var scored=buyers.map(function(b){var he=0,hc=0;if(b.prefs)b.prefs.forEach(function(p){var cc=commMap[p.comm]||p.comm,sf=stock.filter(function(s){return s.commodity===cc&&s.flr>0;});if(sf.some(function(s){return matchScore(s,p)==='exact';}))he++;else if(sf.some(function(s){return matchScore(s,p)==='close';}))hc++;});var mp=he>0?3:hc>0?2:0,bt=b.buyingDays&&b.buyingDays[todayDow]?1:0;return Object.assign({},b,{_sort:mp*100000+(b.spend||0)/100+bt*10,_match:mp});}).sort(function(a,b){return b._sort-a._sort;}).slice(0,20);
+  el.innerHTML=scored.map(function(b,i){var isCalled=!!called[b.name],mc=b._match===3?'var(--sage-light)':b._match===2?'var(--gold-light)':'#f0f0f0',mt=b._match===3?'EXACT':b._match===2?'CLOSE':'';return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:'+(isCalled?'0.4':'1')+'"><div data-bname="'+b.name+'" onclick="togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isCalled?'var(--sage)':'var(--border)')+';background:'+(isCalled?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isCalled?'✓':'')+'</div><div style="width:20px;height:20px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">'+(i+1)+'</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;'+(isCalled?'text-decoration:line-through;color:var(--muted);':'')+'word-break:break-word">'+b.name+(b.buyingDays&&b.buyingDays[todayDow]?'<span style="background:var(--sage-light);color:#1a5c2a;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px">Today</span>':'')+'</div>'+(mt?'<div style="font-size:10px;background:'+mc+';display:inline-block;padding:1px 6px;border-radius:4px;font-weight:600;margin-top:2px">'+mt+'</div>':'')+'</div><div style="font-size:11px;color:var(--muted);flex-shrink:0">R '+(b.spend||0).toLocaleString()+'</div></div>';}).join('');
 }
-
-// ── PIPELINE FUNCTIONS ───────────────────────────────────────────────────────
-function goToOrders() {
-  togglePipelineStep(3);
-  var ordersNav = document.querySelector('.bnav-item:nth-child(5)');
-  showPage('orders', ordersNav || document.createElement('div'));
-  document.querySelectorAll('.bnav-item').forEach(function(n){n.classList.remove('active');});
-  if(ordersNav) ordersNav.classList.add('active');
-  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-  document.getElementById('page-orders').classList.add('active');
-  loadOrders();
-  window.scrollTo(0,0);
-}
-
-function togglePipelineCallList() {
-  var list = document.getElementById('pipeline-call-list');
-  var btn  = document.getElementById('psc2');
-  var isOpen = list.style.display !== 'none';
-  list.style.display = isOpen ? 'none' : 'block';
-  btn.textContent = isOpen ? '▼ Show' : '▲ Hide';
-  if (!isOpen) renderPipelineBuyers();
-}
-
-function renderPipelineBuyers() {
-  var el = document.getElementById('pipeline-buyers');
-  var todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0,10);
-  var called = JSON.parse(sessionStorage.getItem(todayKey) || '{}');
-  var buyers = liveBuyerData.length ? liveBuyerData : [];
-  if (!buyers.length) { el.innerHTML = '<div style="color:var(--muted)">No buyer data — check Buyers tab.</div>'; return; }
-  var todayDow = (function(){var d=new Date().getDay();return d===0?6:d-1;})();
-
-  // Score buyers same as call list
-  var stock = allLiveStockData.length ? allLiveStockData : [];
-  var scored = buyers.map(function(b) {
-    var he=0,hc=0;
-    if(b.prefs) b.prefs.forEach(function(p){
-      var cc=commMap[p.comm]||p.comm;
-      var sf=stock.filter(function(s){return s.commodity===cc&&s.flr>0;});
-      if(sf.some(function(s){return matchScore(s,p)==='exact';}))he++;
-      else if(sf.some(function(s){return matchScore(s,p)==='close';}))hc++;
-    });
-    var mp=he>0?3:hc>0?2:0;
-    var bt=b.buyingDays&&b.buyingDays[todayDow]?1:0;
-    return Object.assign({},b,{_sort:mp*100000+(b.spend||0)/100+bt*10,_match:mp});
-  }).sort(function(a,b){return b._sort-a._sort;}).slice(0,20);
-
-  el.innerHTML = scored.map(function(b,i) {
-    var isCalled = !!called[b.name];
-    var matchColor = b._match===3?'var(--sage-light)':b._match===2?'var(--gold-light)':'#f0f0f0';
-    var matchText  = b._match===3?'EXACT':b._match===2?'CLOSE':'';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:'+(isCalled?'0.4':'1')+'">'
-            + '<div data-bname="'+b.name+'" onclick="togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isCalled?'var(--sage)':'var(--border)')+';background:'+(isCalled?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isCalled?'✓':'')+'</div>'
-      + '<div style="width:20px;height:20px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">'+(i+1)+'</div>'
-      + '<div style="flex:1;min-width:0">'
-      + '<div style="font-weight:700;font-size:13px;'+(isCalled?'text-decoration:line-through;color:var(--muted);':'')+'word-break:break-word">'+b.name+(b.buyingDays&&b.buyingDays[todayDow]?'<span style="background:var(--sage-light);color:#1a5c2a;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px">Today</span>':'')+'</div>'
-      + (matchText?'<div style="font-size:10px;background:'+matchColor+';display:inline-block;padding:1px 6px;border-radius:4px;font-weight:600;margin-top:2px">'+matchText+'</div>':'')
-      + '</div>'
-      + '<div style="font-size:11px;color:var(--muted);flex-shrink:0">R '+(b.spend||0).toLocaleString()+'</div>'
-      + '</div>';
-  }).join('');
-}
-
-function togglePipelineCall(el) {
-  var name = el.getAttribute('data-bname');
-  var todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0,10);
-  var called = JSON.parse(sessionStorage.getItem(todayKey) || '{}');
-  called[name] = !called[name];
-  sessionStorage.setItem(todayKey, JSON.stringify(called));
-  renderPipelineBuyers();
-}
-
-function togglePipelinePayment() {
-  var list = document.getElementById('pipeline-payment-list');
-  var btn  = document.getElementById('psc5');
-  var isOpen = list.style.display !== 'none';
-  list.style.display = isOpen ? 'none' : 'block';
-  btn.textContent = isOpen ? '▼ Show' : '▲ Hide';
-  if (!isOpen) renderPipelineOrders('pipeline-orders', 'payment');
-}
-
-function togglePipelinePackers() {
-  var list = document.getElementById('pipeline-packers-list');
-  var btn  = document.getElementById('psc6');
-  var isOpen = list.style.display !== 'none';
-  list.style.display = isOpen ? 'none' : 'block';
-  btn.textContent = isOpen ? '▼ Show' : '▲ Hide';
-  if (!isOpen) renderPipelineOrders('pipeline-packers', 'packers');
-}
-
-async function renderPipelineOrders(elId, mode) {
-  var el = document.getElementById(elId);
-  el.innerHTML = 'Loading…';
-  try {
-    var res = await fetch(FB_ORDERS+'.json?auth='+FB_SECRET);
-    var raw = await res.json();
+function togglePipelineCall(el){var name=el.getAttribute('data-bname'),todayKey='pipeline-calls-'+new Date().toISOString().slice(0,10),called=JSON.parse(sessionStorage.getItem(todayKey)||'{}');called[name]=!called[name];sessionStorage.setItem(todayKey,JSON.stringify(called));renderPipelineBuyers();}
+function togglePipelinePayment(){var list=document.getElementById('pipeline-payment-list'),btn=document.getElementById('psc5'),isOpen=list.style.display!=='none';list.style.display=isOpen?'none':'block';btn.textContent=isOpen?'▼ Show':'▲ Hide';if(!isOpen)renderPipelineOrders('pipeline-orders','payment');}
+function togglePipelinePackers(){var list=document.getElementById('pipeline-packers-list'),btn=document.getElementById('psc6'),isOpen=list.style.display!=='none';list.style.display=isOpen?'none':'block';btn.textContent=isOpen?'▼ Show':'▲ Hide';if(!isOpen)renderPipelineOrders('pipeline-packers','packers');}
+async function renderPipelineOrders(elId,mode){
+  var el=document.getElementById(elId);el.innerHTML='Loading…';
+  try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_SECRET),raw=await res.json();
     if(!raw){el.innerHTML='<div style="color:var(--muted)">No open orders.</div>';return;}
-    var orders = Object.entries(raw).map(function(e){return Object.assign({id:e[0]},e[1]);}).filter(function(o){return o.status==='open';});
+    var orders=Object.entries(raw).map(function(e){return Object.assign({id:e[0]},e[1]);}).filter(function(o){return o.status==='open';});
     if(!orders.length){el.innerHTML='<div style="color:var(--muted)">No open orders.</div>';return;}
-    var paidKey = 'pipeline-paid-'+new Date().toISOString().slice(0,10);
-    var packedKey = 'pipeline-packed-'+new Date().toISOString().slice(0,10);
-    var paidMap = JSON.parse(sessionStorage.getItem(paidKey)||'{}');
-    var packedMap = JSON.parse(sessionStorage.getItem(packedKey)||'{}');
-
-    el.innerHTML = orders.map(function(o) {
-      var cf = COMM_FULL[o.commodity]||o.commodity;
-      var isPaid = !!paidMap[o.id];
-      var isPacked = !!packedMap[o.id];
-      var isChecked = mode==='payment'?isPaid:isPacked;
-      var stateKey = mode==='payment'?paidKey:packedKey;
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:'+(isChecked?'0.4':'1')+'">'
-                + '<div data-oid="'+o.id+'" data-skey="'+stateKey+'" onclick="togglePipelineOrderState(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isChecked?'var(--sage)':'var(--border)')+';background:'+(isChecked?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isChecked?'✓':'')+'</div>'
-        + '<div style="flex:1;min-width:0">'
-        + '<div style="font-weight:700;font-size:13px;'+(isChecked?'text-decoration:line-through;color:var(--muted);':'')+'word-break:break-word">'+o.buyer+'</div>'
-        + '<div style="font-size:11px;color:var(--muted)">'+cf+' · '+(o.qty||'?')+' units'+(o.collectDate?' · '+o.collectDate:'')+'</div>'
-        + '</div>'
-        + (mode==='payment'?'<div style="font-size:11px;color:'+(isPaid?'var(--sage)':'var(--red)')+';font-weight:700;flex-shrink:0">'+(isPaid?'PAID':'UNPAID')+'</div>':'')
-        + (mode==='packers'?'<div style="font-size:11px;color:'+(isPacked?'var(--sage)':'var(--gold)')+';font-weight:700;flex-shrink:0">'+(isPacked?'PACKED':'PENDING')+'</div>':'')
-        + '</div>';
-    }).join('');
-  } catch(e) { el.innerHTML='<div style="color:var(--red)">Error: '+e.message+'</div>'; }
+    var paidKey='pipeline-paid-'+new Date().toISOString().slice(0,10),packedKey='pipeline-packed-'+new Date().toISOString().slice(0,10);
+    var paidMap=JSON.parse(sessionStorage.getItem(paidKey)||'{}'),packedMap=JSON.parse(sessionStorage.getItem(packedKey)||'{}');
+    el.innerHTML=orders.map(function(o){var cf=COMM_FULL[o.commodity]||o.commodity,isPaid=!!paidMap[o.id],isPacked=!!packedMap[o.id],isChecked=mode==='payment'?isPaid:isPacked,sk=mode==='payment'?paidKey:packedKey;return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:'+(isChecked?'0.4':'1')+'"><div data-oid="'+o.id+'" data-skey="'+sk+'" onclick="togglePipelineOrderState(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isChecked?'var(--sage)':'var(--border)')+';background:'+(isChecked?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isChecked?'✓':'')+'</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;'+(isChecked?'text-decoration:line-through;color:var(--muted);':'')+'word-break:break-word">'+o.buyer+'</div><div style="font-size:11px;color:var(--muted)">'+cf+' · '+(o.qty||'?')+' units'+(o.collectDate?' · '+o.collectDate:'')+'</div></div>'+(mode==='payment'?'<div style="font-size:11px;color:'+(isPaid?'var(--sage)':'var(--red)')+';font-weight:700;flex-shrink:0">'+(isPaid?'PAID':'UNPAID')+'</div>':'')+(mode==='packers'?'<div style="font-size:11px;color:'+(isPacked?'var(--sage)':'var(--gold)')+';font-weight:700;flex-shrink:0">'+(isPacked?'PACKED':'PENDING')+'</div>':'')+'</div>';}).join('');}
+  catch(e){el.innerHTML='<div style="color:var(--red)">Error: '+e.message+'</div>';}
 }
+function togglePipelineOrderState(el){var orderId=el.getAttribute('data-oid'),stateKey=el.getAttribute('data-skey'),map=JSON.parse(sessionStorage.getItem(stateKey)||'{}');map[orderId]=!map[orderId];sessionStorage.setItem(stateKey,JSON.stringify(map));if(stateKey.includes('paid'))renderPipelineOrders('pipeline-orders','payment');if(stateKey.includes('packed'))renderPipelineOrders('pipeline-packers','packers');}
+function runAIFromPipeline(){var el=document.getElementById('ps1'),ch=document.getElementById('psc1');if(el)el.classList.add('done');if(ch){ch.textContent='✓';ch.style.background='var(--sage)';}var state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');state[1]=true;sessionStorage.setItem(pipelineKey,JSON.stringify(state));document.getElementById('ai-match-btn').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(runAIMatch,400);}
+function togglePipelineStep(n){var el=document.getElementById('ps'+n),ch=document.getElementById('psc'+n),state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');if(el.classList.contains('done')){el.classList.remove('done');if(ch)ch.textContent='○';delete state[n];if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='none';}}else{el.classList.add('done');if(ch)ch.textContent='✓';state[n]=true;if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='block';}}sessionStorage.setItem(pipelineKey,JSON.stringify(state));}
+function resetPipeline(){sessionStorage.removeItem(pipelineKey);for(var i=1;i<=6;i++){var el=document.getElementById('ps'+i),ch=document.getElementById('psc'+i);if(el)el.classList.remove('done');if(ch)ch.textContent='○';}}
 
-function togglePipelineOrderState(el) {
-  var orderId = el.getAttribute('data-oid');
-  var stateKey = el.getAttribute('data-skey');
-  var map = JSON.parse(sessionStorage.getItem(stateKey)||'{}');
-  map[orderId] = !map[orderId];
-  sessionStorage.setItem(stateKey, JSON.stringify(map));
-  // Re-render whichever list is open
-  if(stateKey.includes('paid')) renderPipelineOrders('pipeline-orders','payment');
-  if(stateKey.includes('packed')) renderPipelineOrders('pipeline-packers','packers');
-}
-
-function runAIFromPipeline() {
-  // Mark step 1 as done
-  var el = document.getElementById('ps1');
-  var ch = document.getElementById('psc1');
-  if(el) el.classList.add('done');
-  if(ch) { ch.textContent = '✓'; ch.style.background = 'var(--sage)'; }
-  var state = JSON.parse(sessionStorage.getItem(pipelineKey) || '{}');
-  state[1] = true;
-  sessionStorage.setItem(pipelineKey, JSON.stringify(state));
-  // Scroll to AI matcher and run it
-  document.getElementById('ai-match-btn').scrollIntoView({behavior:'smooth', block:'center'});
-  setTimeout(runAIMatch, 400);
-}
-
-function togglePipelineStep(n) {
-  var el = document.getElementById('ps'+n);
-  var ch = document.getElementById('psc'+n);
-  var state = JSON.parse(sessionStorage.getItem(pipelineKey) || '{}');
-  if (el.classList.contains('done')) {
-    el.classList.remove('done');
-    if(ch) ch.textContent = '○';
-    delete state[n];
-    // Hide reserve banner if unticking step 4
-    if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='none';}
-  } else {
-    el.classList.add('done');
-    if(ch) ch.textContent = '✓';
-    state[n] = true;
-    // Show reserve banner when step 4 is ticked
-    if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='block';}
-  }
-  sessionStorage.setItem(pipelineKey, JSON.stringify(state));
-}
-
-function resetPipeline() {
-  sessionStorage.removeItem(pipelineKey);
-  for (var i = 1; i <= 6; i++) {
-    var el = document.getElementById('ps'+i);
-    var ch = document.getElementById('psc'+i);
-    if (el) el.classList.remove('done');
-    if (ch) ch.textContent = '○';
-  }
-}
-
-function populatePrefBuyerSuggestions(){
-  var dl=document.getElementById('pref-buyer-suggestions');
-  if(!dl||!liveBuyerData||!liveBuyerData.length)return;
-  dl.innerHTML=liveBuyerData.map(function(b){return'<option value="'+b.name+'">';}).join('');
-}
 // ── SMART ORDER FORM ─────────────────────────────────────────────────────────
 var VN_DISPLAY={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',MD:'Mendez',NV:'Navel',CN:'Cara Cara',AX:'Mixed','*':'Any'};
 var PN_DISPLAY={TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB025:'250G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket',PC060:'6KG Pocket',CO100:'10KG Carton',CO150:'15KG Carton',SP170:'17KG Sack'};
 var CN_DISPLAY={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino'};
+function initOrderCommodityDropdown(){var sel=document.getElementById('order-commodity');if(!sel)return;var stock=allLiveStockData.length?allLiveStockData:[];var codes=[...new Set(stock.filter(s=>s.flr>0).map(s=>s.commodity))].sort((a,b)=>(CN_DISPLAY[a]||a).localeCompare(CN_DISPLAY[b]||b));sel.innerHTML='<option value="">Select commodity…</option>'+codes.map(c=>'<option value="'+c+'">'+(CN_DISPLAY[c]||c)+'</option>').join('');}
+function onOrderCommodityChange(){var comm=document.getElementById('order-commodity').value,stock=allLiveStockData.filter(s=>s.commodity===comm&&s.flr>0);['order-variety-row','order-pack-row','order-class-row','order-size-row','order-stock-info'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.getElementById('order-variety').innerHTML='<option value="">Select variety…</option>';if(!comm||!stock.length)return;var varieties=[...new Set(stock.map(s=>s.variety))].sort();document.getElementById('order-variety').innerHTML='<option value="">Select variety…</option>'+varieties.map(v=>'<option value="'+v+'">'+(VN_DISPLAY[v]||v)+'</option>').join('');document.getElementById('order-variety-row').style.display='block';}
+function onOrderVarietyChange(){var comm=document.getElementById('order-commodity').value,variety=document.getElementById('order-variety').value,stock=allLiveStockData.filter(s=>s.commodity===comm&&s.variety===variety&&s.flr>0);['order-pack-row','order-class-row','order-size-row','order-stock-info'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});if(!variety||!stock.length)return;var packs=[...new Set(stock.map(s=>s.pack))].sort();document.getElementById('order-pack').innerHTML='<option value="">Select pack…</option>'+packs.map(p=>'<option value="'+p+'">'+(PN_DISPLAY[p]||p)+'</option>').join('');document.getElementById('order-pack-row').style.display='block';}
+function onOrderPackChange(){var comm=document.getElementById('order-commodity').value,variety=document.getElementById('order-variety').value,pack=document.getElementById('order-pack').value,stock=allLiveStockData.filter(s=>s.commodity===comm&&s.variety===variety&&s.pack===pack&&s.flr>0);['order-class-row','order-size-row','order-stock-info'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});if(!pack||!stock.length)return;var grades=[...new Set(stock.map(s=>s.grade))].sort();document.getElementById('order-grade').innerHTML='<option value="">Select class…</option>'+grades.map(g=>'<option value="'+g+'">CL '+g+'</option>').join('');document.getElementById('order-class-row').style.display='block';}
+function onOrderGradeChange(){var comm=document.getElementById('order-commodity').value,variety=document.getElementById('order-variety').value,pack=document.getElementById('order-pack').value,grade=document.getElementById('order-grade').value,stock=allLiveStockData.filter(s=>s.commodity===comm&&s.variety===variety&&s.pack===pack&&s.grade===grade&&s.flr>0);document.getElementById('order-size-row').style.display='none';document.getElementById('order-stock-info').style.display='none';if(!grade||!stock.length)return;var sizes=[...new Set(stock.map(s=>s.size&&s.size!=='*'?s.size:'Any'))].sort();document.getElementById('order-size').innerHTML='<option value="">Select size…</option>'+sizes.map(s=>'<option value="'+s+'">'+s+'</option>').join('');document.getElementById('order-size-row').style.display='block';var totalFlr=stock.reduce(function(a,s){return a+(Number(s.flr)||0);},0),producers=[...new Set(stock.map(s=>s.producer))].join(', '),info=document.getElementById('order-stock-info');info.innerHTML='✅ <strong>'+totalFlr+' units on floor</strong> · '+producers;info.style.display='block';}
+async function saveManualOrder(){var buyer=document.getElementById('m-order-buyer').value.trim().toUpperCase(),commodity=document.getElementById('m-order-commodity').value,variety=document.getElementById('m-order-variety').value.trim(),pack=document.getElementById('m-order-pack').value.trim(),grade=document.getElementById('m-order-grade').value,size=document.getElementById('m-order-size').value.trim()||'*',qty=parseInt(document.getElementById('m-order-qty').value)||0,price=parseFloat(document.getElementById('m-order-price').value)||0,notes=document.getElementById('m-order-notes').value.trim(),collectDate=document.getElementById('m-order-collect-date').value,stat=document.getElementById('m-order-status');if(!buyer||!commodity){stat.style.color='var(--red)';stat.textContent='⚠ Buyer and commodity required';return;}stat.textContent='Saving…';stat.style.color='var(--muted)';try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_SECRET,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({buyer,commodity,pack,variety,size,grade,qty,price,notes,collectDate:collectDate||null,collectTime:null,status:'open',manual:true,createdAt:new Date().toISOString(),flagged:false,matchedStock:null})});if(!res.ok)throw new Error('Save failed');stat.style.color='var(--sage)';stat.textContent='✅ Manual order saved!';['m-order-buyer','m-order-variety','m-order-pack','m-order-size','m-order-qty','m-order-price','m-order-notes','m-order-collect-date'].forEach(id=>document.getElementById(id).value='');document.getElementById('m-order-commodity').value='';document.getElementById('m-order-grade').value='1';setTimeout(()=>{stat.textContent='';},2000);loadOrders();}catch(e){stat.style.color='var(--red)';stat.textContent='⚠ '+e.message;}}
 
-function initOrderCommodityDropdown(){
-  var sel=document.getElementById('order-commodity');
-  if(!sel)return;
-  var stock=allLiveStockData.length?allLiveStockData:[];
-  var codes=[...new Set(stock.filter(s=>s.flr>0).map(s=>s.commodity))].sort((a,b)=>(CN_DISPLAY[a]||a).localeCompare(CN_DISPLAY[b]||b));
-  sel.innerHTML='<option value="">Select commodity…</option>'+codes.map(c=>'<option value="'+c+'">'+(CN_DISPLAY[c]||c)+'</option>').join('');
-}
+// ── BUYER FREQUENCY (overdue) ─────────────────────────────────────────────────
+function calcAvgFreq(dates){if(!dates||dates.length<2)return null;var parsed=dates.map(parseHistoryDate).filter(Boolean).sort(function(a,b){return a-b;});if(parsed.length<2)return null;var gaps=[];for(var i=1;i<parsed.length;i++){var g=Math.round((parsed[i]-parsed[i-1])/86400000);if(g>0&&g<=30)gaps.push(g);}if(!gaps.length)return null;return Math.round(gaps.reduce(function(s,g){return s+g;},0)/gaps.length);}
 
-function onOrderCommodityChange(){
-  var comm=document.getElementById('order-commodity').value;
-  var stock=allLiveStockData.filter(s=>s.commodity===comm&&s.flr>0);
-  // Reset downstream
-  ['order-variety-row','order-pack-row','order-class-row','order-size-row','order-stock-info'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.style.display='none';
-  });
-  document.getElementById('order-variety').innerHTML='<option value="">Select variety…</option>';
-  if(!comm||!stock.length)return;
-  // Populate varieties
-  var varieties=[...new Set(stock.map(s=>s.variety))].sort();
-  var varSel=document.getElementById('order-variety');
-  varSel.innerHTML='<option value="">Select variety…</option>'+varieties.map(v=>'<option value="'+v+'">'+(VN_DISPLAY[v]||v)+'</option>').join('');
-  document.getElementById('order-variety-row').style.display='block';
-}
+// ── DYNAMIC FILTERS ─────────────────────────────────────────────────────────
+function populateStockFilter(data){var sel=document.getElementById('stock-filter');if(!sel)return;var current=sel.value;var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino'};var codes=[...new Set((allLiveStockData.length?allLiveStockData:data).map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));sel.innerHTML='<option value="">All commodities</option>'+codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');}
+function populateFloorFilter(data){var sel=document.getElementById('floor-filter');if(!sel)return;var current=sel.value;var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino'};var src=allLiveFloorData.length?allLiveFloorData:(data||liveFloorData);var codes=[...new Set(src.map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));sel.innerHTML='<option value="">All commodities</option>'+codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');}
 
-function onOrderVarietyChange(){
-  var comm=document.getElementById('order-commodity').value;
-  var variety=document.getElementById('order-variety').value;
-  var stock=allLiveStockData.filter(s=>s.commodity===comm&&s.variety===variety&&s.flr>0);
-  ['order-pack-row','order-class-row','order-size-row','order-stock-info'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.style.display='none';
-  });
-  if(!variety||!stock.length)return;
-  var packs=[...new Set(stock.map(s=>s.pack))].sort();
-  var packSel=document.getElementById('order-pack');
-  packSel.innerHTML='<option value="">Select pack…</option>'+packs.map(p=>'<option value="'+p+'">'+(PN_DISPLAY[p]||p)+'</option>').join('');
-  document.getElementById('order-pack-row').style.display='block';
-}
-
-function onOrderPackChange(){
-  var comm=document.getElementById('order-commodity').value;
-  var variety=document.getElementById('order-variety').value;
-  var pack=document.getElementById('order-pack').value;
-  var stock=allLiveStockData.filter(s=>s.commodity===comm&&s.variety===variety&&s.pack===pack&&s.flr>0);
-  ['order-class-row','order-size-row','order-stock-info'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.style.display='none';
-  });
-  if(!pack||!stock.length)return;
-  var grades=[...new Set(stock.map(s=>s.grade))].sort();
-  var gradeSel=document.getElementById('order-grade');
-  gradeSel.innerHTML='<option value="">Select class…</option>'+grades.map(g=>'<option value="'+g+'">CL '+g+'</option>').join('');
-  document.getElementById('order-class-row').style.display='block';
-}
-
-function onOrderGradeChange(){
-  var comm=document.getElementById('order-commodity').value;
-  var variety=document.getElementById('order-variety').value;
-  var pack=document.getElementById('order-pack').value;
-  var grade=document.getElementById('order-grade').value;
-  var stock=allLiveStockData.filter(s=>s.commodity===comm&&s.variety===variety&&s.pack===pack&&s.grade===grade&&s.flr>0);
-  document.getElementById('order-size-row').style.display='none';
-  document.getElementById('order-stock-info').style.display='none';
-  if(!grade||!stock.length)return;
-  var sizes=[...new Set(stock.map(s=>s.size&&s.size!=='*'?s.size:'Any'))].sort();
-  var sizeSel=document.getElementById('order-size');
-  sizeSel.innerHTML='<option value="">Select size…</option>'+sizes.map(s=>'<option value="'+s+'">'+s+'</option>').join('');
-  document.getElementById('order-size-row').style.display='block';
-  // Show stock info
-  var totalFlr=stock.reduce(function(a,s){return a+(Number(s.flr)||0);},0);
-  var producers=[...new Set(stock.map(s=>s.producer))].join(', ');
-  var info=document.getElementById('order-stock-info');
-  info.innerHTML='✅ <strong>'+totalFlr+' units on floor</strong> · '+producers;
-  info.style.display='block';
-}
-
-async function saveManualOrder(){
-  var buyer=document.getElementById('m-order-buyer').value.trim().toUpperCase();
-  var commodity=document.getElementById('m-order-commodity').value;
-  var variety=document.getElementById('m-order-variety').value.trim();
-  var pack=document.getElementById('m-order-pack').value.trim();
-  var grade=document.getElementById('m-order-grade').value;
-  var size=document.getElementById('m-order-size').value.trim()||'*';
-  var qty=parseInt(document.getElementById('m-order-qty').value)||0;
-  var price=parseFloat(document.getElementById('m-order-price').value)||0;
-  var notes=document.getElementById('m-order-notes').value.trim();
-  var collectDate=document.getElementById('m-order-collect-date').value;
-  var stat=document.getElementById('m-order-status');
-  if(!buyer||!commodity){stat.style.color='var(--red)';stat.textContent='⚠ Buyer and commodity required';return;}
-  stat.textContent='Saving…';stat.style.color='var(--muted)';
-  try{
-    var res=await fetch(FB_ORDERS+'.json?auth='+FB_SECRET,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({buyer,commodity,pack,variety,size,grade,qty,price,notes,collectDate:collectDate||null,collectTime:null,status:'open',manual:true,createdAt:new Date().toISOString(),flagged:false,matchedStock:null})});
-    if(!res.ok)throw new Error('Save failed');
-    stat.style.color='var(--sage)';stat.textContent='✅ Manual order saved!';
-    ['m-order-buyer','m-order-variety','m-order-pack','m-order-size','m-order-qty','m-order-price','m-order-notes','m-order-collect-date'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('m-order-commodity').value='';
-    document.getElementById('m-order-grade').value='1';
-    setTimeout(()=>{stat.textContent='';},2000);
-    loadOrders();
-  }catch(e){stat.style.color='var(--red)';stat.textContent='⚠ '+e.message;}
-}
+function populatePrefBuyerSuggestions(){var dl=document.getElementById('pref-buyer-suggestions');if(!dl||!liveBuyerData||!liveBuyerData.length)return;dl.innerHTML=liveBuyerData.map(function(b){return'<option value="'+b.name+'">';}).join('');}
 
 function populateBuyerSuggestions(){var dl=document.getElementById('buyer-suggestions');if(!dl||!liveBuyerData.length)return;dl.innerHTML=liveBuyerData.map(b=>'<option value="'+b.name+'">').join('');}
 </script>
