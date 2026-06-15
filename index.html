@@ -174,76 +174,86 @@ main{padding:14px 12px}
 <div class="page" id="page-matching">
   <!-- PIPELINE STEPS -->
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
-    <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">🔁 Sales Pipeline</div>
-    <div style="display:flex;flex-direction:column;gap:8px" id="pipeline-steps">
-      <div class="pipeline-step" id="ps1" onclick="togglePipelineStep(1)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:700;font-size:14px;color:var(--moss)">🔁 Sales Pipeline</div>
+      <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↺ Reset</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+
+      <!-- STEP 1: AI MATCH -->
+      <div class="pipeline-step" id="ps1" onclick="runAIFromPipeline()">
         <div class="ps-num">1</div>
-        <div class="ps-body">
-          <div class="ps-title">Run AI Match</div>
-          <div class="ps-sub">Analyse stock vs buyer history</div>
-        </div>
-        <div class="ps-check" id="psc1">○</div>
+        <div class="ps-body"><div class="ps-title">AI Match</div><div class="ps-sub">Analyse stock vs buyer history</div></div>
+        <div style="flex-shrink:0;background:var(--gold);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc1">Run</div>
       </div>
-      <div class="pipeline-step" id="ps2" onclick="togglePipelineStep(2)">
+
+      <!-- STEP 2: CALL BUYERS -->
+      <div class="pipeline-step" id="ps2" onclick="togglePipelineCallList()">
         <div class="ps-num">2</div>
-        <div class="ps-body">
-          <div class="ps-title">Call Buyers</div>
-          <div class="ps-sub">Work through call list below</div>
-        </div>
-        <div class="ps-check" id="psc2">○</div>
+        <div class="ps-body"><div class="ps-title">Call Buyers</div><div class="ps-sub">Work through top 20 buyers</div></div>
+        <div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc2">▼ Show</div>
       </div>
-      <div class="pipeline-step" id="ps3" onclick="togglePipelineStep(3)">
+      <div id="pipeline-call-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px">
+        <div id="pipeline-buyers" style="font-size:13px;color:var(--muted)">Loading buyers…</div>
+      </div>
+
+      <!-- STEP 3: TYPE ORDERS -->
+      <div class="pipeline-step" id="ps3" onclick="goToOrders()">
         <div class="ps-num">3</div>
-        <div class="ps-body">
-          <div class="ps-title">Type in Orders</div>
-          <div class="ps-sub">Record confirmed orders on Orders tab</div>
-        </div>
-        <div class="ps-check" id="psc3">○</div>
+        <div class="ps-body"><div class="ps-title">Type in Orders</div><div class="ps-sub">Record confirmed orders</div></div>
+        <div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px">→ Orders</div>
       </div>
+
+      <!-- STEP 4: RESERVE STOCK -->
       <div class="pipeline-step" id="ps4" onclick="togglePipelineStep(4)">
         <div class="ps-num">4</div>
-        <div class="ps-body">
-          <div class="ps-title">Reserve Stock</div>
-          <div class="ps-sub">Go to market sales system and reserve</div>
-        </div>
+        <div class="ps-body"><div class="ps-title">Reserve Stock</div><div class="ps-sub">Book on market workstation</div></div>
         <div class="ps-check" id="psc4">○</div>
       </div>
-      <div class="pipeline-step" id="ps5" onclick="togglePipelineStep(5)">
+      <div id="pipeline-reserve-banner" style="display:none;background:#fff3cd;border:1.5px solid #c9882a;border-radius:10px;padding:12px 14px;margin-top:-4px">
+        <div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:4px">🖥️ Go to Booking Clerk Workstation</div>
+        <div style="font-size:12px;color:#8a5a00">Reserve the stock on the market sales system before continuing. Once done, tick step 4 above.</div>
+      </div>
+
+      <!-- STEP 5: CHECK PAYMENT -->
+      <div class="pipeline-step" id="ps5" onclick="togglePipelinePayment()">
         <div class="ps-num">5</div>
-        <div class="ps-body">
-          <div class="ps-title">Check Payment</div>
-          <div class="ps-sub">Confirm reservation is paid</div>
-        </div>
-        <div class="ps-check" id="psc5">○</div>
+        <div class="ps-body"><div class="ps-title">Check Payment</div><div class="ps-sub">Confirm reservations are paid</div></div>
+        <div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc5">▼ Show</div>
       </div>
-      <div class="pipeline-step" id="ps6" onclick="togglePipelineStep(6)">
+      <div id="pipeline-payment-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Tap order to mark as paid</div>
+        <div id="pipeline-orders" style="font-size:13px;color:var(--muted)">Loading orders…</div>
+      </div>
+
+      <!-- STEP 6: FLOOR PACKERS -->
+      <div class="pipeline-step" id="ps6" onclick="togglePipelinePackers()">
         <div class="ps-num">6</div>
-        <div class="ps-body">
-          <div class="ps-title">Removal Slip to Floor Packers</div>
-          <div class="ps-sub">Send removal slip to floor packers</div>
-        </div>
-        <div class="ps-check" id="psc6">○</div>
+        <div class="ps-body"><div class="ps-title">Floor Packers</div><div class="ps-sub">Confirm orders are packed</div></div>
+        <div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc6">▼ Show</div>
       </div>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px">
-      <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 12px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↺ Reset</button>
+      <div id="pipeline-packers-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Check floor packers have packed these orders</div>
+        <div id="pipeline-packers" style="font-size:13px;color:var(--muted)">Loading orders…</div>
+      </div>
+
     </div>
   </div>
 
-  <div style="background:linear-gradient(120deg,#1e4d2b,#3a7a4a);border-radius:14px;padding:14px 16px;margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div><div style="color:#fff;font-weight:800;font-size:15px">AI Stock Matcher</div><div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:2px">Gemini analyses buyer history vs current stock</div></div>
-      <button id="ai-match-btn" onclick="runAIMatch()" style="background:var(--gold);border:none;border-radius:10px;padding:10px 16px;color:#fff;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0">Run AI</button>
-    </div>
-    <div id="ai-loading" style="display:none;margin-top:12px;text-align:center;color:rgba(255,255,255,0.8);font-size:13px">Analysing...</div>
-    <div id="ai-summary" style="display:none;margin-top:12px;background:rgba(255,255,255,0.12);border-radius:10px;padding:10px 12px"><div style="color:rgba(255,255,255,0.7);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">AI Summary</div><div id="ai-summary-text" style="color:#fff;font-size:13px;line-height:1.5"></div></div>
-    <div id="ai-error" style="display:none;margin-top:10px;background:rgba(192,57,43,0.3);border-radius:8px;padding:8px 12px;color:#ffcccc;font-size:12px"></div>
+  <!-- AI status elements (hidden, used by runAIMatch) -->
+  <div id="ai-loading" style="display:none;text-align:center;color:var(--muted);font-size:13px;padding:10px">Analysing...</div>
+  <div id="ai-summary" style="display:none;background:var(--sage-light);border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="color:var(--moss);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">AI Summary</div><div id="ai-summary-text" style="color:var(--ink);font-size:13px;line-height:1.5"></div></div>
+  <div id="ai-error" style="display:none;background:var(--red-light);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;margin-bottom:10px"></div>
+  <button id="ai-match-btn" style="display:none" onclick="runAIMatch()">Run AI</button>
+  <!-- AI Results -->
+  <div id="ai-results" style="display:none;margin-bottom:14px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px" id="ai-result-count"></div>
+    <div id="ai-cards"></div>
   </div>
-  <div id="ai-results" style="display:none;margin-bottom:14px"><div style="font-size:12px;color:var(--muted);margin-bottom:10px" id="ai-result-count"></div><div id="ai-cards"></div><div style="text-align:center;margin-top:8px"><button onclick="document.getElementById('ai-results').style.display='none';document.getElementById('manual-match').style.display='block';" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:7px 14px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Show manual view</button></div></div>
-  <div id="manual-match">
-    <div class="legend"><span><span class="dot dot-e"></span>Exact</span><span><span class="dot dot-c"></span>Close</span><span><span class="dot dot-n"></span>No match</span></div>
-    <div class="ctrl-row"><input type="text" id="match-search" placeholder="Search buyer…" oninput="filterMatches()"/></div>
-    <div id="match-result" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+  <!-- Hidden elements needed by JS -->
+  <div id="manual-match" style="display:none">
+    <div id="match-search-hidden"></div>
+    <div id="match-result"></div>
     <div id="match-grid"></div>
   </div>
 </div>
@@ -1133,18 +1143,168 @@ function loadPipelineState() {
   }
 }
 
+// ── PIPELINE FUNCTIONS ───────────────────────────────────────────────────────
+function goToOrders() {
+  togglePipelineStep(3);
+  var ordersNav = document.querySelector('.bnav-item:nth-child(5)');
+  showPage('orders', ordersNav || document.createElement('div'));
+  document.querySelectorAll('.bnav-item').forEach(function(n){n.classList.remove('active');});
+  if(ordersNav) ordersNav.classList.add('active');
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('page-orders').classList.add('active');
+  loadOrders();
+  window.scrollTo(0,0);
+}
+
+function togglePipelineCallList() {
+  var list = document.getElementById('pipeline-call-list');
+  var btn  = document.getElementById('psc2');
+  var isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '▼ Show' : '▲ Hide';
+  if (!isOpen) renderPipelineBuyers();
+}
+
+function renderPipelineBuyers() {
+  var el = document.getElementById('pipeline-buyers');
+  var todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0,10);
+  var called = JSON.parse(sessionStorage.getItem(todayKey) || '{}');
+  var buyers = liveBuyerData.length ? liveBuyerData : [];
+  if (!buyers.length) { el.innerHTML = '<div style="color:var(--muted)">No buyer data — check Buyers tab.</div>'; return; }
+  var todayDow = (function(){var d=new Date().getDay();return d===0?6:d-1;})();
+
+  // Score buyers same as call list
+  var stock = allLiveStockData.length ? allLiveStockData : [];
+  var scored = buyers.map(function(b) {
+    var he=0,hc=0;
+    if(b.prefs) b.prefs.forEach(function(p){
+      var cc=commMap[p.comm]||p.comm;
+      var sf=stock.filter(function(s){return s.commodity===cc&&s.flr>0;});
+      if(sf.some(function(s){return matchScore(s,p)==='exact';}))he++;
+      else if(sf.some(function(s){return matchScore(s,p)==='close';}))hc++;
+    });
+    var mp=he>0?3:hc>0?2:0;
+    var bt=b.buyingDays&&b.buyingDays[todayDow]?1:0;
+    return Object.assign({},b,{_sort:mp*100000+(b.spend||0)/100+bt*10,_match:mp});
+  }).sort(function(a,b){return b._sort-a._sort;}).slice(0,20);
+
+  el.innerHTML = scored.map(function(b,i) {
+    var isCalled = !!called[b.name];
+    var matchColor = b._match===3?'var(--sage-light)':b._match===2?'var(--gold-light)':'#f0f0f0';
+    var matchText  = b._match===3?'EXACT':b._match===2?'CLOSE':'';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:'+(isCalled?'0.4':'1')+'">'
+            + '<div data-bname="'+b.name+'" onclick="togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isCalled?'var(--sage)':'var(--border)')+';background:'+(isCalled?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isCalled?'✓':'')+'</div>'
+      + '<div style="width:20px;height:20px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">'+(i+1)+'</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-weight:700;font-size:13px;'+(isCalled?'text-decoration:line-through;color:var(--muted);':'')+'word-break:break-word">'+b.name+(b.buyingDays&&b.buyingDays[todayDow]?'<span style="background:var(--sage-light);color:#1a5c2a;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px">Today</span>':'')+'</div>'
+      + (matchText?'<div style="font-size:10px;background:'+matchColor+';display:inline-block;padding:1px 6px;border-radius:4px;font-weight:600;margin-top:2px">'+matchText+'</div>':'')
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--muted);flex-shrink:0">R '+(b.spend||0).toLocaleString()+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+function togglePipelineCall(el) {
+  var name = el.getAttribute('data-bname');
+  var todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0,10);
+  var called = JSON.parse(sessionStorage.getItem(todayKey) || '{}');
+  called[name] = !called[name];
+  sessionStorage.setItem(todayKey, JSON.stringify(called));
+  renderPipelineBuyers();
+}
+
+function togglePipelinePayment() {
+  var list = document.getElementById('pipeline-payment-list');
+  var btn  = document.getElementById('psc5');
+  var isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '▼ Show' : '▲ Hide';
+  if (!isOpen) renderPipelineOrders('pipeline-orders', 'payment');
+}
+
+function togglePipelinePackers() {
+  var list = document.getElementById('pipeline-packers-list');
+  var btn  = document.getElementById('psc6');
+  var isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '▼ Show' : '▲ Hide';
+  if (!isOpen) renderPipelineOrders('pipeline-packers', 'packers');
+}
+
+async function renderPipelineOrders(elId, mode) {
+  var el = document.getElementById(elId);
+  el.innerHTML = 'Loading…';
+  try {
+    var res = await fetch(FB_ORDERS+'.json?auth='+FB_SECRET);
+    var raw = await res.json();
+    if(!raw){el.innerHTML='<div style="color:var(--muted)">No open orders.</div>';return;}
+    var orders = Object.entries(raw).map(function(e){return Object.assign({id:e[0]},e[1]);}).filter(function(o){return o.status==='open';});
+    if(!orders.length){el.innerHTML='<div style="color:var(--muted)">No open orders.</div>';return;}
+    var paidKey = 'pipeline-paid-'+new Date().toISOString().slice(0,10);
+    var packedKey = 'pipeline-packed-'+new Date().toISOString().slice(0,10);
+    var paidMap = JSON.parse(sessionStorage.getItem(paidKey)||'{}');
+    var packedMap = JSON.parse(sessionStorage.getItem(packedKey)||'{}');
+
+    el.innerHTML = orders.map(function(o) {
+      var cf = COMM_FULL[o.commodity]||o.commodity;
+      var isPaid = !!paidMap[o.id];
+      var isPacked = !!packedMap[o.id];
+      var isChecked = mode==='payment'?isPaid:isPacked;
+      var stateKey = mode==='payment'?paidKey:packedKey;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:'+(isChecked?'0.4':'1')+'">'
+                + '<div data-oid="'+o.id+'" data-skey="'+stateKey+'" onclick="togglePipelineOrderState(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isChecked?'var(--sage)':'var(--border)')+';background:'+(isChecked?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isChecked?'✓':'')+'</div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-weight:700;font-size:13px;'+(isChecked?'text-decoration:line-through;color:var(--muted);':'')+'word-break:break-word">'+o.buyer+'</div>'
+        + '<div style="font-size:11px;color:var(--muted)">'+cf+' · '+(o.qty||'?')+' units'+(o.collectDate?' · '+o.collectDate:'')+'</div>'
+        + '</div>'
+        + (mode==='payment'?'<div style="font-size:11px;color:'+(isPaid?'var(--sage)':'var(--red)')+';font-weight:700;flex-shrink:0">'+(isPaid?'PAID':'UNPAID')+'</div>':'')
+        + (mode==='packers'?'<div style="font-size:11px;color:'+(isPacked?'var(--sage)':'var(--gold)')+';font-weight:700;flex-shrink:0">'+(isPacked?'PACKED':'PENDING')+'</div>':'')
+        + '</div>';
+    }).join('');
+  } catch(e) { el.innerHTML='<div style="color:var(--red)">Error: '+e.message+'</div>'; }
+}
+
+function togglePipelineOrderState(el) {
+  var orderId = el.getAttribute('data-oid');
+  var stateKey = el.getAttribute('data-skey');
+  var map = JSON.parse(sessionStorage.getItem(stateKey)||'{}');
+  map[orderId] = !map[orderId];
+  sessionStorage.setItem(stateKey, JSON.stringify(map));
+  // Re-render whichever list is open
+  if(stateKey.includes('paid')) renderPipelineOrders('pipeline-orders','payment');
+  if(stateKey.includes('packed')) renderPipelineOrders('pipeline-packers','packers');
+}
+
+function runAIFromPipeline() {
+  // Mark step 1 as done
+  var el = document.getElementById('ps1');
+  var ch = document.getElementById('psc1');
+  if(el) el.classList.add('done');
+  if(ch) { ch.textContent = '✓'; ch.style.background = 'var(--sage)'; }
+  var state = JSON.parse(sessionStorage.getItem(pipelineKey) || '{}');
+  state[1] = true;
+  sessionStorage.setItem(pipelineKey, JSON.stringify(state));
+  // Scroll to AI matcher and run it
+  document.getElementById('ai-match-btn').scrollIntoView({behavior:'smooth', block:'center'});
+  setTimeout(runAIMatch, 400);
+}
+
 function togglePipelineStep(n) {
   var el = document.getElementById('ps'+n);
   var ch = document.getElementById('psc'+n);
   var state = JSON.parse(sessionStorage.getItem(pipelineKey) || '{}');
   if (el.classList.contains('done')) {
     el.classList.remove('done');
-    ch.textContent = '○';
+    if(ch) ch.textContent = '○';
     delete state[n];
+    // Hide reserve banner if unticking step 4
+    if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='none';}
   } else {
     el.classList.add('done');
-    ch.textContent = '✓';
+    if(ch) ch.textContent = '✓';
     state[n] = true;
+    // Show reserve banner when step 4 is ticked
+    if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='block';}
   }
   sessionStorage.setItem(pipelineKey, JSON.stringify(state));
 }
