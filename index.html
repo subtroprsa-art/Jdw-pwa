@@ -697,6 +697,7 @@ async function loadFloorFromFirebase(user) {
     var d = await r.json();
     if(!d) { el.innerHTML = '<div class="empty">No floor balance data. Upload a floor balance PDF.</div>'; return; }
     liveFloorData = Object.values(d);
+    if(liveFloorData.length)console.log('FLOOR SAMPLE:',JSON.stringify(liveFloorData[0]));
     loadAllFloorData().then(function(){
       populateFloorFilter();
       filterFloor();
