@@ -522,7 +522,7 @@ async function runAIMatch(){
     if(ch){ch.textContent='v';ch.style.background='var(--sage)';}
     if(si)si.textContent=matches.length+' matches found'+(data.model?' ('+data.model+')':'');
     // Save to sessionStorage
-    try{sessionStorage.setItem('ai-results-'+new Date().toISOString().slice(0,10),JSON.stringify({summary:parsed.summary||'',matches:matches,model:data.model||''}));}catch(e){}
+    try{localStorage.setItem('ai-results-'+new Date().toISOString().slice(0,10),JSON.stringify({summary:parsed.summary||'',matches:matches,model:data.model||''}));}catch(e){}
     // Populate call buyers with AI results and auto-open
     renderAICallList(matches, parsed.summary||'');
     var list=document.getElementById('pipeline-call-list');
@@ -714,14 +714,36 @@ function switchFloorTab(user, btn) {
   loadFloorFromFirebase(user);
 }
 
-function filterFloor() {
-  var q = (document.getElementById('floor-search').value || '').toLowerCase();
-  var f = document.getElementById('floor-filter').value;
-  var data = liveFloorData.filter(s =>
-    (!f || s.commodity === f) &&
-    (!q || (s.producer||'').toLowerCase().includes(q) || (s.commodity||'').toLowerCase().includes(q) || (s.seq||'').includes(q))
-  );
+function filterFloor(){
+  var q=(document.getElementById('floor-search').value||'').toLowerCase().trim();
+  var f=document.getElementById('floor-filter').value;
+  var src=allLiveFloorData.length?allLiveFloorData:liveFloorData;
+  var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino'};
+  var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MAH:'maluma',MD:'mendez',NV:'navel',CN:'cara cara',AX:'mixed',LR:'leanri',HM:'honey murcott',M1:'mandarin',NAR:'nardocott'};
+  var PN={TR040:'4kg tray',BG150:'15kg bag',BG160:'16kg bag',CTT150:'15kg carton',PTB005:'500g punnet',PTB025:'250g punnet',PTB002:'160g punnet',DL076:'dl076',PC030:'3kg pocket',PC060:'6kg pocket',CO100:'10kg carton',CO150:'15kg carton',SP170:'17kg sack'};
+  var data=src.filter(function(s){
+    if(f&&s.commodity!==f)return false;
+    if(!q)return true;
+    var terms=q.split(/\s+/);
+    var searchStr=[
+      s.producer,
+      CN[s.commodity]||s.commodity,
+      VN[s.variety]||s.variety,
+      s.variety,
+      s.size&&s.size!=='*'?s.size:'',
+      s.count&&s.count!=='*'?s.count:'',
+      PN[s.pack]||s.pack,
+      s.grade,
+      s.grn,
+      s.seq,
+      String(s.balance||'')
+    ].join(' ').toLowerCase();
+    return terms.every(function(t){return searchStr.includes(t);});
+  });
+  if(f||q)data=data.sort(function(a,b){return(a.producer||'').localeCompare(b.producer||'');});
   renderFloor(data);
+  var su=document.getElementById('floor-salesman-note');
+  if(su){su.textContent=(f||q)?'Searching all salesmen':'';su.style.display=(f||q)?'block':'none';}
 }
 
 function renderFloor(data) {
@@ -812,7 +834,7 @@ function renderAICallList(matches, summary) {
   var el = document.getElementById('pipeline-buyers');
   if(!el) return;
   var todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0,10);
-  var called = JSON.parse(sessionStorage.getItem(todayKey) || '{}');
+  var called = JSON.parse(localStorage.getItem(todayKey) || '{}');
 
   var html = '';
   if(summary) {
@@ -950,7 +972,7 @@ function loadPipelineState(){
   var state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');
   for(var i=1;i<=6;i++){if(state[i]){var el=document.getElementById('ps'+i),ch=document.getElementById('psc'+i);if(el)el.classList.add('done');if(ch)ch.textContent='v';}}
   // Restore AI results if they exist for today
-  var saved=null;try{saved=JSON.parse(sessionStorage.getItem('ai-results-'+new Date().toISOString().slice(0,10)));}catch(e){}
+  var saved=null;try{saved=JSON.parse(localStorage.getItem('ai-results-'+new Date().toISOString().slice(0,10)));}catch(e){}
   if(saved&&saved.matches&&saved.matches.length){
     var se=document.getElementById('ai-summary'),st=document.getElementById('ai-summary-text'),rd=document.getElementById('ai-results'),cd=document.getElementById('ai-cards'),cn=document.getElementById('ai-result-count');
     if(saved.summary&&se&&st){st.textContent=saved.summary;se.style.display='block';}
@@ -1036,7 +1058,7 @@ function renderAICallList(matches, summary) {
   var el = document.getElementById('pipeline-buyers');
   if(!el) return;
   var todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0,10);
-  var called = JSON.parse(sessionStorage.getItem(todayKey) || '{}');
+  var called = JSON.parse(localStorage.getItem(todayKey) || '{}');
 
   var html = '';
   if(summary) {
