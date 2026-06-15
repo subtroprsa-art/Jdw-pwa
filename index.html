@@ -615,7 +615,7 @@ function populateFloorFilter(data) {
 function filterStock(){
   var q=document.getElementById('stock-search').value.toLowerCase().trim();
   var f=document.getElementById('stock-filter').value;
-  var src=f?(allLiveStockData.length?allLiveStockData:[]):(liveStockData.length?liveStockData:[]);
+  var src=(allLiveStockData.length?allLiveStockData:(liveStockData.length?liveStockData:[]));
   var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino'};
   var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MD:'mendez',NV:'navel',AX:'mixed'};
   var PN={TR040:'4kg tray',BG150:'15kg bag',BG160:'16kg bag',CTT150:'15kg carton',PTB005:'500g punnet',PTB025:'250g punnet',PTB002:'160g punnet',DL076:'dl076',PC030:'3kg pocket',PC060:'6kg pocket',CO100:'10kg carton',CO150:'15kg carton',SP170:'17kg sack'};
