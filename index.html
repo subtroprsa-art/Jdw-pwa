@@ -252,7 +252,8 @@ main{padding:14px 12px}
   <div class="upload-box"><div class="upload-title">📄 Upload Stock PDF</div><div class="upload-hint">POT.pdf · CDW.pdf · RIAAN.pdf</div><label class="upload-file-btn">📎 Choose PDF<input type="file" id="stockFile" accept=".pdf" style="display:none" onchange="document.getElementById('stockFileName').textContent=this.files[0]?.name||'No file chosen'"/></label><span id="stockFileName" class="upload-fname">No file chosen</span><div class="upload-btn-row"><button class="upload-btn" onclick="doStockUpload(false)">Upload</button><button class="upload-btn upload-btn-red" onclick="doStockUpload(true)">🔄 Clear &amp; Re-upload</button></div><div id="uploadStatus" class="upload-status"></div></div>
   <div class="stock-tabs"><button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button><button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button><button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button></div>
   <div class="ctrl-row"><input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/><select id="stock-filter" onchange="filterStock()"><option value="">All</option><option value="AVOS">Avocados</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwi</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="ORGS">Oranges</option><option value="SATS">Satsumas</option><option value="STRS">Strawberries</option></select></div>
-  <div id="stock-list"></div>
+  <div id="stock-salesman-note" style="display:none;font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600"></div>
+<div id="stock-list"></div>
 </div>
 <div class="page" id="page-commodities"><div class="ctrl-row"><input type="text" id="comm-search" placeholder="🔍 Search commodity…" oninput="filterCommodities()"/></div><div id="comm-summary-list"></div><div id="comm-detail" style="display:none"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button onclick="closeCommodityDetail()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:13px;cursor:pointer">← Back</button><div id="comm-detail-title" style="font-weight:700;font-size:16px;color:var(--moss)"></div></div><div id="comm-detail-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div><div id="comm-detail-lines"></div></div></div>
 <div class="page" id="page-orders">
@@ -348,6 +349,7 @@ main{padding:14px 12px}
     </select>
   </div>
   <div id="floor-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+  <div id="floor-salesman-note" style="display:none;font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600"></div>
   <div id="floor-list"></div>
 </div>
 </main>
@@ -606,7 +608,19 @@ function renderStock(data){
     return'<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden"><div onclick="toggleSection(\''+cid+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--moss);cursor:pointer"><div><div style="font-weight:800;font-size:16px;color:#fff">'+cl+'</div><div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">'+sP.length+' producer'+(sP.length>1?'s':'')+'</div></div><div style="display:flex;align-items:center;gap:10px"><div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center"><div style="font-size:20px;font-weight:800;color:#fff;line-height:1">'+tf.toLocaleString()+'</div><div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">on floor</div></div><div id="arr-'+cid+'" style="color:#fff;font-size:14px;transition:transform .2s">▼</div></div></div><div id="'+cid+'" style="display:none;padding:10px">'+ph+'</div></div>';}).join('');
 }
 
-function filterStock(){var q=document.getElementById('stock-search').value.toLowerCase(),f=document.getElementById('stock-filter').value,src=liveStockData.length?liveStockData:[];renderStock(src.filter(s=>(!f||s.commodity===f)&&(!q||s.producer.toLowerCase().includes(q)||s.commodity.toLowerCase().includes(q))));}
+function filterStock(){
+  var q=document.getElementById('stock-search').value.toLowerCase();
+  var f=document.getElementById('stock-filter').value;
+  // If commodity filter active, show ALL salesmen combined; otherwise show current tab only
+  var src=f?(allLiveStockData.length?allLiveStockData:[]):(liveStockData.length?liveStockData:[]);
+  var filtered=src.filter(s=>(!f||s.commodity===f)&&(!q||s.producer.toLowerCase().includes(q)||s.commodity.toLowerCase().includes(q)));
+  // Sort alphabetically by producer when filtering by commodity
+  if(f) filtered=filtered.sort((a,b)=>a.producer.localeCompare(b.producer));
+  renderStock(filtered);
+  // Show indicator when showing all salesmen
+  var su=document.getElementById('stock-salesman-note');
+  if(su){su.textContent=f?'Showing all salesmen for '+f:'';su.style.display=f?'block':'none';}
+}
 
 function showPage(id,el){
   if(id==='commodities'){document.getElementById('comm-summary-list').innerHTML='<div class="empty">Loading…</div>';document.getElementById('comm-detail').style.display='none';document.getElementById('comm-summary-list').style.display='block';fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json').then(r=>r.json()).then(d=>{var all=[];for(var [uk,uv] of Object.entries(d||{}))for(var e of Object.values(uv||{}))all.push({...firebaseToItem(e),user:e.user||uk});allLiveStockData=all;renderCommodities(buildCommoditySummary());}).catch(()=>{document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load data.</div>';});}
@@ -708,10 +722,10 @@ async function printOrders(){try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_
 
 // ── FLOOR BALANCE ────────────────────────────────────────────────────────────
 let liveFloorData = [];
+let allLiveFloorData = [];
 
 async function loadFloorFromFirebase(user) {
   var el = document.getElementById('floor-list');
-  var su = document.getElementById('floor-summary');
   if(el) el.innerHTML = '<div class="empty">Loading…</div>';
   try {
     var r = await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor/' + user + '.json');
@@ -719,10 +733,23 @@ async function loadFloorFromFirebase(user) {
     var d = await r.json();
     if(!d) { el.innerHTML = '<div class="empty">No floor balance data. Upload a floor balance PDF.</div>'; return; }
     liveFloorData = Object.values(d);
+    // Also load all salesmen for commodity filter
+    loadAllFloorData();
     filterFloor();
   } catch(e) {
     if(el) el.innerHTML = '<div class="empty">Could not load floor balance: ' + e.message + '</div>';
   }
+}
+
+async function loadAllFloorData() {
+  try {
+    var r = await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor.json');
+    if(!r.ok) return;
+    var d = await r.json();
+    var all = [];
+    for(var u of Object.values(d||{})) for(var e of Object.values(u||{})) all.push(e);
+    allLiveFloorData = all;
+  } catch(e) { console.warn('loadAllFloorData:', e.message); }
 }
 
 function switchFloorTab(user, btn) {
@@ -739,11 +766,15 @@ function switchFloorTab(user, btn) {
 function filterFloor() {
   var q = (document.getElementById('floor-search').value || '').toLowerCase();
   var f = document.getElementById('floor-filter').value;
-  var data = liveFloorData.filter(s =>
+  var src = f ? allLiveFloorData : liveFloorData;
+  var data = src.filter(s =>
     (!f || s.commodity === f) &&
     (!q || (s.producer||'').toLowerCase().includes(q) || (s.commodity||'').toLowerCase().includes(q) || (s.seq||'').includes(q))
   );
+  if(f) data = data.sort((a,b)=>(a.producer||'').localeCompare(b.producer||''));
   renderFloor(data);
+  var su = document.getElementById('floor-salesman-note');
+  if(su){su.textContent=f?'Showing all salesmen':'';su.style.display=f?'block':'none';}
 }
 
 function renderFloor(data) {
