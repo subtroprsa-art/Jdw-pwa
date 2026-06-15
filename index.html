@@ -156,6 +156,9 @@ main{padding:14px 12px}
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
   <div class="stitle">Latest Sales</div>
   <div id="sale-list"></div>
+  <div style="text-align:center;margin:18px 0 8px">
+    <button onclick="printWeeklyReport()" style="background:var(--moss);border:none;border-radius:10px;padding:12px 24px;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer">📊 Print Weekly Summary Report</button>
+  </div>
 </div>
 <div class="page" id="page-matching">
   <div style="background:linear-gradient(120deg,#1e4d2b,#3a7a4a);border-radius:14px;padding:14px 16px;margin-bottom:14px">
@@ -854,6 +857,126 @@ async function mergeBuyerPrefs(buyers) {
       });
     });
   } catch(e) { console.warn('mergeBuyerPrefs error:', e.message); }
+}
+
+async function printWeeklyReport(){
+  try{
+    var [histRes,stockRes,ordersRes]=await Promise.all([
+      fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json'),
+      fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json'),
+      fetch(FB_ORDERS+'.json?auth='+FB_SECRET)
+    ]);
+
+    // ── HISTORY ───────────────────────────────────────────────
+    var history=[];
+    if(histRes.ok){var raw=await histRes.json();if(raw)history=Array.isArray(raw)?raw:Object.values(raw);}
+    var now=new Date(),weekAgo=new Date(now-7*24*60*60*1000);
+    var weekSales=history.filter(function(h){
+      if(!h.date)return false;
+      var p=h.date.split('/');if(p.length<3)return false;
+      return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]))>=weekAgo;
+    });
+    var totalRev=weekSales.reduce(function(s,h){return s+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0;},0);
+    var buyerSpend={};
+    weekSales.forEach(function(h){if(!h.buyer)return;buyerSpend[h.buyer]=(buyerSpend[h.buyer]||0)+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0;});
+    var top5=Object.entries(buyerSpend).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+
+    // ── STOCK ─────────────────────────────────────────────────
+    var allStock=[];
+    if(stockRes.ok){var sd=await stockRes.json();for(var u of Object.values(sd||{}))for(var e of Object.values(u||{}))allStock.push(firebaseToItem(e));}
+    var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas'};
+    var commStats={};
+    allStock.forEach(function(s){
+      var c=s.commodity||'UNK';
+      if(!commStats[c])commStats[c]={name:CN[c]||c,rec:0,sold:0,flr:0,urgent:0};
+      commStats[c].rec+=Number(s.rec)||0;
+      commStats[c].sold+=Number(s.sold)||0;
+      commStats[c].flr+=Number(s.flr)||0;
+      if(s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14)commStats[c].urgent++;
+    });
+    var totalFlr=allStock.reduce(function(s,e){return s+(Number(e.flr)||0);},0);
+    var totalRec=allStock.reduce(function(s,e){return s+(Number(e.rec)||0);},0);
+    var totalSold=allStock.reduce(function(s,e){return s+(Number(e.sold)||0);},0);
+    var urgentTotal=allStock.filter(function(s){return s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14;}).length;
+
+    // ── ORDERS ────────────────────────────────────────────────
+    var orders=[];
+    if(ordersRes.ok){var od=await ordersRes.json();if(od)orders=Object.values(od);}
+    var openOrders=orders.filter(function(o){return o.status==='open';}).length;
+    var fulfilledOrders=orders.filter(function(o){return o.status==='fulfilled';}).length;
+
+    // ── BUILD HTML ────────────────────────────────────────────
+    var dateStr=now.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    var weekStr=weekAgo.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' – '+now.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+    var clearPct=totalRec>0?Math.round(totalSold/totalRec*100):0;
+
+    var commRows=Object.values(commStats).filter(function(c){return c.rec>0;}).sort(function(a,b){return b.flr-a.flr;}).map(function(c){
+      var pct=c.rec>0?Math.round(c.sold/c.rec*100):0;
+      var urgBadge=c.urgent>0?'<span style="color:#c0392b;font-weight:700"> ('+c.urgent+' urgent)</span>':'';
+      return '<tr><td style="padding:7px 8px">'+c.name+'</td><td style="padding:7px 8px;text-align:right">'+c.rec.toLocaleString()+'</td><td style="padding:7px 8px;text-align:right">'+c.sold.toLocaleString()+'</td><td style="padding:7px 8px;text-align:right">'+c.flr.toLocaleString()+urgBadge+'</td><td style="padding:7px 8px;text-align:right">'+pct+'%</td></tr>';
+    }).join('');
+
+    var buyerRows=top5.map(function(e,i){
+      return '<tr><td style="padding:7px 8px">'+(i+1)+'</td><td style="padding:7px 8px;font-weight:600">'+e[0]+'</td><td style="padding:7px 8px;text-align:right">R '+Math.round(e[1]).toLocaleString()+'</td></tr>';
+    }).join('');
+
+    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SubTrop RSA — Weekly Report</title><style>'
+      +'body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:20px;margin:0}'
+      +'h1{font-size:20px;color:#1e4d2b;margin-bottom:2px}'
+      +'.sub{font-size:12px;color:#888;margin-bottom:20px}'
+      +'.section{margin-bottom:24px}'
+      +'h2{font-size:14px;color:#1e4d2b;border-bottom:2px solid #1e4d2b;padding-bottom:4px;margin-bottom:10px}'
+      +'.kpi-row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}'
+      +'.kpi{background:#f3f7f3;border-radius:8px;padding:12px 16px;min-width:120px;border-top:3px solid #1e4d2b}'
+      +'.kpi.gold{border-top-color:#c9882a}.kpi.red{border-top-color:#c0392b}'
+      +'.kpi-val{font-size:22px;font-weight:800;color:#141f15}'
+      +'.kpi-lbl{font-size:10px;color:#6b7c6c;text-transform:uppercase;margin-top:2px}'
+      +'table{width:100%;border-collapse:collapse;font-size:12px}'
+      +'th{background:#1e4d2b;color:#fff;padding:8px;text-align:left;font-size:11px}'
+      +'tr:nth-child(even){background:#f3f7f3}'
+      +'@media print{button{display:none}}'
+      +'</style></head><body>'
+      +'<h1>SubTrop RSA — Weekly Summary Report</h1>'
+      +'<div class="sub">Period: '+weekStr+' · Printed: '+dateStr+'</div>'
+
+      +'<div class="section">'
+      +'<h2>Revenue & Sales</h2>'
+      +'<div class="kpi-row">'
+      +'<div class="kpi gold"><div class="kpi-val">R '+Math.round(totalRev).toLocaleString()+'</div><div class="kpi-lbl">Week Revenue</div></div>'
+      +'<div class="kpi"><div class="kpi-val">'+weekSales.length+'</div><div class="kpi-lbl">Transactions</div></div>'
+      +'<div class="kpi"><div class="kpi-val">'+Object.keys(buyerSpend).length+'</div><div class="kpi-lbl">Active Buyers</div></div>'
+      +'</div></div>'
+
+      +'<div class="section">'
+      +'<h2>Top 5 Buyers This Week</h2>'
+      +'<table><thead><tr><th>#</th><th>Buyer</th><th>Revenue</th></tr></thead><tbody>'+buyerRows+'</tbody></table>'
+      +'</div>'
+
+      +'<div class="section">'
+      +'<h2>Stock Overview</h2>'
+      +'<div class="kpi-row">'
+      +'<div class="kpi"><div class="kpi-val">'+totalFlr.toLocaleString()+'</div><div class="kpi-lbl">Units on Floor</div></div>'
+      +'<div class="kpi"><div class="kpi-val">'+clearPct+'%</div><div class="kpi-lbl">Clearance Rate</div></div>'
+      +'<div class="kpi red"><div class="kpi-val">'+urgentTotal+'</div><div class="kpi-lbl">Urgent Lines (14d+)</div></div>'
+      +'</div>'
+      +'<table><thead><tr><th>Commodity</th><th style="text-align:right">Received</th><th style="text-align:right">Sold</th><th style="text-align:right">On Floor</th><th style="text-align:right">Clearance</th></tr></thead><tbody>'+commRows+'</tbody></table>'
+      +'</div>'
+
+      +'<div class="section">'
+      +'<h2>Orders</h2>'
+      +'<div class="kpi-row">'
+      +'<div class="kpi gold"><div class="kpi-val">'+openOrders+'</div><div class="kpi-lbl">Open Orders</div></div>'
+      +'<div class="kpi"><div class="kpi-val">'+fulfilledOrders+'</div><div class="kpi-lbl">Fulfilled This Week</div></div>'
+      +'</div></div>'
+
+      +'<div style="text-align:center;margin-top:20px"><button onclick="window.print()" style="background:#1e4d2b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;font-weight:700">🖨 Print</button></div>'
+      +'</body></html>';
+
+    var win=window.open('','_blank','width=900,height=700');
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+  }catch(e){alert('Could not generate report: '+e.message);}
 }
 
 function populatePrefBuyerSuggestions(){
