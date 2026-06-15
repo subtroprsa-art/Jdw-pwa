@@ -120,6 +120,17 @@ main{padding:14px 12px}
 .day-active{background:var(--sage-light);color:#1a5c2a;border-color:#b8ddc0}
 .day-inactive{background:#f0f0f0;color:#bbb}
 .day-today{background:var(--moss);color:#fff;border-color:var(--moss)}
+.pipeline-step{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all .2s;background:#fff}
+.pipeline-step:active{opacity:.8}
+.pipeline-step.done{background:var(--sage-light);border-color:#b8ddc0}
+.pipeline-step.done .ps-title{text-decoration:line-through;color:var(--muted)}
+.ps-num{width:26px;height:26px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0}
+.pipeline-step.done .ps-num{background:var(--sage)}
+.ps-body{flex:1;min-width:0}
+.ps-title{font-weight:700;font-size:13.5px;color:var(--ink)}
+.ps-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.ps-check{font-size:20px;color:var(--muted);flex-shrink:0}
+.pipeline-step.done .ps-check{color:var(--sage)}
 </style>
 </head>
 <body>
@@ -161,6 +172,64 @@ main{padding:14px 12px}
   </div>
 </div>
 <div class="page" id="page-matching">
+  <!-- PIPELINE STEPS -->
+  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
+    <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">🔁 Sales Pipeline</div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="pipeline-steps">
+      <div class="pipeline-step" id="ps1" onclick="togglePipelineStep(1)">
+        <div class="ps-num">1</div>
+        <div class="ps-body">
+          <div class="ps-title">Run AI Match</div>
+          <div class="ps-sub">Analyse stock vs buyer history</div>
+        </div>
+        <div class="ps-check" id="psc1">○</div>
+      </div>
+      <div class="pipeline-step" id="ps2" onclick="togglePipelineStep(2)">
+        <div class="ps-num">2</div>
+        <div class="ps-body">
+          <div class="ps-title">Call Buyers</div>
+          <div class="ps-sub">Work through call list below</div>
+        </div>
+        <div class="ps-check" id="psc2">○</div>
+      </div>
+      <div class="pipeline-step" id="ps3" onclick="togglePipelineStep(3)">
+        <div class="ps-num">3</div>
+        <div class="ps-body">
+          <div class="ps-title">Type in Orders</div>
+          <div class="ps-sub">Record confirmed orders on Orders tab</div>
+        </div>
+        <div class="ps-check" id="psc3">○</div>
+      </div>
+      <div class="pipeline-step" id="ps4" onclick="togglePipelineStep(4)">
+        <div class="ps-num">4</div>
+        <div class="ps-body">
+          <div class="ps-title">Reserve Stock</div>
+          <div class="ps-sub">Go to market sales system and reserve</div>
+        </div>
+        <div class="ps-check" id="psc4">○</div>
+      </div>
+      <div class="pipeline-step" id="ps5" onclick="togglePipelineStep(5)">
+        <div class="ps-num">5</div>
+        <div class="ps-body">
+          <div class="ps-title">Check Payment</div>
+          <div class="ps-sub">Confirm reservation is paid</div>
+        </div>
+        <div class="ps-check" id="psc5">○</div>
+      </div>
+      <div class="pipeline-step" id="ps6" onclick="togglePipelineStep(6)">
+        <div class="ps-num">6</div>
+        <div class="ps-body">
+          <div class="ps-title">Removal Slip to Floor Packers</div>
+          <div class="ps-sub">Send removal slip to floor packers</div>
+        </div>
+        <div class="ps-check" id="psc6">○</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:5px 12px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↺ Reset</button>
+    </div>
+  </div>
+
   <div style="background:linear-gradient(120deg,#1e4d2b,#3a7a4a);border-radius:14px;padding:14px 16px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div><div style="color:#fff;font-weight:800;font-size:15px">AI Stock Matcher</div><div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:2px">Gemini analyses buyer history vs current stock</div></div>
@@ -284,7 +353,7 @@ main{padding:14px 12px}
 </main>
 <nav class="bnav">
   <div class="bnav-item active" onclick="showPage('dashboard',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Dashboard</div></div>
-  <div class="bnav-item" onclick="showPage('matching',this)"><div class="bnav-icon">🔗</div><div class="bnav-label">Matcher</div></div>
+  <div class="bnav-item" onclick="showPage('matching',this)"><div class="bnav-icon">🔗</div><div class="bnav-label">Pipeline</div></div>
   <div class="bnav-item" onclick="showPage('buyers',this)"><div class="bnav-icon">👥</div><div class="bnav-label">Buyers</div></div>
   <div class="bnav-item" onclick="showPage('stock',this)"><div class="bnav-icon">📦</div><div class="bnav-label">Stock</div></div>
   <div class="bnav-item" onclick="showPage('orders',this)"><div class="bnav-icon">📋<span id="orders-badge" style="display:none;position:absolute;top:8px;width:8px;height:8px;background:var(--gold);border-radius:50%"></span></div><div class="bnav-label">Orders</div></div>
@@ -543,7 +612,7 @@ function showPage(id,el){
   if(id==='commodities'){document.getElementById('comm-summary-list').innerHTML='<div class="empty">Loading…</div>';document.getElementById('comm-detail').style.display='none';document.getElementById('comm-summary-list').style.display='block';fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json').then(r=>r.json()).then(d=>{var all=[];for(var [uk,uv] of Object.entries(d||{}))for(var e of Object.values(uv||{}))all.push({...firebaseToItem(e),user:e.user||uk});allLiveStockData=all;renderCommodities(buildCommoditySummary());}).catch(()=>{document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load data.</div>';});}
   if(id==='stock'){var at=document.querySelector('.stock-tab.active');loadStockFromFirebase(at?at.id.replace('tab-',''):'RJ');loadAllStockForMatcher();}
   if(id==='buyers')loadBuyersFromFirebase();
-  if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();}
+  if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();setTimeout(loadPipelineState,100);}
   if(id==='dashboard')loadDashboard();
   if(id==='orders'){loadOrders();populateBuyerSuggestions();populatePrefBuyerSuggestions();}
   if(id==='floor'){var at=document.querySelector('[id^="ftab-"].active');loadFloorFromFirebase(at?at.id.replace('ftab-',''):'RJ');}
@@ -977,6 +1046,47 @@ async function printWeeklyReport(){
     win.document.close();
     win.focus();
   }catch(e){alert('Could not generate report: '+e.message);}
+}
+
+// ── PIPELINE ─────────────────────────────────────────────────────────────────
+var pipelineKey = 'pipeline-'+new Date().toISOString().slice(0,10);
+
+function loadPipelineState() {
+  var state = JSON.parse(sessionStorage.getItem(pipelineKey) || '{}');
+  for (var i = 1; i <= 6; i++) {
+    if (state[i]) {
+      var el = document.getElementById('ps'+i);
+      var ch = document.getElementById('psc'+i);
+      if (el) el.classList.add('done');
+      if (ch) ch.textContent = '✓';
+    }
+  }
+}
+
+function togglePipelineStep(n) {
+  var el = document.getElementById('ps'+n);
+  var ch = document.getElementById('psc'+n);
+  var state = JSON.parse(sessionStorage.getItem(pipelineKey) || '{}');
+  if (el.classList.contains('done')) {
+    el.classList.remove('done');
+    ch.textContent = '○';
+    delete state[n];
+  } else {
+    el.classList.add('done');
+    ch.textContent = '✓';
+    state[n] = true;
+  }
+  sessionStorage.setItem(pipelineKey, JSON.stringify(state));
+}
+
+function resetPipeline() {
+  sessionStorage.removeItem(pipelineKey);
+  for (var i = 1; i <= 6; i++) {
+    var el = document.getElementById('ps'+i);
+    var ch = document.getElementById('psc'+i);
+    if (el) el.classList.remove('done');
+    if (ch) ch.textContent = '○';
+  }
 }
 
 function populatePrefBuyerSuggestions(){
