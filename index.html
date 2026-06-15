@@ -184,6 +184,46 @@ main{padding:14px 12px}
 </div>
 <div class="page" id="page-commodities"><div class="ctrl-row"><input type="text" id="comm-search" placeholder="🔍 Search commodity…" oninput="filterCommodities()"/></div><div id="comm-summary-list"></div><div id="comm-detail" style="display:none"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button onclick="closeCommodityDetail()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:13px;cursor:pointer">← Back</button><div id="comm-detail-title" style="font-weight:700;font-size:16px;color:var(--moss)"></div></div><div id="comm-detail-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div><div id="comm-detail-lines"></div></div></div>
 <div class="page" id="page-orders">
+  <!-- BUYER PREFERENCE EDITOR -->
+  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border-top:3px solid var(--blue)">
+    <div style="font-weight:700;font-size:14px;color:var(--blue);margin-bottom:12px">⭐ Buyer Commodity Preferences</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Buyer Name</label>
+        <input id="pref-buyer" list="pref-buyer-suggestions" type="text" placeholder="e.g. MANDELA MARKET" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none" oninput="loadBuyerPrefs()"/>
+        <datalist id="pref-buyer-suggestions"></datalist>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Add Commodity</label>
+        <div style="display:flex;gap:8px">
+          <select id="pref-commodity" style="flex:1;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
+            <option value="">Select commodity…</option>
+            <option value="AVOS">Avocados</option>
+            <option value="BERS">Strawberries</option>
+            <option value="CLTM">Clementines</option>
+            <option value="DRAG">Dragon Fruit</option>
+            <option value="FIGS">Figs</option>
+            <option value="GFT">Grapefruit</option>
+            <option value="GVS">Guavas</option>
+            <option value="KIWI">Kiwifruit</option>
+            <option value="LEMS">Lemons</option>
+            <option value="MANG">Mangoes</option>
+            <option value="NAAR">Naartjies</option>
+            <option value="NOVA">Nova</option>
+            <option value="ORGS">Oranges</option>
+            <option value="SATS">Satsumas</option>
+          </select>
+          <button onclick="addBuyerPref()" style="padding:11px 16px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">+ Add</button>
+        </div>
+      </div>
+      <div id="pref-current" style="display:none">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Current Preferences</label>
+        <div id="pref-tags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      </div>
+      <div id="pref-status" style="font-size:12px;color:var(--sage);min-height:1em;text-align:center"></div>
+    </div>
+  </div>
+
   <div id="orders-alert" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:12px 14px;margin-bottom:14px"><div style="font-weight:700;font-size:13px;color:#8a5a00;margin-bottom:4px">🔔 Stock Available for Orders!</div><div id="orders-alert-text" style="font-size:12px;color:#8a5a00"></div></div>
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border-top:3px solid var(--gold)">
     <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">📋 Record New Order</div>
@@ -454,7 +494,7 @@ function filterMatches(){renderMatchPage(allLiveStockData.length?allLiveStockDat
 
 async function loadBuyersFromFirebase(){
   var el=document.getElementById('buyer-list');if(el)el.innerHTML='<div class="empty">Loading buyers…</div>';
-  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');if(!r.ok)throw new Error('fetch failed');var raw=await r.json();if(!raw){renderBuyers([]);return;}var hist=Array.isArray(raw)?raw:Object.values(raw);liveBuyerData=buildBuyerProfiles(hist);renderBuyers(liveBuyerData);var dp=document.getElementById('page-dashboard');if(dp&&dp.classList.contains('active'))loadDashboard();}
+  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/jdw/history.json');if(!r.ok)throw new Error('fetch failed');var raw=await r.json();if(!raw){renderBuyers([]);return;}var hist=Array.isArray(raw)?raw:Object.values(raw);liveBuyerData=buildBuyerProfiles(hist);renderBuyers(liveBuyerData);mergeBuyerPrefs(liveBuyerData);var dp=document.getElementById('page-dashboard');if(dp&&dp.classList.contains('active'))loadDashboard();}
   catch(e){liveBuyerData=[];renderBuyers([]);}
 }
 
@@ -493,7 +533,7 @@ function showPage(id,el){
   if(id==='buyers')loadBuyersFromFirebase();
   if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();}
   if(id==='dashboard')loadDashboard();
-  if(id==='orders'){loadOrders();populateBuyerSuggestions();}
+  if(id==='orders'){loadOrders();populateBuyerSuggestions();populatePrefBuyerSuggestions();}
   if(id==='floor'){var at=document.querySelector('[id^="ftab-"].active');loadFloorFromFirebase(at?at.id.replace('ftab-',''):'RJ');}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
@@ -708,6 +748,110 @@ function renderFloor(data) {
   }).join('');
 }
 
+// ── BUYER PREFERENCE EDITOR ──────────────────────────────────────────────────
+const FB_PREFS = 'https://jdw-crm-default-rtdb.firebaseio.com/preferences';
+
+async function loadBuyerPrefs() {
+  var buyer = document.getElementById('pref-buyer').value.trim().toUpperCase();
+  var tagsEl = document.getElementById('pref-tags');
+  var currentEl = document.getElementById('pref-current');
+  if (!buyer) { currentEl.style.display='none'; return; }
+  try {
+    var r = await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET);
+    var data = await r.json();
+    var prefs = (data && data.commodities) ? data.commodities : [];
+    renderPrefTags(buyer, prefs);
+    currentEl.style.display = prefs.length > 0 ? 'block' : 'none';
+  } catch(e) { console.warn('Pref load error:', e.message); }
+}
+
+function renderPrefTags(buyer, prefs) {
+  var CN = {AVOS:'Avocados',BERS:'Strawberries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwifruit',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',NOVA:'Nova',ORGS:'Oranges',SATS:'Satsumas'};
+  var tagsEl = document.getElementById('pref-tags');
+  var currentEl = document.getElementById('pref-current');
+  if (!prefs.length) { currentEl.style.display='none'; return; }
+  currentEl.style.display = 'block';
+  tagsEl.innerHTML = prefs.map(function(code) {
+    return '<div style="display:inline-flex;align-items:center;gap:6px;background:var(--blue-light);color:var(--blue);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700">'
+      + (CN[code]||code)
+      + '<span data-buyer="'+buyer+'" data-code="'+code+'" onclick="removeBuyerPrefEl(this)" style="cursor:pointer;font-size:14px;color:var(--blue);font-weight:900;line-height:1;margin-left:2px">×</span>'
+      + '</div>';
+  }).join('');
+}
+
+async function addBuyerPref() {
+  var buyer = document.getElementById('pref-buyer').value.trim().toUpperCase();
+  var comm  = document.getElementById('pref-commodity').value;
+  var stat  = document.getElementById('pref-status');
+  if (!buyer) { stat.style.color='var(--red)'; stat.textContent='⚠ Enter a buyer name first'; return; }
+  if (!comm)  { stat.style.color='var(--red)'; stat.textContent='⚠ Select a commodity'; return; }
+  stat.textContent='Saving…'; stat.style.color='var(--muted)';
+  try {
+    // Get existing prefs
+    var r = await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET);
+    var data = await r.json();
+    var prefs = (data && data.commodities) ? data.commodities : [];
+    if (prefs.includes(comm)) { stat.style.color='var(--gold)'; stat.textContent='Already added'; return; }
+    prefs.push(comm);
+    await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({buyer:buyer, commodities:prefs, updatedAt:new Date().toISOString()})
+    });
+    stat.style.color='var(--sage)'; stat.textContent='✅ Saved!';
+    renderPrefTags(buyer, prefs);
+    document.getElementById('pref-commodity').value='';
+    document.getElementById('pref-current').style.display='block';
+    // Refresh buyer profiles to include new pref
+    if(liveBuyerData.length) mergeBuyerPrefs(liveBuyerData);
+    setTimeout(function(){stat.textContent='';},2000);
+  } catch(e) { stat.style.color='var(--red)'; stat.textContent='⚠ '+e.message; }
+}
+
+function removeBuyerPrefEl(el) {
+  var buyer = el.getAttribute('data-buyer');
+  var comm  = el.getAttribute('data-code');
+  removeBuyerPref(buyer, comm);
+}
+async function removeBuyerPref(buyer, comm) {
+  try {
+    var r = await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET);
+    var data = await r.json();
+    var prefs = (data && data.commodities) ? data.commodities.filter(function(c){return c!==comm;}) : [];
+    await fetch(FB_PREFS+'/'+encodeURIComponent(buyer)+'.json?auth='+FB_SECRET, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({buyer:buyer, commodities:prefs, updatedAt:new Date().toISOString()})
+    });
+    renderPrefTags(buyer, prefs);
+    if(liveBuyerData.length) mergeBuyerPrefs(liveBuyerData);
+  } catch(e) { console.warn('Remove pref error:', e.message); }
+}
+
+// Merge manual preferences into buyer profiles for matcher + call list
+async function mergeBuyerPrefs(buyers) {
+  try {
+    var r = await fetch(FB_PREFS+'.json?auth='+FB_SECRET);
+    var allPrefs = await r.json();
+    if (!allPrefs) return;
+    var CN = {AVOS:'Avocados',BERS:'Strawberries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwifruit',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',NOVA:'Nova',ORGS:'Oranges',SATS:'Satsumas'};
+    buyers.forEach(function(b) {
+      var key = b.name.toUpperCase();
+      if (!allPrefs[key] || !allPrefs[key].commodities) return;
+      var existingComms = b.prefs.map(function(p){return p.comm;});
+      allPrefs[key].commodities.forEach(function(code) {
+        var commName = CN[code]||code;
+        if (!existingComms.includes(commName)) {
+          b.prefs.push({comm:commName, pack:'', cls:'CL 1', sizes:['*'], revenue:0, note:'Manual preference'});
+        }
+      });
+    });
+  } catch(e) { console.warn('mergeBuyerPrefs error:', e.message); }
+}
+
+function populatePrefBuyerSuggestions(){
+  var dl=document.getElementById('pref-buyer-suggestions');
+  if(!dl||!liveBuyerData||!liveBuyerData.length)return;
+  dl.innerHTML=liveBuyerData.map(function(b){return'<option value="'+b.name+'">';}).join('');
+}
 function populateBuyerSuggestions(){var dl=document.getElementById('buyer-suggestions');if(!dl||!liveBuyerData.length)return;dl.innerHTML=liveBuyerData.map(b=>'<option value="'+b.name+'">').join('');}
 </script>
 </body>
