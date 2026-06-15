@@ -403,8 +403,8 @@ async function loadDashboard(){
       document.getElementById('kpi-floor').textContent=tf.toLocaleString();document.getElementById('kpi-floor-sub').textContent='units on floor';
       var cp=tr>0?Math.round(ts/tr*100):0;document.getElementById('kpi-clearance').textContent=cp+'%';document.getElementById('kpi-clearance-sub').textContent='of all stock sold';
       var uc=allStock.filter(s=>s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14).length;
-      var ku=document.getElementById('kpi-urgent');if(ku)ku.textContent=uc;var ub=document.getElementById('kpi-urgent-banner');if(ub)ub.style.display=uc>0?'flex':'none';document.getElementById('kpi-urgent-sub').textContent='lines '+(uc>0?'— needs pushing':'on floor');
-      if(uc>0)document.getElementById('kpi-urgent').parentElement.style.borderTopColor='var(--red)';
+      var ku=document.getElementById('kpi-urgent');if(ku)ku.textContent=uc;var ub=document.getElementById('kpi-urgent-banner');if(ub)ub.style.display=uc>0?'flex':'none';(function(){var _el=document.getElementById('kpi-urgent-sub');if(_el)_el.textContent='lines '+(uc>0?'— needs pushing':'on floor');})();
+      if(uc>0)
       renderStockChart(allStock);
       var td=(()=>{var d=new Date().getDay();return d===0?6:d-1;})(),cl=[];
       for(var buyer of (liveBuyerData.length?liveBuyerData:[]).slice(0,30)){
@@ -415,7 +415,7 @@ async function loadDashboard(){
         cl.push({name:buyer.name,spend:buyer.spend,matchDesc:md,ms:he?3:2,buysToday:buyer.buyingDays&&buyer.buyingDays[td]});
       }
       cl.sort((a,b)=>b.ms-a.ms||(b.spend||0)-(a.spend||0));
-      var ce=document.getElementById('dash-call-list');
+      var ce=document.getElementById('dash-call-list');if(!ce)return;
       if(!cl.length){ce.innerHTML='<div style="font-size:13px;color:var(--muted)">No strong matches today.</div>';}
       else{
         var todayKey='calls-'+new Date().toISOString().slice(0,10);
@@ -437,7 +437,7 @@ async function loadDashboard(){
       }
     }
     if(ordersRes.ok){var or=await ordersRes.json(),ti=new Date().toISOString().slice(0,10),dt=or?Object.values(or).filter(o=>o.status==='open'&&o.collectDate===ti):[];var de=document.getElementById('dash-due-today');if(dt.length>0){de.style.display='block';document.getElementById('dash-due-list').innerHTML=dt.map(o=>'<div style="padding:4px 0;border-bottom:1px solid rgba(201,136,42,0.2);display:flex;justify-content:space-between"><span style="font-weight:700">'+o.buyer+'</span><span>'+(COMM_FULL[o.commodity]||o.commodity)+' '+o.qty+'u'+(o.collectTime?' @ '+o.collectTime:'')+'</span></div>').join('');}else de.style.display='none';}
-    if(histRes.ok){var raw=await histRes.json();if(raw){var hist=Array.isArray(raw)?raw:Object.values(raw),now=new Date(),wa=new Date(now-7*24*60*60*1000),rec=hist.filter(h=>{if(!h.date)return false;var p=h.date.split('/');if(p.length<3)return false;return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]))>=wa;});var src=rec.length>0?rec:hist,rev=src.reduce((s,h)=>s+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0,0),buyers=new Set(src.map(h=>h.buyer).filter(Boolean)).size;document.getElementById('kpi-revenue').textContent='R '+Math.round(rev).toLocaleString();document.getElementById('kpi-revenue-sub').textContent=(rec.length>0?'Last 7 days':'All time')+' · '+buyers+' buyers';}}
+    if(histRes.ok){var raw=await histRes.json();if(raw){var hist=Array.isArray(raw)?raw:Object.values(raw),now=new Date(),wa=new Date(now-7*24*60*60*1000),rec=hist.filter(h=>{if(!h.date)return false;var p=h.date.split('/');if(p.length<3)return false;return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]))>=wa;});var src=rec.length>0?rec:hist,rev=src.reduce((s,h)=>s+(Number(h.total)||(Number(h.price||0)*Number(h.qty||0)))||0,0),buyers=new Set(src.map(h=>h.buyer).filter(Boolean)).size;}}
   }catch(e){renderStockChart();console.error('Dashboard:',e.message);}
 }
 
@@ -448,7 +448,7 @@ function renderSalesFromHistory(data){
 }
 
 function renderMatchPage(data){
-  var allBuyers=liveBuyerData.length?liveBuyerData:[],q=(document.getElementById('match-search').value||'').toLowerCase(),groups={};
+  var allBuyers=liveBuyerData.length?liveBuyerData:[],q='',groups={};
   data.filter(s=>s.flr>0).forEach(s=>{if(!groups[s.commodity])groups[s.commodity]={items:[],totalFlr:0};groups[s.commodity].items.push(s);groups[s.commodity].totalFlr+=s.flr;});
   var fb=q?allBuyers.filter(b=>b.name.toLowerCase().includes(q)||b.prefs.some(p=>p.comm.toLowerCase().includes(q))):allBuyers;
   var td=new Date().getDay();td=td===0?6:td-1;
