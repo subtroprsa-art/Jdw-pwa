@@ -209,6 +209,35 @@ main{padding:14px 12px}
   <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">Open Orders<span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span><span style="flex:1;height:1px;background:var(--border);display:block"></span><button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">🖨 Print</button><button onclick="loadOrders()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">↻</button></div>
   <div id="orders-list"><div class="empty">No open orders</div></div>
 </div>
+<!-- FLOOR BALANCE -->
+<div class="page" id="page-floor">
+  <div class="stock-tabs">
+    <button class="stock-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ',this)">Riaan (RJ)</button>
+    <button class="stock-tab" id="ftab-CW" onclick="switchFloorTab('CW',this)">Christoff (CW)</button>
+    <button class="stock-tab" id="ftab-POT" onclick="switchFloorTab('POT',this)">Potgieter</button>
+  </div>
+  <div class="ctrl-row">
+    <input type="text" id="floor-search" placeholder="🔍 Search producer or commodity…" oninput="filterFloor()"/>
+    <select id="floor-filter" onchange="filterFloor()">
+      <option value="">All commodities</option>
+      <option value="AVOS">Avocados</option>
+      <option value="CLTM">Clementines</option>
+      <option value="DRAG">Dragon Fruit</option>
+      <option value="FIGS">Figs</option>
+      <option value="GFT">Grapefruit</option>
+      <option value="GVS">Guavas</option>
+      <option value="KIWI">Kiwi</option>
+      <option value="LEMS">Lemons</option>
+      <option value="MANG">Mangoes</option>
+      <option value="NAAR">Naartjies</option>
+      <option value="NOVA">Nova</option>
+      <option value="ORGS">Oranges</option>
+      <option value="BERS">Strawberries</option>
+    </select>
+  </div>
+  <div id="floor-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+  <div id="floor-list"></div>
+</div>
 </main>
 <nav class="bnav">
   <div class="bnav-item active" onclick="showPage('dashboard',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Dashboard</div></div>
@@ -217,6 +246,7 @@ main{padding:14px 12px}
   <div class="bnav-item" onclick="showPage('stock',this)"><div class="bnav-icon">📦</div><div class="bnav-label">Stock</div></div>
   <div class="bnav-item" onclick="showPage('orders',this)"><div class="bnav-icon">📋<span id="orders-badge" style="display:none;position:absolute;top:8px;width:8px;height:8px;background:var(--gold);border-radius:50%"></span></div><div class="bnav-label">Orders</div></div>
   <div class="bnav-item" onclick="showPage('commodities',this)"><div class="bnav-icon">🌿</div><div class="bnav-label">Commodities</div></div>
+  <div class="bnav-item" onclick="showPage('floor',this)"><div class="bnav-icon">📋</div><div class="bnav-label">Floor Bal</div></div>
 </nav>
 </div>
 <script>
@@ -464,6 +494,7 @@ function showPage(id,el){
   if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();}
   if(id==='dashboard')loadDashboard();
   if(id==='orders'){loadOrders();populateBuyerSuggestions();}
+  if(id==='floor'){var at=document.querySelector('[id^="ftab-"].active');loadFloorFromFirebase(at?at.id.replace('ftab-',''):'RJ');}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.bnav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
@@ -553,6 +584,129 @@ async function checkOrdersAgainstStock(stockItems){
 }
 
 async function printOrders(){try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_SECRET),raw=await res.json();if(!raw){alert('No open orders.');return;}var orders=Object.entries(raw).map(([id,o])=>({id,...o})).filter(o=>o.status==='open').sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));if(!orders.length){alert('No open orders.');return;}var now=new Date().toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),rows=orders.map((o,i)=>'<tr style="border-bottom:1px solid #ddd"><td style="padding:8px 6px;font-weight:600">'+(i+1)+'</td><td style="padding:8px 6px;font-weight:700">'+o.buyer+(o.flagged?'<span style="color:#c9882a;font-weight:bold"> 🔔 STOCK</span>':'')+'</td><td style="padding:8px 6px">'+(COMM_FULL[o.commodity]||o.commodity)+'</td><td style="padding:8px 6px">'+(PACK_FULL[o.pack]||o.pack||'Any')+'</td><td style="padding:8px 6px">'+(o.size&&o.size!=='*'?o.size:'Any')+'</td><td style="padding:8px 6px">'+(o.grade?'CL '+o.grade:'Any')+'</td><td style="padding:8px 6px">'+(o.qty||'—')+'</td><td style="padding:8px 6px">'+(o.price?'R'+o.price:'—')+'</td><td style="padding:8px 6px;font-size:11px;color:#666">'+(o.notes||'')+'</td></tr>').join('');var win=window.open('','_blank','width=800,height=600');win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>SubTrop RSA — Open Orders</title><style>body{font-family:Arial,sans-serif;font-size:13px;padding:16px}h1{font-size:18px;color:#1e4d2b;margin-bottom:4px}.sub{font-size:12px;color:#888;margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#1e4d2b;color:#fff;padding:8px 6px;text-align:left}tr:nth-child(even){background:#f3f7f3}@media print{button{display:none}}</style></head><body><h1>SubTrop RSA — Open Orders</h1><div class="sub">Printed: '+now+' · '+orders.length+' order'+(orders.length>1?'s':'')+'</div><table><thead><tr><th>#</th><th>Buyer</th><th>Commodity</th><th>Pack</th><th>Size</th><th>Class</th><th>Qty</th><th>Price</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');win.document.close();win.focus();setTimeout(()=>win.print(),600);}catch(e){alert('Could not print: '+e.message);}}
+
+// ── FLOOR BALANCE ────────────────────────────────────────────────────────────
+let liveFloorData = [];
+
+async function loadFloorFromFirebase(user) {
+  var el = document.getElementById('floor-list');
+  var su = document.getElementById('floor-summary');
+  if(el) el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    var r = await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor/' + user + '.json');
+    if(!r.ok) throw new Error('Firebase fetch failed');
+    var d = await r.json();
+    if(!d) { el.innerHTML = '<div class="empty">No floor balance data. Upload a floor balance PDF.</div>'; return; }
+    liveFloorData = Object.values(d);
+    filterFloor();
+  } catch(e) {
+    if(el) el.innerHTML = '<div class="empty">Could not load floor balance: ' + e.message + '</div>';
+  }
+}
+
+function switchFloorTab(user, btn) {
+  document.querySelectorAll('.stock-tab').forEach(b => {
+    if(b.id && b.id.startsWith('ftab-')) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  liveFloorData = [];
+  var el = document.getElementById('floor-list');
+  if(el) el.innerHTML = '<div class="empty">Loading…</div>';
+  loadFloorFromFirebase(user);
+}
+
+function filterFloor() {
+  var q = (document.getElementById('floor-search').value || '').toLowerCase();
+  var f = document.getElementById('floor-filter').value;
+  var data = liveFloorData.filter(s =>
+    (!f || s.commodity === f) &&
+    (!q || (s.producer||'').toLowerCase().includes(q) || (s.commodity||'').toLowerCase().includes(q) || (s.seq||'').includes(q))
+  );
+  renderFloor(data);
+}
+
+function renderFloor(data) {
+  var el = document.getElementById('floor-list');
+  var su = document.getElementById('floor-summary');
+  if(!data || !data.length) {
+    el.innerHTML = '<div class="empty">No floor balance entries found</div>';
+    if(su) su.textContent = '';
+    return;
+  }
+
+  // Sort: alphabetical by producer, then oldest first (most days on floor)
+  data = [...data].sort((a, b) => {
+    var pa = (a.producer||'').localeCompare(b.producer||'');
+    if(pa !== 0) return pa;
+    return (Number(b.days)||0) - (Number(a.days)||0); // oldest first = more days
+  });
+
+  if(su) su.textContent = data.length + ' lines · ' + new Set(data.map(s=>s.producer)).size + ' producers';
+
+  // Group by producer
+  var byProd = {};
+  data.forEach(s => {
+    var p = s.producer || 'Unknown';
+    if(!byProd[p]) byProd[p] = [];
+    byProd[p].push(s);
+  });
+
+  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pome',GFT:'Grapefruit'};
+  var PN = {TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB025:'250G Punnet',PTB002:'160G Punnet',DL076:'DL076',PC030:'3KG Pocket',PC060:'6KG Pocket',PC020:'2KG Pocket',PC100:'10KG Pocket',CO100:'10KG Carton',CO150:'15KG Carton',SP170:'17KG Sack',BX040:'4KG Box',CR:'Crate'};
+  var VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',AX:'Mixed',NV:'Navel',CN:'Cara Cara'};
+
+  el.innerHTML = Object.keys(byProd).sort().map(prod => {
+    var lines = byProd[prod];
+    var totalBal = lines.reduce((s,e) => s + (Number(e.balance)||0), 0);
+    var pid = 'fp-' + prod.replace(/\s+/g,'-') + '-' + Math.random().toString(36).slice(2);
+    var hasOld = lines.some(s => (Number(s.days)||0) >= 14);
+
+    var linesHTML = lines.map(s => {
+      var days = Number(s.days) || 0;
+      var bal = Number(s.balance) || 0;
+      var comm = s.commodity || 'UNK';
+      var commName = CN[comm] || comm;
+      var pack = PN[s.pack] || s.pack || '—';
+      var variety = s.variety && s.variety !== '*' ? (VN[s.variety] || s.variety) : '';
+      var grade = s.grade || '';
+      var size = s.size && s.size !== '*' ? s.size : '';
+      var oldBadge = days >= 14 ? '<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ' + days + 'd</span>' : days >= 7 ? '<span class="b ba">' + days + 'd</span>' : '<span class="b bt">' + days + 'd</span>';
+      var gradeColor = grade === 'CL 1' ? 'bg' : grade === 'CL 2' ? 'ba' : 'bb';
+
+      return '<div style="background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:7px;border:1.5px solid var(--border)">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
+        + '<div style="font-size:11px;color:var(--muted)">SEQ ' + (s.seq||'—') + ' · GRN ' + (s.grn||'—') + '</div>'
+        + '<div style="font-size:16px;font-weight:800;color:' + (bal === 0 ? 'var(--red)' : bal < 20 ? 'var(--gold)' : 'var(--moss)') + '">' + bal + ' <span style="font-size:10px;font-weight:600;color:var(--muted)">BAL</span></div>'
+        + '</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px">'
+        + '<span class="b" style="background:#e8f5ec;color:#1a5c2a">' + commName + '</span>'
+        + '<span class="b bb">' + pack + '</span>'
+        + (variety ? '<span class="b" style="background:#f0f4f0;color:var(--muted)">' + variety + '</span>' : '')
+        + (grade ? '<span class="b ' + gradeColor + '">' + grade + '</span>' : '')
+        + (size ? '<span class="b bt">sz ' + size + '</span>' : '')
+        + oldBadge
+        + '</div>'
+        + '<div style="font-size:10px;color:var(--muted)">Arrived: ' + (s.arrived||'—') + ' · Rec: ' + (s.received||'—') + '</div>'
+        + '</div>';
+    }).join('');
+
+    return '<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">'
+      + '<div onclick="toggleSection('' + pid + '')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--moss);cursor:pointer">'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-weight:800;font-size:14px;color:#fff;word-break:break-word">' + prod + (hasOld ? ' <span style="font-size:10px;background:rgba(192,57,43,0.3);padding:2px 6px;border-radius:4px">⚠️ OLD</span>' : '') + '</div>'
+      + '<div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">' + lines.length + ' line' + (lines.length>1?'s':'') + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;flex-shrink:0">'
+      + '<div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:5px 10px;text-align:center">'
+      + '<div style="font-size:18px;font-weight:800;color:#fff;line-height:1">' + totalBal.toLocaleString() + '</div>'
+      + '<div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">balance</div>'
+      + '</div>'
+      + '<div id="arr-' + pid + '" style="color:#fff;font-size:14px;transition:transform .2s">▼</div>'
+      + '</div></div>'
+      + '<div id="' + pid + '" style="display:none;padding:10px">' + linesHTML + '</div>'
+      + '</div>';
+  }).join('');
+}
 
 function populateBuyerSuggestions(){var dl=document.getElementById('buyer-suggestions');if(!dl||!liveBuyerData.length)return;dl.innerHTML=liveBuyerData.map(b=>'<option value="'+b.name+'">').join('');}
 </script>
