@@ -691,7 +691,7 @@ function renderFloor(data) {
     }).join('');
 
     return '<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">'
-      + '<div onclick="toggleSection('' + pid + '')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--moss);cursor:pointer">'
+      + '<div onclick="toggleSection(\'' + pid + '\')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--moss);cursor:pointer">'
       + '<div style="flex:1;min-width:0">'
       + '<div style="font-weight:800;font-size:14px;color:#fff;word-break:break-word">' + prod + (hasOld ? ' <span style="font-size:10px;background:rgba(192,57,43,0.3);padding:2px 6px;border-radius:4px">⚠️ OLD</span>' : '') + '</div>'
       + '<div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">' + lines.length + ' line' + (lines.length>1?'s':'') + '</div>'
