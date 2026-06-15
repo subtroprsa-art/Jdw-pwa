@@ -371,7 +371,7 @@ window.addEventListener('load',function(){var s=loadSession();if(s&&USERS[s.u])s
 
 const commName={AVOS:"Avocados",LEMS:"Lemons",FIGS:"Figs",KIWI:"Kiwifruit",ORGS:"Oranges",GVS:"Guavas",CLTM:"Clementines",NAAR:"Naartjies",STRS:"Strawberries",MANG:"Mangoes",DRAG:"Dragon Fruit",GFT:"Grapefruit",SATS:"Satsumas",PAPO:"Papino",BERS:"Berries"};
 const packName={TR040:"4KG TRAY",BG150:"15KG BAG",CTT150:"CTT 150 CARTON",PTB005:"500G PUNNET",PTB002:"160G PUNNET",DL076:"DL 076 CARTON",PC030:"3KG POCKET",PC060:"6KG POCKET",CO100:"10KG CARTON"};
-const varName={AF:"Fuerte",AH:"Hass",AK:"Pinkerton",MA:"Maluma",MD:"Mendez",NV:"Navel","*":"Open"};
+const varName={AF:"Fuerte",AH:"Hass",AK:"Pinkerton",MA:"Maluma",MAH:"Maluma",MD:"Mendez",NV:"Navel",CN:"Cara Cara",AX:"Mixed",SZ:"Sizewell","*":"Open"};
 const commMap={"Avocados":"AVOS","Lemons":"LEMS","Figs":"FIGS","Kiwifruit":"KIWI","Oranges":"ORGS","Guavas":"GVS","Clementines":"CLTM","Naartjies":"NAAR","Strawberries":"BERS","Berries":"BERS","Dragon Fruit":"DRAG","Mangoes":"MANG","Grapefruit":"GFT","Satsumas":"SATS","Papino":"PAPO"};
 const packMap={"4KG TRAY":["TR040"],"15KG CARTON":["CTT150"],"500G PUNNET":["PTB005"],"250G PUNNET":["PTB002"],"160G PUNNET":["PTB002"],"3KG POCKET":["PC030"]};
 const pn=c=>packName[c]||c;
@@ -539,7 +539,7 @@ async function runAIMatch(){
     var buyers=liveBuyerData.length?liveBuyerData:[];
     if(!buyers.length)throw new Error('No buyer history.');
     var today=new Date().toLocaleDateString('en-ZA',{weekday:'long'}),dow=new Date().getDay(),td=dow===0?6:dow-1;
-    var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',NV:'Navel'},PN={TR040:'4KG Tray',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
+    var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',MD:'Mendez',NV:'Navel',CN:'Cara Cara',AX:'Mixed'},PN={TR040:'4KG Tray',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
     var sl=stock.filter(s=>s.flr>0).sort((a,b)=>b.flr-a.flr).slice(0,20).map(s=>{var v=s.variety!=='*'?(VN[s.variety]||s.variety):'';return s.commodity+'|'+(PN[s.pack]||s.pack)+(v?'|'+v:'')+'|CL'+s.grade+'|sz'+s.size+'|'+s.flr+'u|'+s.producer.split(' ').slice(0,2).join(' ');}).join('\n');
     var sc=new Set(stock.map(s=>s.commodity));
     var bl=buyers.filter(b=>b.prefs.some(p=>sc.has(commMap[p.comm]||p.comm))).slice(0,10).map(b=>{var bt=b.buyingDays&&b.buyingDays[td]?'*':'';var pr=b.prefs.filter(p=>sc.has(commMap[p.comm]||p.comm)).slice(0,2).map(p=>p.comm+'|'+(p.pack||'any')+'|'+p.cls+'|sz'+p.sizes[0]+'|R'+Math.round(p.revenue)).join(',');return b.name+bt+'|R'+b.spend+'|'+pr;}).join('\n');
@@ -617,7 +617,7 @@ function filterStock(){
   var f=document.getElementById('stock-filter').value;
   var src=(allLiveStockData.length?allLiveStockData:(liveStockData.length?liveStockData:[]));
   var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino'};
-  var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MD:'mendez',NV:'navel',AX:'mixed'};
+  var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MAH:'maluma',MD:'mendez',NV:'navel',CN:'cara cara',AX:'mixed'};
   var PN={TR040:'4kg tray',BG150:'15kg bag',BG160:'16kg bag',CTT150:'15kg carton',PTB005:'500g punnet',PTB025:'250g punnet',PTB002:'160g punnet',DL076:'dl076',PC030:'3kg pocket',PC060:'6kg pocket',CO100:'10kg carton',CO150:'15kg carton',SP170:'17kg sack'};
   var filtered=src.filter(s=>{
     if(f&&s.commodity!==f)return false;
@@ -825,7 +825,7 @@ function renderFloor(data) {
 
   var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pome',GFT:'Grapefruit'};
   var PN = {TR040:'4KG Tray',BG150:'15KG Bag',BG160:'16KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB025:'250G Punnet',PTB002:'160G Punnet',DL076:'DL076',PC030:'3KG Pocket',PC060:'6KG Pocket',PC020:'2KG Pocket',PC100:'10KG Pocket',CO100:'10KG Carton',CO150:'15KG Carton',SP170:'17KG Sack',BX040:'4KG Box',CR:'Crate'};
-  var VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',AX:'Mixed',NV:'Navel',CN:'Cara Cara'};
+  var VN = {AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',AX:'Mixed',NV:'Navel',CN:'Cara Cara',MD:'Mendez'};
 
   el.innerHTML = Object.keys(byProd).sort().map(prod => {
     var lines = byProd[prod];
