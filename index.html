@@ -251,7 +251,7 @@ main{padding:14px 12px}
 <div class="page" id="page-stock">
   <div class="upload-box"><div class="upload-title">📄 Upload Stock PDF</div><div class="upload-hint">POT.pdf · CDW.pdf · RIAAN.pdf</div><label class="upload-file-btn">📎 Choose PDF<input type="file" id="stockFile" accept=".pdf" style="display:none" onchange="document.getElementById('stockFileName').textContent=this.files[0]?.name||'No file chosen'"/></label><span id="stockFileName" class="upload-fname">No file chosen</span><div class="upload-btn-row"><button class="upload-btn" onclick="doStockUpload(false)">Upload</button><button class="upload-btn upload-btn-red" onclick="doStockUpload(true)">🔄 Clear &amp; Re-upload</button></div><div id="uploadStatus" class="upload-status"></div></div>
   <div class="stock-tabs"><button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button><button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button><button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button></div>
-  <div class="ctrl-row"><input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/><select id="stock-filter" onchange="filterStock()"><option value="">All</option><option value="AVOS">Avocados</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwi</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="ORGS">Oranges</option><option value="SATS">Satsumas</option><option value="BERS">Strawberries</option></select></div>
+  <div class="ctrl-row"><input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/><select <select id="stock-filter" onchange="filterStock()"><option value="">All commodities</option></select></div>
   <div id="stock-salesman-note" style="display:none;font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600"></div>
 <div id="stock-list"></div>
 </div>
@@ -331,22 +331,7 @@ main{padding:14px 12px}
   </div>
   <div class="ctrl-row">
     <input type="text" id="floor-search" placeholder="🔍 Search producer or commodity…" oninput="filterFloor()"/>
-    <select id="floor-filter" onchange="filterFloor()">
-      <option value="">All commodities</option>
-      <option value="AVOS">Avocados</option>
-      <option value="CLTM">Clementines</option>
-      <option value="DRAG">Dragon Fruit</option>
-      <option value="FIGS">Figs</option>
-      <option value="GFT">Grapefruit</option>
-      <option value="GVS">Guavas</option>
-      <option value="KIWI">Kiwi</option>
-      <option value="LEMS">Lemons</option>
-      <option value="MANG">Mangoes</option>
-      <option value="NAAR">Naartjies</option>
-      <option value="NOVA">Nova</option>
-      <option value="ORGS">Oranges</option>
-      <option value="BERS">Strawberries</option>
-    </select>
+    <select <select id="floor-filter" onchange="filterFloor()"><option value="">All commodities</option></select>
   </div>
   <div id="floor-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
   <div id="floor-salesman-note" style="display:none;font-size:12px;color:var(--blue);margin-bottom:8px;font-weight:600"></div>
@@ -395,7 +380,7 @@ const FB_ORDERS='https://jdw-crm-default-rtdb.firebaseio.com/orders';
 const FB_SECRET='RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs';
 const COMM_FULL={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',STRS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas'};
 const PACK_FULL={TR040:'4KG Tray',BG150:'15KG Bag',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL 076 Carton',PC030:'3KG Pocket'};
-const COMM_NAMES={AVOS:'Avocados',BERS:'Berries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwi',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',ORGS:'Oranges',PAPO:'Papino',SATS:'Satsumas',UNK:'Unknown'};
+const COMM_NAMES={AVOS:'Avocados',BERS:'Berries',CLTM:'Clementines',DRAG:'Dragon Fruit',FIGS:'Figs',GFT:'Grapefruit',GVS:'Guavas',KIWI:'Kiwi',LEMS:'Lemons',MANG:'Mangoes',NAAR:'Naartjies',ORGS:'Oranges',PAPO:'Papino',SATS:'Satsumas',POME:'Pomegranate',UNK:'Unknown'};
 const SYNC='https://jdw-sync.onrender.com';
 let liveStockData=[],allLiveStockData=[],liveBuyerData=[];
 
@@ -608,6 +593,25 @@ function renderStock(data){
     return'<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:14px;overflow:hidden"><div onclick="toggleSection(\''+cid+'\')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--moss);cursor:pointer"><div><div style="font-weight:800;font-size:16px;color:#fff">'+cl+'</div><div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">'+sP.length+' producer'+(sP.length>1?'s':'')+'</div></div><div style="display:flex;align-items:center;gap:10px"><div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center"><div style="font-size:20px;font-weight:800;color:#fff;line-height:1">'+tf.toLocaleString()+'</div><div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">on floor</div></div><div id="arr-'+cid+'" style="color:#fff;font-size:14px;transition:transform .2s">▼</div></div></div><div id="'+cid+'" style="display:none;padding:10px">'+ph+'</div></div>';}).join('');
 }
 
+function populateStockFilter(data) {
+  var sel = document.getElementById('stock-filter');
+  if(!sel) return;
+  var current = sel.value;
+  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
+  var codes = [...new Set((allLiveStockData.length?allLiveStockData:data).map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));
+  sel.innerHTML = '<option value="">All commodities</option>' + codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');
+}
+
+function populateFloorFilter(data) {
+  var sel = document.getElementById('floor-filter');
+  if(!sel) return;
+  var current = sel.value;
+  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
+  var src = allLiveFloorData.length ? allLiveFloorData : (data||liveFloorData);
+  var codes = [...new Set(src.map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));
+  sel.innerHTML = '<option value="">All commodities</option>' + codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');
+}
+
 function filterStock(){
   var q=document.getElementById('stock-search').value.toLowerCase();
   var f=document.getElementById('stock-filter').value;
@@ -642,7 +646,7 @@ async function loadStockFromFirebase(user){
 }
 
 async function loadAllStockForMatcher(){
-  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json');if(!r.ok)throw new Error();var d=await r.json(),all=[];for(var u of Object.values(d||{}))for(var e of Object.values(u||{}))all.push(firebaseToItem(e));allLiveStockData=all;renderMatchPage(all);var el=document.getElementById('match-result');if(el)el.textContent=all.length+' stock lines · all salesmen';checkOrdersAgainstStock(all);}
+  try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json');if(!r.ok)throw new Error();var d=await r.json(),all=[];for(var u of Object.values(d||{}))for(var e of Object.values(u||{}))all.push(firebaseToItem(e));allLiveStockData=all;renderMatchPage(all);var el=document.getElementById('match-result');if(el)el.textContent=all.length+' stock lines · all salesmen';checkOrdersAgainstStock(all);populateStockFilter(all);}
   catch(e){renderMatchPage([]);}
 }
 
@@ -734,14 +738,15 @@ async function loadFloorFromFirebase(user) {
     if(!d) { el.innerHTML = '<div class="empty">No floor balance data. Upload a floor balance PDF.</div>'; return; }
     liveFloorData = Object.values(d);
     // Also load all salesmen for commodity filter
-    loadAllFloorData();
+    loadAllFloorData().then(function(){populateFloorFilter();});
+    populateFloorFilter(liveFloorData);
     filterFloor();
   } catch(e) {
     if(el) el.innerHTML = '<div class="empty">Could not load floor balance: ' + e.message + '</div>';
   }
 }
 
-async function loadAllFloorData() {
+async function loadAllFloorData() { // returns promise
   try {
     var r = await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor.json');
     if(!r.ok) return;
