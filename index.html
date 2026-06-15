@@ -597,7 +597,7 @@ function populateStockFilter(data) {
   var sel = document.getElementById('stock-filter');
   if(!sel) return;
   var current = sel.value;
-  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
+  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
   var codes = [...new Set((allLiveStockData.length?allLiveStockData:data).map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));
   sel.innerHTML = '<option value="">All commodities</option>' + codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');
 }
@@ -606,7 +606,7 @@ function populateFloorFilter(data) {
   var sel = document.getElementById('floor-filter');
   if(!sel) return;
   var current = sel.value;
-  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
+  var CN = {AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino',GRN:'Grapes',APPL:'Apples',PEER:'Pears',PLUM:'Plums',CHER:'Cherries',PERS:'Persimmons',BLUE:'Blueberries',RASP:'Raspberries',BLKB:'Blackberries'};
   var src = allLiveFloorData.length ? allLiveFloorData : (data||liveFloorData);
   var codes = [...new Set(src.map(s=>s.commodity).filter(Boolean))].sort((a,b)=>(CN[a]||a).localeCompare(CN[b]||b));
   sel.innerHTML = '<option value="">All commodities</option>' + codes.map(c=>'<option value="'+c+'"'+(c===current?' selected':'')+'>'+( CN[c]||c)+'</option>').join('');
