@@ -666,6 +666,7 @@ async function printOrders(){try{var res=await fetch(FB_ORDERS+'.json?auth='+FB_
 
 // ── FLOOR BALANCE ────────────────────────────────────────────────────────────
 let liveFloorData = [];
+let allLiveFloorData = [];
 
 async function loadFloorFromFirebase(user) {
   var el = document.getElementById('floor-list');
