@@ -212,7 +212,7 @@ main{padding:14px 12px}
       <div id="pipeline-packers-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Check floor packers have packed these orders</div><div id="pipeline-packers" style="font-size:13px;color:var(--muted)">Loading...</div></div>
     </div>
   </div>
-  <div id="ai-loading" style="display:none;text-align:center;color:var(--muted);font-size:13px;padding:10px">Analysing...</div>
+  <div id="ai-loading" style="display:none;text-align:center;color:var(--muted);font-size:13px;padding:16px"><div style="font-size:20px;margin-bottom:8px">🤖</div><div style="font-weight:600;margin-bottom:4px">Analysing stock vs buyers...</div><div style="font-size:11px">May take 30-60s if server is waking up</div></div>
   <div id="ai-summary" style="display:none;background:var(--sage-light);border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="color:var(--moss);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">AI Summary</div><div id="ai-summary-text" style="color:var(--ink);font-size:13px;line-height:1.5"></div></div>
   <div id="ai-error" style="display:none;background:var(--red-light);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;margin-bottom:10px"></div>
   <button id="ai-match-btn" style="display:none" onclick="runAIMatch()">Run AI</button>
@@ -916,7 +916,22 @@ async function renderPipelineOrders(elId,mode){
   catch(e){el.innerHTML='<div style="color:var(--red)">Error: '+e.message+'</div>';}
 }
 function togglePipelineOrderState(el){var orderId=el.getAttribute('data-oid'),stateKey=el.getAttribute('data-skey'),map=JSON.parse(sessionStorage.getItem(stateKey)||'{}');map[orderId]=!map[orderId];sessionStorage.setItem(stateKey,JSON.stringify(map));if(stateKey.includes('paid'))renderPipelineOrders('pipeline-orders','payment');if(stateKey.includes('packed'))renderPipelineOrders('pipeline-packers','packers');}
-function runAIFromPipeline(){var el=document.getElementById('ps1'),ch=document.getElementById('psc1');if(el)el.classList.add('done');if(ch){ch.textContent='v';ch.style.background='var(--sage)';}var state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');state[1]=true;sessionStorage.setItem(pipelineKey,JSON.stringify(state));document.getElementById('ai-match-btn').scrollIntoView({behavior:'smooth',block:'center'});setTimeout(runAIMatch,400);}
+function runAIFromPipeline(){
+  var el=document.getElementById('ps1'),ch=document.getElementById('psc1');
+  if(el)el.classList.add('done');
+  if(ch){ch.textContent='v';ch.style.background='var(--sage)';}
+  var state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');
+  state[1]=true;
+  sessionStorage.setItem(pipelineKey,JSON.stringify(state));
+  // Show loading immediately so user knows it's working
+  var ld=document.getElementById('ai-loading');
+  if(ld)ld.style.display='block';
+  var err=document.getElementById('ai-error');
+  if(err)err.style.display='none';
+  var rd=document.getElementById('ai-results');
+  if(rd)rd.style.display='none';
+  runAIMatch();
+}
 function togglePipelineStep(n){var el=document.getElementById('ps'+n),ch=document.getElementById('psc'+n),state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');if(el.classList.contains('done')){el.classList.remove('done');if(ch)ch.textContent='o';delete state[n];if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='none';}}else{el.classList.add('done');if(ch)ch.textContent='v';state[n]=true;if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='block';}}sessionStorage.setItem(pipelineKey,JSON.stringify(state));}
 function resetPipeline(){sessionStorage.removeItem(pipelineKey);for(var i=1;i<=6;i++){var el=document.getElementById('ps'+i),ch=document.getElementById('psc'+i);if(el)el.classList.remove('done');if(ch)ch.textContent='o';}}
 
