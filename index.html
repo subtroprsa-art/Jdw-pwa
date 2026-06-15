@@ -805,6 +805,7 @@ function renderFloor(data) {
         + (variety ? '<span class="b" style="background:#f0f4f0;color:var(--muted)">' + variety + '</span>' : '')
         + (grade ? '<span class="b ' + gradeColor + '">' + grade + '</span>' : '')
         + (size ? '<span class="b bt">sz ' + size + '</span>' : '')
+        + (s.count && s.count !== '*' ? '<span class="b" style="background:#f0f4f0;color:var(--muted)">cnt ' + s.count + '</span>' : '')
         + oldBadge
         + '</div>'
         + '<div style="font-size:10px;color:var(--muted)">Arrived: ' + (s.arrived||'—') + ' · Rec: ' + (s.received||'—') + '</div>'
