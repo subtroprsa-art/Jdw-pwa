@@ -734,14 +734,18 @@ function filterFloor(){
       s.producer,
       CN[s.commodity]||s.commodity,
       VN[s.variety]||s.variety,
-      s.variety,
-      s.size&&s.size!=='*'?s.size:'',
-      s.count&&s.count!=='*'?s.count:'',
+      s.variety||'',
+      s.size&&s.size!=='*'?String(s.size):'',
+      s.count&&s.count!=='*'?String(s.count):'',
+      s.size?String(s.size):'',
+      s.count?String(s.count):'',
       PN[s.pack]||s.pack,
-      s.grade,
-      s.grn,
-      s.seq,
-      String(s.balance||'')
+      s.pack||'',
+      s.grade||'',
+      s.grn||'',
+      s.seq||'',
+      String(s.balance||''),
+      s.loc||''
     ].join(' ').toLowerCase();
     return terms.every(function(t){return searchStr.includes(t);});
   });
@@ -795,7 +799,7 @@ function renderFloor(data) {
       var pack = PN[s.pack] || s.pack || '—';
       var variety = s.variety && s.variety !== '*' ? (VN[s.variety] || s.variety) : '';
       var grade = s.grade || '';
-      var size = s.size && s.size !== '*' ? s.size : '';
+      var size = s.size && s.size !== '*' ? String(s.size) : (s.count && s.count !== '*' ? String(s.count) : '');
       var oldBadge = days >= 14 ? '<span class="b" style="background:#fff0f0;color:#c0392b;border:1.5px solid #f5c0bb">⚠️ ' + days + 'd</span>' : days >= 7 ? '<span class="b ba">' + days + 'd</span>' : '<span class="b bt">' + days + 'd</span>';
       var gradeColor = grade === 'CL 1' ? 'bg' : grade === 'CL 2' ? 'ba' : 'bb';
 
