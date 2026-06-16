@@ -852,15 +852,18 @@ async function saveManualOrder(){var buyer=document.getElementById('m-order-buye
 let liveFloorData = [];
 let allLiveFloorData = [];
 async function loadAllFloorData(){try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor.json');if(!r.ok)return;var d=await r.json();var all=[];for(var u of Object.values(d||{}))for(var e of Object.values(u||{}))all.push(e);allLiveFloorData=all;}catch(e){console.warn('loadAllFloorData:',e.message);}}
-async function loadFloorFromFirebase(user){var el=document.getElementById('floor-list');if(el)el.innerHTML='<div class="empty">Loading...</div>';try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor/'+user+'.json');if(!r.ok)throw new Error('Firebase fetch failed');var d=await r.json();if(!d){el.innerHTML='<div class="empty">No floor balance data.</div>';return;}liveFloorData=Object.values(d);loadAllFloorData().then(function(){populateFloorFilter();});populateFloorFilter(liveFloorData);filterFloor();}catch(e){if(el)el.innerHTML='<div class="empty">Could not load floor balance: '+e.message+'</div>';}}
+async function loadFloorFromFirebase(user){var el=document.getElementById('floor-list');if(el)el.innerHTML='<div class="empty">Loading...</div>';try{var r=await fetch('https://jdw-crm-default-rtdb.firebaseio.com/floor/'+user+'.json');if(!r.ok)throw new Error('Firebase fetch failed');var d=await r.json();if(!d){el.innerHTML='<div class="empty">No floor balance data.</div>';return;}liveFloorData=Object.values(d);allLiveFloorData=[];populateFloorFilter(liveFloorData);filterFloor();}catch(e){if(el)el.innerHTML='<div class="empty">Could not load floor balance: '+e.message+'</div>';}}
 function switchFloorTab(user,btn){document.querySelectorAll('.stock-tab').forEach(function(b){if(b.id&&b.id.startsWith('ftab-'))b.classList.remove('active');});btn.classList.add('active');liveFloorData=[];var el=document.getElementById('floor-list');if(el)el.innerHTML='<div class="empty">Loading...</div>';loadFloorFromFirebase(user);}
 function filterFloor(){
   var q=(document.getElementById('floor-search').value||'').toLowerCase().trim();
   var f=document.getElementById('floor-filter').value;
-  var src=allLiveFloorData.length?allLiveFloorData:liveFloorData;
+  var src=liveFloorData; // default to current salesman
   var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino'};
   var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MAH:'maluma',MD:'mendez',NV:'navel',CN:'cara cara',AX:'mixed',LR:'leanri',HM:'honey murcott',M1:'mandarin',NAR:'nardocott'};
   var PN={TR040:'4kg tray',BG150:'15kg bag',CTT150:'15kg carton',PTB005:'500g punnet',PTB002:'160g punnet',DL076:'dl076',PC030:'3kg pocket',PC060:'6kg pocket',CO150:'15kg carton'};
+  // If searching, use all salesmen data (load if needed)
+  if(q&&!allLiveFloorData.length){loadAllFloorData().then(filterFloor);return;}
+  if(q&&allLiveFloorData.length)src=allLiveFloorData;
   var data=src.filter(function(s){
     if(f&&s.commodity!==f)return false;
     if(!q)return true;
