@@ -525,6 +525,25 @@ async function loadBuyersFromFirebase(){
   catch(e){console.error('loadBuyers error:',e.message,e);liveBuyerData=[];var el=document.getElementById('buyer-list');if(el)el.innerHTML='<div class="empty">Error loading buyers: '+e.message+'</div>';}
 }
 
+function calcAvgFreq(dates){
+  if(!dates||dates.length<2)return null;
+  var parsed=dates.map(function(d){
+    if(!d)return null;
+    var p=d.split('/');
+    if(p.length<3)return null;
+    return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+  }).filter(Boolean).sort(function(a,b){return a-b;});
+  if(parsed.length<2)return null;
+  var gaps=[];
+  for(var i=1;i<parsed.length;i++){
+    var g=Math.round((parsed[i]-parsed[i-1])/86400000);
+    if(g>0&&g<=30)gaps.push(g);
+  }
+  if(!gaps.length)return null;
+  return Math.round(gaps.reduce(function(s,g){return s+g;},0)/gaps.length);
+}
+
+
 function buildBuyerProfiles(history){
   var map={},CN={AVOS:'Avocados',LEMS:'Lemons',NAAR:'Naartjies',ORGS:'Oranges',CLTM:'Clementines',KIWI:'Kiwifruit',STRS:'Strawberries',FIGS:'Figs',GVS:'Guavas',DRAG:'Dragon Fruit',MANG:'Mangoes',GFT:'Grapefruit',UNK:'Unknown',SATS:'Satsumas',PAPO:'Papino',BERS:'Berries'},PG={AVOS:'4KG TRAY',KIWI:'500G PUNNET',STRS:'250G PUNNET',LEMS:'15KG CARTON',ORGS:'15KG CARTON',NAAR:'10KG CARTON',FIGS:'160G PUNNET',GVS:'4KG TRAY',MANG:'4KG TRAY'};
   for(var h of history){if(!h.buyer||h.buyer==='UNKNOWN')continue;var nm=h.buyer;if(!map[nm])map[nm]={name:nm,acc:h.account||'',txns:0,spend:0,prefs:{},lastDate:'',dates:[]};var b=map[nm],lt=Number(h.total)||(Number(h.price||0)*Number(h.qty||0))||0;b.txns++;b.spend+=lt;if(h.date)b.dates.push(h.date);if(!b.acc&&h.account)b.acc=h.account;if(!b.lastDate||h.date>b.lastDate)b.lastDate=h.date;var comm=h.commodity||'UNK';if(!map[nm].prefs[comm])map[nm].prefs[comm]={comm:CN[comm]||comm,pack:PG[comm]||'',cls:'CL '+(h.cls||'1'),sizes:new Set(),txns:0,totalQty:0,revenue:0};var p=map[nm].prefs[comm];p.txns++;p.totalQty+=Number(h.qty)||0;p.revenue+=lt;if(h.size&&h.size!=='*')p.sizes.add(h.size);}
