@@ -573,7 +573,9 @@ function renderStock(data){
 
 function filterStock(){
   var q=document.getElementById('stock-search').value.toLowerCase().trim(),f=document.getElementById('stock-filter').value;
-  var src=allLiveStockData.length?allLiveStockData:(liveStockData.length?liveStockData:[]);
+  var src=liveStockData.length?liveStockData:[];
+  if(q&&!allLiveStockData.length){loadAllStockForMatcher().then(filterStock);return;}
+  if(q&&allLiveStockData.length)src=allLiveStockData;
   var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino'};
   var VN={AF:'fuerte',AH:'hass',AK:'pinkerton',MA:'maluma',MAH:'maluma',MD:'mendez',NV:'navel',AX:'mixed'};
   var filtered=src.filter(function(s){if(f&&s.commodity!==f)return false;if(!q)return true;var terms=q.split(' ');var searchStr=[s.producer,CN[s.commodity]||s.commodity,VN[s.variety]||s.variety||'',s.size||'',s.pack||'',s.grn||''].join(' ').toLowerCase();return terms.every(function(t){return searchStr.includes(t);});});
@@ -614,7 +616,7 @@ async function loadAllStockForMatcher(){
   catch(e){renderMatchPage([]);}
 }
 
-function switchStockTab(user,btn){document.querySelectorAll('.stock-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');liveStockData=[];var el=document.getElementById('stock-list');if(el)el.innerHTML='<div class="empty">Loading…</div>';loadStockFromFirebase(user);}
+function switchStockTab(user,btn){document.querySelectorAll('.stock-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');liveStockData=[];allLiveStockData=[];var el=document.getElementById('stock-list');if(el)el.innerHTML='<div class="empty">Loading…</div>';loadStockFromFirebase(user);}
 
 async function doStockUpload(clearFirst){
   var input=document.getElementById('stockFile'),file=input&&input.files&&input.files[0],stat=document.getElementById('uploadStatus');
