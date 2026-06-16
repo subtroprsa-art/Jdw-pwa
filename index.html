@@ -192,6 +192,7 @@ main{padding:14px 12px}
   </div>
   <div class="stitle">Sell-Through by Commodity</div>
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
+
 </div>
 <div class="page" id="page-matching">
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
@@ -223,7 +224,7 @@ main{padding:14px 12px}
 <div class="page" id="page-stock">
   <div class="upload-box"><div class="upload-title">📄 Upload Stock PDF</div><div class="upload-hint">POT.pdf · CDW.pdf · RIAAN.pdf</div><label class="upload-file-btn">📎 Choose PDF<input type="file" id="stockFile" accept=".pdf" style="display:none" onchange="document.getElementById('stockFileName').textContent=this.files[0]?.name||'No file chosen'"/></label><span id="stockFileName" class="upload-fname">No file chosen</span><div class="upload-btn-row"><button class="upload-btn" onclick="doStockUpload(false)">Upload</button><button class="upload-btn upload-btn-red" onclick="doStockUpload(true)">🔄 Clear &amp; Re-upload</button></div><div id="uploadStatus" class="upload-status"></div></div>
   <div class="stock-tabs"><button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button><button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button><button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button></div>
-  <div class="ctrl-row"><input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()" style="flex:1"/><button id="mic-stock-search" onclick="startVoiceSearch('stock-search',filterStock)" style="flex-shrink:0;padding:11px 14px;border:none;border-radius:10px;background:var(--moss);color:#fff;font-size:16px;cursor:pointer">🎤</button><select id="stock-filter" onchange="filterStock()"><option value="">All</option><option value="AVOS">Avocados</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwi</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="ORGS">Oranges</option><option value="SATS">Satsumas</option><option value="STRS">Strawberries</option></select></div>
+  <div class="ctrl-row"><input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()""/><select id="stock-filter" onchange="filterStock()"><option value="">All</option><option value="AVOS">Avocados</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwi</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="ORGS">Oranges</option><option value="SATS">Satsumas</option><option value="STRS">Strawberries</option></select></div>
   <div id="stock-list"></div>
 </div>
 <div class="page" id="page-commodities"><div class="ctrl-row"><input type="text" id="comm-search" placeholder="🔍 Search commodity…" oninput="filterCommodities()"/></div><div id="comm-summary-list"></div><div id="comm-detail" style="display:none"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button onclick="closeCommodityDetail()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:13px;cursor:pointer">← Back</button><div id="comm-detail-title" style="font-weight:700;font-size:16px;color:var(--moss)"></div></div><div id="comm-detail-stats" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div><div id="comm-detail-lines"></div></div></div>
@@ -287,7 +288,7 @@ main{padding:14px 12px}
     <button class="stock-tab" id="ftab-POT" onclick="switchFloorTab('POT',this)">Potgieter</button>
   </div>
   <div class="ctrl-row">
-    <input type="text" id="floor-search" placeholder="🔍 Search producer or commodity…" oninput="filterFloor()" style="flex:1"/><button id="mic-floor-search" onclick="startVoiceSearch('floor-search',filterFloor)" style="flex-shrink:0;padding:11px 14px;border:none;border-radius:10px;background:var(--moss);color:#fff;font-size:16px;cursor:pointer">🎤</button>
+    <input type="text" id="floor-search" placeholder="🔍 Search producer or commodity…" oninput="filterFloor()"/>
     <select id="floor-filter" onchange="filterFloor()">
       <option value="">All commodities</option>
       <option value="AVOS">Avocados</option>
@@ -914,35 +915,6 @@ async function printThermalOrders(){
   }catch(e){alert('Could not print: '+e.message);}
 }
 
-
-// ── VOICE SEARCH ─────────────────────────────────────────────────────────────
-function startVoiceSearch(inputId, filterFn) {
-  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){
-    alert('Voice search not supported on this browser. Try Chrome.');
-    return;
-  }
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var rec = new SR();
-  rec.lang = 'en-ZA';
-  rec.interimResults = false;
-  rec.maxAlternatives = 1;
-  var btn = document.getElementById('mic-'+inputId);
-  if(btn) { btn.style.background='var(--red)'; btn.textContent='🎙'; }
-  rec.start();
-  rec.onresult = function(e) {
-    var text = e.results[0][0].transcript;
-    var inp = document.getElementById(inputId);
-    if(inp) { inp.value = text; filterFn(); }
-    if(btn) { btn.style.background='var(--moss)'; btn.textContent='🎤'; }
-  };
-  rec.onerror = function(e) {
-    if(btn) { btn.style.background='var(--moss)'; btn.textContent='🎤'; }
-    if(e.error !== 'no-speech') alert('Voice error: ' + e.error);
-  };
-  rec.onend = function() {
-    if(btn) { btn.style.background='var(--moss)'; btn.textContent='🎤'; }
-  };
-}
 
 function populateBuyerSuggestions(){var dl=document.getElementById('buyer-suggestions');if(!dl||!liveBuyerData.length)return;dl.innerHTML=liveBuyerData.map(function(b){return'<option value="'+b.name+'">';}).join('');}
 
