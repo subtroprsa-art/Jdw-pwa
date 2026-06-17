@@ -727,7 +727,7 @@ async function printUrgentStock(){
   if(!allLiveStockData.length){alert('No stock data loaded yet.');return;}
   var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino'};
   var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',MD:'Mendez',NV:'Navel',CN:'Cara Cara',AX:'Mixed'};
-  var urgent=allLiveStockData.filter(function(s){return s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14;}).sort(function(a,b){return(a.producer||'').localeCompare(b.producer||'');});
+  var urgent=allLiveStockData.filter(function(s){return s.flr>0&&daysOnFloor(s.arrived||s.date||'')>=14;}).sort(function(a,b){return daysOnFloor(b.arrived||b.date||'')-daysOnFloor(a.arrived||a.date||'');});
   if(!urgent.length){alert('No urgent stock.');return;}
   var now=new Date().toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var rows=urgent.map(function(s,i){var days=daysOnFloor(s.arrived||s.date||'');return'<tr><td style="padding:7px 8px">'+(i+1)+'</td><td style="padding:7px 8px;font-weight:600">'+s.producer+'</td><td style="padding:7px 8px">'+(CN[s.commodity]||s.commodity)+'</td><td style="padding:7px 8px">'+(VN[s.variety]||s.variety||'-')+'</td><td style="padding:7px 8px">'+s.grade+'</td><td style="padding:7px 8px">'+s.size+'</td><td style="padding:7px 8px;text-align:right">'+s.flr+'</td><td style="padding:7px 8px;text-align:right;color:#c0392b;font-weight:700">'+days+'d</td><td style="padding:7px 8px">'+s.user+'</td></tr>';}).join('');
