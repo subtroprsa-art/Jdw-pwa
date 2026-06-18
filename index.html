@@ -15,7 +15,7 @@
 <title>SubTrop CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
-:root{--moss:#1e4d2b;--sage:#3a7a4a;--sage-light:#e8f5ec;--gold:#c9882a;--gold-light:#fff4e0;--red:#c0392b;--red-light:#fdecea;--blue:#1a4479;--blue-light:#e8f0fc;--ink:#141f15;--muted:#6b7c6c;--border:#dde8de;--paper:#f3f7f3;--card:#ffffff;--shadow:0 1px 8px rgba(30,77,43,0.10);--r:14px;--nav-h:64px;font-family:'Outfit',sans-serif;}
+:root{--moss:#1e4d2b;--sage:#3a7a4a;--sage-light:#e8f5ec;--gold:#c9882a;--gold-light:#fff4e0;--red:#c0392b;--red-light:#fdecea;--blue:#1a4479;--blue-light:#e8f0fc;--ink:#141f15;--muted:#6b7c6c;--border:#dde8de;--paper:#f3f7f3;--card:#ffffff;--shadow:0 1px 8px rgba(30,77,43,0.10);--r:14px;--nav-h:0px;font-family:'Outfit',sans-serif;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px}
 #login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:linear-gradient(160deg,#1e4d2b 0%,#2d6e3e 50%,#1a3d22 100%)}
@@ -37,7 +37,7 @@ body{background:var(--paper);color:var(--ink);min-height:100vh;font-size:15px}
 .login-error.show{display:block}
 .login-footer{color:rgba(255,255,255,0.35);font-size:11px;margin-top:24px;text-align:center}
 #app{display:none}
-body.app-active{padding-bottom:var(--nav-h)}
+body.app-active{padding-bottom:0}
 .hdr{background:var(--moss);padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
 .hdr-brand{display:flex;align-items:center;gap:10px}
 .hdr-logo{width:36px;height:36px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0}
@@ -157,30 +157,46 @@ main{padding:14px 12px}
 </div>
 <div id="app">
 <div class="hdr">
-  <div class="hdr-brand"><div class="hdr-logo">S</div><div><div class="hdr-title">SubTrop <span>RSA</span></div><div class="hdr-sub">RSA Market Agents</div></div></div>
+  <div class="hdr-brand">
+    <button id="home-btn" onclick="goHome()" style="display:none;background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:#fff;font-size:20px;cursor:pointer;margin-right:6px">🏠</button>
+    <div class="hdr-logo">S</div>
+    <div><div class="hdr-title">SubTrop <span>CRM</span></div><div class="hdr-sub" id="hdr-page-name">Home</div></div>
+  </div>
   <div class="hdr-right"><div class="hdr-user" id="hdr-username"></div><div class="hdr-date" id="live-date"></div><button class="logout-btn" onclick="doLogout()">Sign Out</button></div>
 </div>
 <main>
 <div class="page active" id="page-dashboard">
+  <!-- KPI Row -->
   <div class="kpi-row" style="margin-bottom:10px">
     <div class="kpi red"><div class="kpi-lbl">Floor Stock</div><div class="kpi-val" id="kpi-floor">--</div><div class="kpi-sub" id="kpi-floor-sub">units on floor</div></div>
     <div class="kpi"><div class="kpi-lbl">Clearance Rate</div><div class="kpi-val" id="kpi-clearance">--</div><div class="kpi-sub" id="kpi-clearance-sub">% stock sold</div></div>
   </div>
-  <div id="kpi-urgent-banner" onclick="printUrgentStock()" style="display:none;background:var(--red-light);border:1.5px solid var(--red);border-radius:12px;padding:14px 16px;margin-bottom:14px;cursor:pointer;justify-content:space-between;align-items:center">
+  <!-- Urgent Stock Banner -->
+  <div id="kpi-urgent-banner" onclick="printUrgentStock()" style="display:none;background:var(--red-light);border:1.5px solid var(--red);border-radius:12px;padding:12px 16px;margin-bottom:12px;cursor:pointer;display:none;justify-content:space-between;align-items:center">
     <div><div style="font-weight:800;font-size:15px;color:var(--red)">Urgent Stock</div><div style="font-size:12px;color:var(--red);margin-top:2px" id="kpi-urgent-sub">lines 14+ days - tap to print</div></div>
     <div style="font-size:32px;font-weight:800;color:var(--red)" id="kpi-urgent">--</div>
   </div>
-  <div id="dash-due-today" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:14px"><div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:8px">Collections Due Today</div><div id="dash-due-list" style="font-size:13px;color:#8a5a00"></div></div>
-  <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px">
-    <button onclick="goToTab('matching')" style="padding:16px;border:none;border-radius:12px;background:var(--moss);color:#fff;font-family:inherit;font-weight:800;font-size:16px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px"><span style="font-size:22px">&#x1F501;</span><div><div>Sell Now</div><div style="font-size:11px;font-weight:400;opacity:.75">Open sales pipeline</div></div></button>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <button onclick="goToTab('stock')" style="padding:14px;border:none;border-radius:12px;background:var(--sage);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">&#x1F4E6;</div>Search Stock</button>
-      <button onclick="goToTab('buyers')" style="padding:14px;border:none;border-radius:12px;background:var(--blue);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">&#x1F465;</div>Search Buyers</button>
-      <button onclick="showTodayOrders()" style="padding:14px;border:none;border-radius:12px;background:var(--gold);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">&#x1F4CB;</div>Today's Orders</button>
-      <button onclick="showOutstandingOrders()" style="padding:14px;border:none;border-radius:12px;background:#6b4c9a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left"><div style="font-size:20px;margin-bottom:4px">&#x23F3;</div>Outstanding Orders</button>
-      <button onclick="toggleReportsMenu()" style="padding:14px;border:none;border-radius:12px;background:#2c5f7a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;grid-column:span 2"><div style="font-size:20px;margin-bottom:4px">&#x1F4CA;</div>Reports</button>
+  <!-- Coldstore Reminder Banner -->
+  <div id="coldstore-banner" style="display:none;background:#e8f4f8;border:1.5px solid #2c5f7a;border-radius:12px;padding:12px 16px;margin-bottom:12px;cursor:pointer" onclick="goToPage('coldstore')">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:800;font-size:15px;color:#2c5f7a">❄️ Coldstore Alert</div><div style="font-size:12px;color:#2c5f7a;margin-top:2px" id="coldstore-banner-sub">stock needs removal</div></div>
+      <div style="font-size:32px;font-weight:800;color:#2c5f7a" id="coldstore-banner-count">--</div>
     </div>
   </div>
+  <!-- Collections Due Today -->
+  <div id="dash-due-today" style="display:none;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:12px"><div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:8px">Collections Due Today</div><div id="dash-due-list" style="font-size:13px;color:#8a5a00"></div></div>
+  <!-- Home Screen Buttons -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    <button onclick="goToPage('matching')" style="padding:18px 14px;border:none;border-radius:14px;background:var(--moss);color:#fff;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;text-align:left;grid-column:span 2;display:flex;align-items:center;gap:12px"><span style="font-size:24px">🔗</span><div><div>Pipeline</div><div style="font-size:11px;font-weight:400;opacity:.75">AI Match + Call Buyers</div></div></button>
+    <button onclick="goToPage('buyers')" style="padding:16px 14px;border:none;border-radius:14px;background:#1a4479;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">👥</span>Buyers</button>
+    <button onclick="goToPage('stock')" style="padding:16px 14px;border:none;border-radius:14px;background:var(--sage);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">📦</span>Stock</button>
+    <button onclick="goToPage('orders')" style="padding:16px 14px;border:none;border-radius:14px;background:var(--gold);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">📋</span>Orders</button>
+    <button onclick="goToPage('floor')" style="padding:16px 14px;border:none;border-radius:14px;background:#5a3e8a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">📊</span>Floor Balance</button>
+    <button onclick="goToPage('coldstore')" style="padding:16px 14px;border:none;border-radius:14px;background:#2c5f7a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">❄️</span>Coldstore</button>
+    <button onclick="goToPage('commodities')" style="padding:16px 14px;border:none;border-radius:14px;background:#3a7a4a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">🌿</span>Commodities</button>
+    <button onclick="toggleReportsMenu()" style="padding:16px 14px;border:none;border-radius:14px;background:#2c5f7a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;grid-column:span 2"><span style="font-size:22px">📈</span>Reports</button>
+  </div>
+  <!-- Reports Menu -->
   <div id="reports-menu" style="display:none;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px;border-top:3px solid #2c5f7a">
     <div style="font-weight:700;font-size:14px;color:#2c5f7a;margin-bottom:12px">Reports</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -192,6 +208,7 @@ main{padding:14px 12px}
       <button onclick="printWeeklyReport()" style="padding:12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);text-align:left">Weekly Summary</button>
     </div>
   </div>
+  <!-- Orders Panel -->
   <div id="dash-orders-panel" style="display:none;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-weight:700;font-size:14px;color:var(--moss)" id="dash-orders-title">Orders</div>
@@ -199,9 +216,9 @@ main{padding:14px 12px}
     </div>
     <div id="dash-orders-list"></div>
   </div>
+  <!-- Sell Through Chart -->
   <div class="stitle">Sell-Through by Commodity</div>
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:16px" id="stock-chart"></div>
-
 </div>
 <div class="page" id="page-matching">
   <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
@@ -287,7 +304,7 @@ main{padding:14px 12px}
     </div>
   </div>
   <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">Open Orders<span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span><span style="flex:1;height:1px;background:var(--border);display:block"></span><button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">A4</button><button onclick="printThermalOrders()" style="background:#2c5f7a;border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700;margin-left:4px">Thermal</button><button onclick="loadOrders()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Refresh</button></div>
-  <div id="orders-list"><div class="empty">No open orders</div></div>
+  <span id="orders-badge" style="display:none"></span><div id="orders-list"><div class="empty">No open orders</div></div>
 </div>
 <!-- FLOOR BALANCE -->
 <div class="page" id="page-floor">
@@ -318,16 +335,22 @@ main{padding:14px 12px}
   <div id="floor-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
   <div id="floor-salesman-note" style="display:none;font-size:11px;color:var(--muted);margin-bottom:6px;text-align:center"></div><div id="floor-list"></div>
 </div>
+
+<!-- COLDSTORE -->
+<div class="page" id="page-coldstore">
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <select id="coldstore-filter" onchange="filterColdstore()" style="flex:1;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
+      <option value="">All stock</option>
+      <option value="overdue">⚠ Overdue only</option>
+      <option value="ripening">Ripening Room</option>
+      <option value="coldroom">Cold Room</option>
+    </select>
+  </div>
+  <div id="coldstore-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
+  <div id="coldstore-list"><div class="empty">Loading coldstore...</div></div>
+</div>
 </main>
-<nav class="bnav">
-  <div class="bnav-item active" onclick="showPage('dashboard',this)"><div class="bnav-icon">📊</div><div class="bnav-label">Dashboard</div></div>
-  <div class="bnav-item" onclick="showPage('matching',this)"><div class="bnav-icon">🔗</div><div class="bnav-label">Pipeline</div></div>
-  <div class="bnav-item" onclick="showPage('buyers',this)"><div class="bnav-icon">👥</div><div class="bnav-label">Buyers</div></div>
-  <div class="bnav-item" onclick="showPage('stock',this)"><div class="bnav-icon">📦</div><div class="bnav-label">Stock</div></div>
-  <div class="bnav-item" onclick="showPage('orders',this)"><div class="bnav-icon">📋<span id="orders-badge" style="display:none;position:absolute;top:8px;width:8px;height:8px;background:var(--gold);border-radius:50%"></span></div><div class="bnav-label">Orders</div></div>
-  <div class="bnav-item" onclick="showPage('commodities',this)"><div class="bnav-icon">🌿</div><div class="bnav-label">Commodities</div></div>
-  <div class="bnav-item" onclick="showPage('floor',this)"><div class="bnav-icon">📋</div><div class="bnav-label">Floor Bal</div></div>
-</nav>
+
 </div>
 <script>
 const USERS={'riaan.joubert':{display:'Riaan Joubert',pw:'rsasubtrop2026'},'christoff.dewet':{display:'Christoff de Wet',pw:'rsasubtrop2026'}};
@@ -335,7 +358,7 @@ const SK='st_sess';
 function saveSession(u){try{sessionStorage.setItem(SK,JSON.stringify({u,exp:Date.now()+28800000}));}catch(e){}}
 function loadSession(){try{var s=JSON.parse(sessionStorage.getItem(SK));if(s&&s.exp>Date.now())return s;}catch(e){}return null;}
 function clearSession(){try{sessionStorage.removeItem(SK);}catch(e){}}
-function showApp(n){document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='block';document.body.classList.add('app-active');document.getElementById('hdr-username').textContent=n;document.getElementById('live-date').textContent=new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short'});loadDashboard();loadBuyersFromFirebase();loadStockFromFirebase('RJ');loadAllStockForMatcher();}
+function showApp(n){document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='block';document.body.classList.add('app-active');document.getElementById('hdr-username').textContent=n;document.getElementById('live-date').textContent=new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short'});loadDashboard();loadBuyersFromFirebase();loadStockFromFirebase('RJ');loadAllStockForMatcher();loadColdstore();}
 function normalizeUser(r){return r.trim().toLowerCase().replace(/\s+/g,'.');}
 function doLogin(){
   var u=document.getElementById('login-user').value,p=document.getElementById('login-pass').value,e=document.getElementById('login-error');
@@ -583,7 +606,8 @@ function filterStock(){
   renderStock(filtered);
   var su=document.getElementById('stock-salesman-note');if(su){su.textContent=f?'Showing all salesmen':'';su.style.display=f?'block':'none';}}
 
-function showPage(id,el){
+function showPage(id,el){goToPage(id);}
+function showPage_unused(id,el){
   if(id==='commodities'){
     document.getElementById('comm-summary-list').innerHTML='<div class="empty">Loading…</div>';
     document.getElementById('comm-detail').style.display='none';
@@ -702,6 +726,174 @@ function goToTab(id){
 function toggleReportsMenu(){
   var m=document.getElementById('reports-menu');
   m.style.display=m.style.display==='none'?'block':'none';
+}
+
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function goToPage(id){
+  var pageNames={
+    matching:'Pipeline',buyers:'Buyers',stock:'Stock',
+    orders:'Orders',floor:'Floor Balance',coldstore:'Coldstore',
+    commodities:'Commodities'
+  };
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  var pg=document.getElementById('page-'+id);
+  if(pg)pg.classList.add('active');
+  var homeBtn=document.getElementById('home-btn');
+  if(homeBtn)homeBtn.style.display='block';
+  var pageName=document.getElementById('hdr-page-name');
+  if(pageName)pageName.textContent=pageNames[id]||id;
+  window.scrollTo(0,0);
+  // Load data for page
+  if(id==='buyers')loadBuyersFromFirebase();
+  if(id==='stock'){var at=document.querySelector('.stock-tab.active');loadStockFromFirebase(at?at.id.replace('tab-',''):'RJ');loadAllStockForMatcher();}
+  if(id==='matching'){if(!liveBuyerData.length)loadBuyersFromFirebase();loadAllStockForMatcher();setTimeout(loadPipelineState,100);}
+  if(id==='orders'){loadOrders();populateBuyerSuggestions();initOrderCommodityDropdown();}
+  if(id==='floor'){var at=document.querySelector('#ftab-RJ.active,#ftab-CW.active,#ftab-POT.active');loadFloorFromFirebase(at?at.id.replace('ftab-',''):'RJ');}
+  if(id==='coldstore')loadColdstore();
+  if(id==='commodities'){
+    document.getElementById('comm-summary-list').innerHTML='<div class="empty">Loading…</div>';
+    document.getElementById('comm-detail').style.display='none';
+    document.getElementById('comm-summary-list').style.display='block';
+    fetch('https://jdw-crm-default-rtdb.firebaseio.com/stock.json').then(function(r){return r.json();}).then(function(d){
+      var all=[];for(var uk in d||{})for(var ek in d[uk]||{})all.push(Object.assign(firebaseToItem(d[uk][ek]),{user:d[uk][ek].user||uk}));
+      allLiveStockData=all;renderCommodities(buildCommoditySummary());
+    }).catch(function(){document.getElementById('comm-summary-list').innerHTML='<div class="empty">Could not load data.</div>';});
+  }
+}
+
+function goHome(){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('page-dashboard').classList.add('active');
+  var homeBtn=document.getElementById('home-btn');
+  if(homeBtn)homeBtn.style.display='none';
+  var pageName=document.getElementById('hdr-page-name');
+  if(pageName)pageName.textContent='Home';
+  window.scrollTo(0,0);
+  loadDashboard();
+}
+
+// ── COLDSTORE ─────────────────────────────────────────────────────────────────
+const FB_COLDSTORE='https://jdw-crm-default-rtdb.firebaseio.com/coldstore';
+var liveColdstoreData=[];
+
+async function loadColdstore(){
+  var el=document.getElementById('coldstore-list');
+  if(el)el.innerHTML='<div class="empty">Loading...</div>';
+  try{
+    var r=await fetch(FB_COLDSTORE+'.json?auth='+FB_SECRET);
+    var raw=await r.json();
+    if(!raw){el.innerHTML='<div class="empty">No coldstore stock</div>';return;}
+    liveColdstoreData=Object.entries(raw).map(function(e){return Object.assign({id:e[0]},e[1]);}).filter(function(s){return s.status!=='removed';});
+    renderColdstore(liveColdstoreData);
+    updateColdstoreBanner();
+  }catch(e){if(el)el.innerHTML='<div class="empty">Error: '+e.message+'</div>';}
+}
+
+function daysInColdstore(depositedAt){
+  if(!depositedAt)return 0;
+  var d=new Date(depositedAt);
+  var now=new Date();
+  return Math.max(0,Math.floor((now-d)/86400000));
+}
+
+function isRipeningRoom(location){
+  if(!location)return false;
+  return location.toLowerCase().includes('ripen');
+}
+
+function coldstoreOverdue(item){
+  var days=daysInColdstore(item.depositedAt||item.date);
+  var maxDays=isRipeningRoom(item.toLocation)?2:7;
+  return days>=maxDays;
+}
+
+function renderColdstore(data){
+  var el=document.getElementById('coldstore-list');
+  var su=document.getElementById('coldstore-summary');
+  if(!data||!data.length){
+    if(el)el.innerHTML='<div class="empty">No stock in coldstore</div>';
+    if(su)su.textContent='';
+    return;
+  }
+
+  // Sort: overdue first, then by days descending
+  data=data.slice().sort(function(a,b){
+    var ao=coldstoreOverdue(a)?1:0,bo=coldstoreOverdue(b)?1:0;
+    if(ao!==bo)return bo-ao;
+    return daysInColdstore(b.depositedAt||b.date)-daysInColdstore(a.depositedAt||a.date);
+  });
+
+  var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino'};
+  var overdueCount=data.filter(coldstoreOverdue).length;
+  if(su)su.textContent=data.length+' lines in coldstore · '+overdueCount+' overdue';
+
+  el.innerHTML=data.map(function(s){
+    var days=daysInColdstore(s.depositedAt||s.date);
+    var ripening=isRipeningRoom(s.toLocation);
+    var maxDays=ripening?2:7;
+    var overdue=days>=maxDays;
+    var comm=CN[s.commodity]||s.commodity||'';
+    var dayColor=overdue?'var(--red)':days>=(maxDays-1)?'var(--gold)':'var(--sage)';
+    var bgColor=overdue?'var(--red-light)':'#fff';
+    var borderColor=overdue?'var(--red)':'var(--border)';
+
+    return '<div style="background:'+bgColor+';border-radius:12px;border:1.5px solid '+borderColor+';padding:12px 14px;margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+      +'<div>'
+      +'<div style="font-weight:800;font-size:14px;color:var(--ink)">'+(s.producer||'Unknown')+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Deposit: '+(s.depositNo||'—')+' · GRN: '+(s.grn||'—')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+      +'<div style="font-size:22px;font-weight:800;color:'+dayColor+'">'+days+'d</div>'
+      +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase">in store</div>'
+      +'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'
+      +'<span class="b bg">'+comm+'</span>'
+      +(s.variety?'<span class="b" style="background:#f0f4f0;color:var(--muted)">'+s.variety+'</span>':'')
+      +(s.grade?'<span class="b '+(s.grade==='CL 1'||s.grade==='1'?'bg':'ba')+'">'+s.grade+'</span>':'')
+      +(s.count&&s.count!=='*'?'<span class="b bt">'+s.count+'ct</span>':s.size&&s.size!=='*'?'<span class="b bt">sz '+s.size+'</span>':'')
+      +'<span class="b" style="background:'+(ripening?'#fff3e0':'#e3f2fd')+';color:'+(ripening?'#e65100':'#1565c0')+'">'+(ripening?'🌡 Ripening':'❄️ Cold Room')+'</span>'
+      +(overdue?'<span class="b br">⚠ REMOVE NOW</span>':'')
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:8px">📍 '+(s.toLocation||'—')+' · '+(s.qty||'?')+' units · '+(s.salesman||'—')+'</div>'
+      +'<button data-id="'+s.id+'" onclick="removeColdstoreItem(this)" style="width:100%;padding:9px;border:none;border-radius:8px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">&#x2713; Removed from Coldstore</button>'+'</div>';
+  }).join('');
+}
+
+function filterColdstore(){
+  var f=document.getElementById('coldstore-filter').value;
+  var data=liveColdstoreData;
+  if(f==='overdue')data=data.filter(coldstoreOverdue);
+  else if(f==='ripening')data=data.filter(function(s){return isRipeningRoom(s.toLocation);});
+  else if(f==='coldroom')data=data.filter(function(s){return !isRipeningRoom(s.toLocation);});
+  renderColdstore(data);
+}
+
+async function removeColdstoreItem(btn){var id=btn.dataset?btn.dataset.id:btn;
+  try{
+    await fetch(FB_COLDSTORE+'/'+id+'.json?auth='+FB_SECRET,{
+      method:'PATCH',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({status:'removed',removedAt:new Date().toISOString()})
+    });
+    loadColdstore();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+function updateColdstoreBanner(){
+  var overdue=liveColdstoreData.filter(coldstoreOverdue);
+  var banner=document.getElementById('coldstore-banner');
+  var count=document.getElementById('coldstore-banner-count');
+  var sub=document.getElementById('coldstore-banner-sub');
+  if(!banner)return;
+  if(overdue.length>0){
+    banner.style.display='block';
+    if(count)count.textContent=overdue.length;
+    if(sub)sub.textContent=overdue.filter(function(s){return isRipeningRoom(s.toLocation);}).length+' ripening · '+overdue.filter(function(s){return !isRipeningRoom(s.toLocation);}).length+' coldroom';
+  }else{
+    banner.style.display='none';
+  }
 }
 
 async function showTodayOrders(){
