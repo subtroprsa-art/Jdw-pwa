@@ -847,11 +847,29 @@ function renderColdstore(data){
     var bgColor=overdue?'var(--red-light)':pending?'#fffbf0':'#fff';
     var borderColor=overdue?'var(--red)':pending?'var(--gold)':'var(--border)';
 
+    // Step tracker: 1=in_transit, 2=active, 3=withdrawal_pending, 4=removed
+    var stepIndex={in_transit:1,active:2,withdrawal_pending:3,removed:4}[s.status]||2;
+    var stepLabels=['Transfer','Deposited','Withdrawal Req','Back on Floor'];
+    var stepsHTML='<div style="display:flex;gap:3px;margin-bottom:10px">'
+      +stepLabels.map(function(lbl,i){
+        var n=i+1;
+        var done=n<stepIndex;
+        var current=n===stepIndex;
+        var bg=done?'var(--sage)':current?'var(--gold)':'#e8e8e8';
+        var fg=done||current?'#fff':'#999';
+        return '<div style="flex:1;text-align:center">'
+          +'<div style="height:5px;background:'+bg+';border-radius:3px;margin-bottom:3px"></div>'
+          +'<div style="font-size:8px;font-weight:700;color:'+(done||current?'var(--ink)':'#bbb')+';text-transform:uppercase;letter-spacing:.02em">'+lbl+'</div>'
+          +'</div>';
+      }).join('')
+      +'</div>';
+
     var statusBadge='';
     if(s.status==='in_transit')statusBadge='<span class="b" style="background:var(--gold-light);color:#8a5a00">&#9203; Awaiting deposit confirmation</span>';
     else if(s.status==='withdrawal_pending')statusBadge='<span class="b" style="background:var(--gold-light);color:#8a5a00">&#9203; Awaiting floor confirmation</span>';
 
     return '<div style="background:'+bgColor+';border-radius:12px;border:1.5px solid '+borderColor+';padding:12px 14px;margin-bottom:10px">'
+      +stepsHTML
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
       +'<div>'
       +'<div style="font-weight:800;font-size:14px;color:var(--ink)">'+(s.producer||'Unknown')+'</div>'
