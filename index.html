@@ -342,6 +342,7 @@ main{padding:14px 12px}
     <select id="coldstore-filter" onchange="filterColdstore()" style="flex:1;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none">
       <option value="">All stock</option>
       <option value="overdue">⚠ Overdue only</option>
+      <option value="pending">⏳ Awaiting confirmation</option>
       <option value="ripening">Ripening Room</option>
       <option value="coldroom">Cold Room</option>
     </select>
@@ -786,8 +787,8 @@ async function loadColdstore(){
     var raw=await r.json();
     if(!raw){el.innerHTML='<div class="empty">No coldstore stock</div>';liveColdstoreData=[];liveColdstoreRemoved=[];return;}
     var all=Object.entries(raw).map(function(e){return Object.assign({id:e[0]},e[1]);});
+    // Active states: in_transit, active, withdrawal_pending (still physically tracked)
     liveColdstoreData=all.filter(function(s){return s.status!=='removed';});
-    // Recently removed - last 7 days, for reconciliation view
     var weekAgo=Date.now()-7*86400000;
     liveColdstoreRemoved=all.filter(function(s){return s.status==='removed'&&s.removedAt&&new Date(s.removedAt).getTime()>=weekAgo;}).sort(function(a,b){return new Date(b.removedAt)-new Date(a.removedAt);});
     renderColdstore(liveColdstoreData);
@@ -795,9 +796,10 @@ async function loadColdstore(){
   }catch(e){if(el)el.innerHTML='<div class="empty">Error: '+e.message+'</div>';}
 }
 
-function daysInColdstore(depositedAt){
-  if(!depositedAt)return 0;
-  var d=new Date(depositedAt);
+function daysInColdstore(item){
+  var anchor=item.depositedAt||item.transferSlipAt||item.date;
+  if(!anchor)return 0;
+  var d=new Date(anchor);
   var now=new Date();
   return Math.max(0,Math.floor((now-d)/86400000));
 }
@@ -808,7 +810,8 @@ function isRipeningRoom(location){
 }
 
 function coldstoreOverdue(item){
-  var days=daysInColdstore(item.depositedAt||item.date);
+  if(item.status==='in_transit'||item.status==='withdrawal_pending')return false; // awaiting confirmation, not yet counted for ageing
+  var days=daysInColdstore(item);
   var maxDays=isRipeningRoom(item.toLocation)?2:7;
   return days>=maxDays;
 }
@@ -822,48 +825,55 @@ function renderColdstore(data){
     return;
   }
 
-  // Sort: overdue first, then by days descending
   data=data.slice().sort(function(a,b){
     var ao=coldstoreOverdue(a)?1:0,bo=coldstoreOverdue(b)?1:0;
     if(ao!==bo)return bo-ao;
-    return daysInColdstore(b.depositedAt||b.date)-daysInColdstore(a.depositedAt||a.date);
+    return daysInColdstore(b)-daysInColdstore(a);
   });
 
   var CN={AVOS:'Avocados',LEMS:'Lemons',ORGS:'Oranges',KIWI:'Kiwifruit',FIGS:'Figs',GVS:'Guavas',CLTM:'Clementines',NAAR:'Naartjies',BERS:'Strawberries',MANG:'Mangoes',DRAG:'Dragon Fruit',GFT:'Grapefruit',SATS:'Satsumas',NOVA:'Nova',POME:'Pomegranate',PAPO:'Papino'};
   var overdueCount=data.filter(coldstoreOverdue).length;
-  if(su)su.textContent=data.length+' lines in coldstore · '+overdueCount+' overdue';
+  var pendingCount=data.filter(function(s){return s.status==='in_transit'||s.status==='withdrawal_pending';}).length;
+  if(su)su.textContent=data.length+' lines · '+overdueCount+' overdue'+(pendingCount?' · '+pendingCount+' awaiting confirmation':'');
 
   var activeHTML=data.map(function(s){
-    var days=daysInColdstore(s.depositedAt||s.date);
+    var days=daysInColdstore(s);
     var ripening=isRipeningRoom(s.toLocation);
     var maxDays=ripening?2:7;
-    var overdue=days>=maxDays;
+    var overdue=coldstoreOverdue(s);
     var comm=CN[s.commodity]||s.commodity||'';
+    var pending=s.status==='in_transit'||s.status==='withdrawal_pending';
     var dayColor=overdue?'var(--red)':days>=(maxDays-1)?'var(--gold)':'var(--sage)';
-    var bgColor=overdue?'var(--red-light)':'#fff';
-    var borderColor=overdue?'var(--red)':'var(--border)';
+    var bgColor=overdue?'var(--red-light)':pending?'#fffbf0':'#fff';
+    var borderColor=overdue?'var(--red)':pending?'var(--gold)':'var(--border)';
+
+    var statusBadge='';
+    if(s.status==='in_transit')statusBadge='<span class="b" style="background:var(--gold-light);color:#8a5a00">&#9203; Awaiting deposit confirmation</span>';
+    else if(s.status==='withdrawal_pending')statusBadge='<span class="b" style="background:var(--gold-light);color:#8a5a00">&#9203; Awaiting floor confirmation</span>';
 
     return '<div style="background:'+bgColor+';border-radius:12px;border:1.5px solid '+borderColor+';padding:12px 14px;margin-bottom:10px">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
       +'<div>'
       +'<div style="font-weight:800;font-size:14px;color:var(--ink)">'+(s.producer||'Unknown')+'</div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Deposit: '+(s.depositNo||'—')+' · GRN: '+(s.grn||'—')+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Deposit: '+(s.depositNo||'—')+' &middot; GRN: '+(s.grn||'—')+(s.withdrawalNo?' &middot; Withdrawal: '+s.withdrawalNo:'')+'</div>'
       +'</div>'
-      +'<div style="text-align:right">'
+      +(pending?'':'<div style="text-align:right">'
       +'<div style="font-size:22px;font-weight:800;color:'+dayColor+'">'+days+'d</div>'
       +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase">in store</div>'
-      +'</div>'
+      +'</div>')
       +'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">'
       +'<span class="b bg">'+comm+'</span>'
       +(s.variety?'<span class="b" style="background:#f0f4f0;color:var(--muted)">'+s.variety+'</span>':'')
       +(s.grade?'<span class="b '+(s.grade==='CL 1'||s.grade==='1'?'bg':'ba')+'">'+s.grade+'</span>':'')
       +(s.count&&s.count!=='*'?'<span class="b bt">'+s.count+'ct</span>':s.size&&s.size!=='*'?'<span class="b bt">sz '+s.size+'</span>':'')
-      +'<span class="b" style="background:'+(ripening?'#fff3e0':'#e3f2fd')+';color:'+(ripening?'#e65100':'#1565c0')+'">'+(ripening?'🌡 Ripening':'❄️ Cold Room')+'</span>'
-      +(overdue?'<span class="b br">⚠ REMOVE NOW</span>':'')
+      +'<span class="b" style="background:'+(ripening?'#fff3e0':'#e3f2fd')+';color:'+(ripening?'#e65100':'#1565c0')+'">'+(ripening?'&#127777; Ripening':'&#10052;&#65039; Cold Room')+'</span>'
+      +statusBadge
+      +(overdue?'<span class="b br">&#9888; REMOVE NOW</span>':'')
       +'</div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-bottom:8px">📍 '+(s.toLocation||'—')+' · '+(s.qty||'?')+' units · '+(s.salesman||'—')+'</div>'
-      +'<button data-id="'+s.id+'" onclick="removeColdstoreItem(this)" style="width:100%;padding:9px;border:none;border-radius:8px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">&#x2713; Removed from Coldstore</button>'+'</div>';
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:8px">&#128205; '+(s.toLocation||'—')+' &middot; '+(s.qty||'?')+' units &middot; '+(s.salesman||'—')+'</div>'
+      +(s.status==='active'?'<button data-id="'+s.id+'" onclick="manualMarkWithdrawalRequested(this)" style="width:100%;padding:9px;border:1.5px solid var(--gold);border-radius:8px;background:#fff;color:#8a5a00;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">Mark Withdrawal Requested</button>':'')
+      +'</div>';
   }).join('');
 
   var removedHTML='';
@@ -898,14 +908,17 @@ function filterColdstore(){
   if(f==='overdue')data=data.filter(coldstoreOverdue);
   else if(f==='ripening')data=data.filter(function(s){return isRipeningRoom(s.toLocation);});
   else if(f==='coldroom')data=data.filter(function(s){return !isRipeningRoom(s.toLocation);});
+  else if(f==='pending')data=data.filter(function(s){return s.status==='in_transit'||s.status==='withdrawal_pending';});
   renderColdstore(data);
 }
 
-async function removeColdstoreItem(btn){var id=btn.dataset?btn.dataset.id:btn;
+async function manualMarkWithdrawalRequested(btn){
+  var id=btn.dataset?btn.dataset.id:btn;
+  if(!confirm('Mark this stock as withdrawal requested? Only do this if you have submitted a withdrawal request manually outside the slip workflow.'))return;
   try{
     await fetch(FB_COLDSTORE+'/'+id+'.json?auth='+FB_SECRET,{
       method:'PATCH',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({status:'removed',removedAt:new Date().toISOString()})
+      body:JSON.stringify({status:'withdrawal_pending',withdrawalRequestedAt:new Date().toISOString()})
     });
     loadColdstore();
   }catch(e){alert('Error: '+e.message);}
