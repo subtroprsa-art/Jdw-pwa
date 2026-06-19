@@ -508,17 +508,27 @@ function extractJSON(raw){
 async function runAIMatch(){
   var btn=document.getElementById('ai-match-btn'),ld=document.getElementById('ai-loading'),se=document.getElementById('ai-summary'),st=document.getElementById('ai-summary-text'),err=document.getElementById('ai-error'),rd=document.getElementById('ai-results'),cd=document.getElementById('ai-cards'),cn=document.getElementById('ai-result-count'),md=document.getElementById('manual-match');
   btn.disabled=true;btn.textContent='Analysing...';ld.style.display='block';se.style.display='none';err.style.display='none';rd.style.display='none';
+  if(!liveColdstoreData||!liveColdstoreData.length){try{await loadColdstore();}catch(e){}}
   try{
     var stock=(allLiveStockData.length?allLiveStockData:[]).filter(s=>s.flr>0);
-    if(!stock.length)throw new Error('No stock on floor.');
-    var buyers=liveBuyerData.length?liveBuyerData:[];
+    // Include active coldstore stock as available-but-flagged inventory
+    var coldstoreActive=(liveColdstoreData||[]).filter(function(c){return c.status==='active';});
+    var coldstoreAsStock=coldstoreActive.map(function(c){
+      return {
+        commodity:c.commodity,pack:c.pack,variety:c.variety||'*',grade:(c.grade||'').replace('CL ','')||'1',
+        size:c.count&&c.count!=='*'?c.count:(c.size||'*'),flr:Number(c.qty)||0,
+        producer:c.producer||'',inColdstore:true,coldstoreLocation:c.toLocation||''
+      };
+    });
+    stock=stock.concat(coldstoreAsStock);
+    if(!stock.length)throw new Error('No stock on floor.');    var buyers=liveBuyerData.length?liveBuyerData:[];
     if(!buyers.length)throw new Error('No buyer history.');
     var today=new Date().toLocaleDateString('en-ZA',{weekday:'long'}),dow=new Date().getDay(),td=dow===0?6:dow-1;
     var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',NV:'Navel',LR:'Leanri',HM:'Honey Murcott',M1:'Mandarin',NAR:'Nardocott'},PN={TR040:'4KG Tray',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
-    var sl=stock.filter(s=>s.flr>0).sort((a,b)=>b.flr-a.flr).slice(0,20).map(s=>{var v=s.variety!=='*'?(VN[s.variety]||s.variety):'';return s.commodity+'|'+(PN[s.pack]||s.pack)+(v?'|'+v:'')+'|CL'+s.grade+'|sz'+s.size+'|'+s.flr+'u|'+s.producer.split(' ').slice(0,2).join(' ');}).join('\n');
+    var sl=stock.filter(s=>s.flr>0).sort((a,b)=>b.flr-a.flr).slice(0,20).map(s=>{var v=s.variety!=='*'?(VN[s.variety]||s.variety):'';var cs=s.inColdstore?' [COLDSTORE-'+(s.coldstoreLocation||'')+']':'';return s.commodity+'|'+(PN[s.pack]||s.pack)+(v?'|'+v:'')+'|CL'+s.grade+'|sz'+s.size+'|'+s.flr+'u|'+s.producer.split(' ').slice(0,2).join(' ')+cs;}).join('\n');
     var sc=new Set(stock.map(s=>s.commodity));
     var bl=buyers.filter(b=>b.prefs.some(p=>sc.has(commMap[p.comm]||p.comm))).slice(0,10).map(b=>{var bt=b.buyingDays&&b.buyingDays[td]?'*':'';var pr=b.prefs.filter(p=>sc.has(commMap[p.comm]||p.comm)).slice(0,2).map(p=>p.comm+'|'+(p.pack||'any')+'|'+p.cls+'|sz'+p.sizes[0]+'|R'+Math.round(p.revenue)).join(',');return b.name+bt+'|R'+b.spend+'|'+pr;}).join('\n');
-    var prompt='JHB fresh produce market. '+today+'.\nSTOCK(comm|pack|var|grade|size|units|producer):\n'+sl+'\nBUYERS(name*=buystoday|spend|comm|pack|grade|size|revenue):\n'+bl+'\nReturn JSON only: {"summary":"1 sentence","matches":[{"buyer":"","score":0,"commodity":"","stockLine":"","reason":"","tip":"","buysToday":false,"priority":""}]}\nmax 8 matches, score 1-100, priority HIGH/MEDIUM/LOW, genuine matches only.';
+    var prompt='JHB fresh produce market. '+today+'.\nSTOCK(comm|pack|var|grade|size|units|producer, [COLDSTORE-location] tag means stock must be retrieved from coldstore before sale):\n'+sl+'\nBUYERS(name*=buystoday|spend|comm|pack|grade|size|revenue):\n'+bl+'\nReturn JSON only: {"summary":"1 sentence","matches":[{"buyer":"","score":0,"commodity":"","stockLine":"","reason":"","tip":"","buysToday":false,"priority":"","inColdstore":false}]}\nmax 8 matches, score 1-100, priority HIGH/MEDIUM/LOW, genuine matches only. Set inColdstore true if the matched stock line has a [COLDSTORE-...] tag, and mention in the tip that stock needs removal from coldstore first.';
     var response=await fetch('https://jdw-sync.onrender.com/ai-match',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
     if(!response.ok){var et=await response.text();var em='API error '+response.status;try{em=JSON.parse(et).error||em;}catch(e){}throw new Error(em);}
     var data=await response.json(),text=(data.content&&data.content[0]&&data.content[0].text)||'';
@@ -527,7 +537,7 @@ async function runAIMatch(){
     if(parsed.summary){st.textContent=parsed.summary;se.style.display='block';}
     var matches=parsed.matches||[];
     cn.textContent=matches.length+' AI-ranked matches'+(data.model?' · '+data.model:'');
-    cd.innerHTML=matches.map(m=>{var sc=Number(m.score)||0,sb=sc>=80?'#fff0e0':sc>=60?'#e8f5ec':'#f0f0f0',sc2=sc>=80?'#c9882a':sc>=60?'#1a5c2a':'#888',pl=m.priority||'LOW',pb=pl==='HIGH'?'var(--gold-light)':pl==='MEDIUM'?'var(--sage-light)':'#f0f0f0',pc=pl==='HIGH'?'#8a5a00':pl==='MEDIUM'?'#1a5c2a':'#888';return'<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden"><div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)"><div style="width:46px;height:46px;border-radius:10px;background:'+sb+';color:'+sc2+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">'+sc+'</div><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;word-break:break-word">'+(m.buyer||'')+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">'+(m.commodity||'')+' · '+(m.stockLine||'')+'</div></div><span style="background:'+pb+';color:'+pc+';font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0">'+pl+'</span></div><div style="padding:10px 14px">'+(m.buysToday?'<div style="margin-bottom:8px"><span class="b bg" style="font-size:10px">Buys today</span></div>':'')+(m.reason?'<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">'+m.reason+'</div>':'')+(m.tip?'<div style="font-size:12px;color:var(--muted)">Call tip: '+m.tip+'</div>':'')+'</div></div>';}).join('');
+    cd.innerHTML=matches.map(m=>{var sc=Number(m.score)||0,sb=sc>=80?'#fff0e0':sc>=60?'#e8f5ec':'#f0f0f0',sc2=sc>=80?'#c9882a':sc>=60?'#1a5c2a':'#888',pl=m.priority||'LOW',pb=pl==='HIGH'?'var(--gold-light)':pl==='MEDIUM'?'var(--sage-light)':'#f0f0f0',pc=pl==='HIGH'?'#8a5a00':pl==='MEDIUM'?'#1a5c2a':'#888';return'<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden"><div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)"><div style="width:46px;height:46px;border-radius:10px;background:'+sb+';color:'+sc2+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">'+sc+'</div><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;word-break:break-word">'+(m.buyer||'')+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">'+(m.commodity||'')+' · '+(m.stockLine||'')+'</div></div><span style="background:'+pb+';color:'+pc+';font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0">'+pl+'</span></div><div style="padding:10px 14px">'+(m.buysToday?'<div style="margin-bottom:8px"><span class="b bg" style="font-size:10px">Buys today</span></div>':'')+(m.inColdstore?'<div style="margin-bottom:8px"><span class="b" style="background:#e3f2fd;color:#1565c0;font-size:10px">&#10052;&#65039; In Coldstore - retrieve first</span></div>':'')+(m.reason?'<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">'+m.reason+'</div>':'')+(m.tip?'<div style="font-size:12px;color:var(--muted)">Call tip: '+m.tip+'</div>':'')+'</div></div>';}).join('');
     md.style.display='none';
     var si=document.getElementById('ai-status-inline');
     var ch2=document.getElementById('psc1');
@@ -812,7 +822,7 @@ function isRipeningRoom(location){
 function coldstoreOverdue(item){
   if(item.status==='in_transit'||item.status==='withdrawal_pending')return false; // awaiting confirmation, not yet counted for ageing
   var days=daysInColdstore(item);
-  var maxDays=isRipeningRoom(item.toLocation)?2:7;
+  var maxDays=isRipeningRoom(item.toLocation)?3:7;
   return days>=maxDays;
 }
 
@@ -839,7 +849,7 @@ function renderColdstore(data){
   var activeHTML=data.map(function(s){
     var days=daysInColdstore(s);
     var ripening=isRipeningRoom(s.toLocation);
-    var maxDays=ripening?2:7;
+    var maxDays=ripening?3:7;
     var overdue=coldstoreOverdue(s);
     var comm=CN[s.commodity]||s.commodity||'';
     var pending=s.status==='in_transit'||s.status==='withdrawal_pending';
@@ -890,7 +900,10 @@ function renderColdstore(data){
       +(overdue?'<span class="b br">&#9888; REMOVE NOW</span>':'')
       +'</div>'
       +'<div style="font-size:11px;color:var(--muted);margin-bottom:8px">&#128205; '+(s.toLocation||'—')+' &middot; '+(s.qty||'?')+' units &middot; '+(s.salesman||'—')+'</div>'
-      +(s.status==='active'?'<button data-id="'+s.id+'" onclick="manualMarkWithdrawalRequested(this)" style="width:100%;padding:9px;border:1.5px solid var(--gold);border-radius:8px;background:#fff;color:#8a5a00;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">Mark Withdrawal Requested</button>':'')
+      +'<div style="display:flex;gap:8px">'
+      +(s.status==='active'?'<button data-id="'+s.id+'" onclick="manualMarkWithdrawalRequested(this)" style="flex:1;padding:9px;border:1.5px solid var(--gold);border-radius:8px;background:#fff;color:#8a5a00;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">Mark Withdrawal Requested</button>':'')
+      +'<button data-id="'+s.id+'" data-producer="'+(s.producer||'this item')+'" onclick="deleteColdstoreItem(this)" style="padding:9px 14px;border:1.5px solid var(--red);border-radius:8px;background:#fff;color:var(--red);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">&#128465;</button>'
+      +'</div>'
       +'</div>';
   }).join('');
 
@@ -928,6 +941,16 @@ function filterColdstore(){
   else if(f==='coldroom')data=data.filter(function(s){return !isRipeningRoom(s.toLocation);});
   else if(f==='pending')data=data.filter(function(s){return s.status==='in_transit'||s.status==='withdrawal_pending';});
   renderColdstore(data);
+}
+
+async function deleteColdstoreItem(btn){
+  var id=btn.dataset.id;
+  var producer=btn.dataset.producer;
+  if(!confirm('Delete coldstore record for '+producer+'? This cannot be undone.'))return;
+  try{
+    await fetch(FB_COLDSTORE+'/'+id+'.json?auth='+FB_SECRET,{method:'DELETE'});
+    loadColdstore();
+  }catch(e){alert('Error: '+e.message);}
 }
 
 async function manualMarkWithdrawalRequested(btn){
