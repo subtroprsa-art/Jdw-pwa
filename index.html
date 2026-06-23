@@ -1185,14 +1185,24 @@ function renderAICallList(matches, summary) {
   if(summary) html += '<div style="background:var(--sage-light);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#1a5c2a;border-left:3px solid var(--sage)">'+summary+'</div>';
   html += matches.map(function(m,i){
     var isCalled=!!called[m.buyer],pl=m.priority||'LOW',pb=pl==='HIGH'?'var(--gold-light)':pl==='MEDIUM'?'var(--sage-light)':'#f0f0f0',pc=pl==='HIGH'?'#8a5a00':pl==='MEDIUM'?'#1a5c2a':'#888',sc=Number(m.score)||0;
-    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);opacity:'+(isCalled?'0.4':'1')+'">'
-      +'<div data-bname="'+m.buyer+'" onclick="togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isCalled?'var(--sage)':'var(--border)')+';background:'+(isCalled?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isCalled?'v':'')+'</div>'
+    var waMsg='Hi '+(m.buyer||'')+', we have '+(m.commodity||'')+' available - '+(m.stockLine||'')+'. Interested?';
+    var rid='aic-'+i+'-'+Math.random().toString(36).slice(2);
+    return '<div style="border-bottom:1px solid var(--border);opacity:'+(isCalled?'0.4':'1')+'">'
+      +'<div style="display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer" onclick="toggleSection(\''+rid+'\')">'
+      +'<div data-bname="'+m.buyer+'" onclick="event.stopPropagation();togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid '+(isCalled?'var(--sage)':'var(--border)')+';background:'+(isCalled?'var(--sage)':'#fff')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">'+(isCalled?'v':'')+'</div>'
       +'<div style="width:20px;height:20px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">'+(i+1)+'</div>'
       +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;'+(isCalled?'text-decoration:line-through;color:var(--muted);':'')+'word-break:break-word">'+m.buyer+(m.buysToday?' <span style="background:var(--sage-light);color:#1a5c2a;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px">Today</span>':'')+'</div>'
       +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(m.commodity||'')+' - '+(m.stockLine||'')+'</div>'
-      +(m.reason?'<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic">'+m.reason+'</div>':'')
       +'</div>'
       +'<div style="text-align:right;flex-shrink:0"><span style="background:'+pb+';color:'+pc+';font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:block;margin-bottom:3px">'+pl+'</span><span style="font-size:12px;font-weight:800;color:var(--moss)">'+sc+'</span></div>'
+      +'<div id="arr-'+rid+'" style="color:var(--muted);font-size:13px;transition:transform .2s;flex-shrink:0">&#9660;</div>'
+      +'</div>'
+      +'<div id="'+rid+'" style="display:none;padding:0 0 12px 34px">'
+      +(m.reason?'<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">'+m.reason+'</div>':'')
+      +(m.inColdstore?'<div style="margin-bottom:8px"><span class="b" style="background:#e3f2fd;color:#1565c0;font-size:10px">&#10052;&#65039; In Coldstore - retrieve first</span></div>':'')
+      +(m.tip?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Call tip: '+m.tip+'</div>':'')
+      +'<button data-phone="+27824186030" data-msg="'+waMsg.replace(/"/g,'&quot;')+'" onclick="openWhatsApp(this.dataset.phone,this.dataset.msg)" style="width:100%;padding:9px;border:none;border-radius:8px;background:#25D366;color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">&#128241; WhatsApp '+m.buyer+'</button>'
+      +'</div>'
       +'</div>';
   }).join('');
   el.innerHTML = html || '<div style="color:var(--muted)">No matches found.</div>';
