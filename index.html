@@ -227,7 +227,7 @@ main{padding:14px 12px}
       <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Reset</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <div class="pipeline-step" id="ps1" onclick="runAIFromPipeline()"><div class="ps-num">1</div><div class="ps-body"><div class="ps-title">AI Match</div><div class="ps-sub" id="ai-status-inline">Analyse stock vs buyer history</div></div><div style="flex-shrink:0;background:var(--gold);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc1">Run</div></div>
+      <div class="pipeline-step" id="ps1" onclick="runAIFromPipeline()"><div class="ps-num">1</div><div class="ps-body"><div class="ps-title">Match Stock to Buyers</div><div class="ps-sub" id="ai-status-inline">Analyse stock vs buyer history</div></div><div style="flex-shrink:0;background:var(--gold);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc1">Run</div></div>
       <div class="pipeline-step" id="ps2" onclick="togglePipelineCallList()"><div class="ps-num">2</div><div class="ps-body"><div class="ps-title">Call Buyers</div><div class="ps-sub">Work through top 20 buyers</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc2">Show</div></div>
       <div id="pipeline-call-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div id="pipeline-buyers" style="font-size:13px;color:var(--muted)">Loading buyers...</div></div>
       <div class="pipeline-step" id="ps3" onclick="goToOrders()"><div class="ps-num">3</div><div class="ps-body"><div class="ps-title">Type in Orders</div><div class="ps-sub">Record confirmed orders</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px">Orders</div></div>
@@ -481,37 +481,13 @@ function renderMatchPage(data){
   document.getElementById('match-result').textContent=sb.length+' buyers · '+Object.keys(groups).length+' commodities on floor';
 }
 
-function extractJSON(raw){
-  var s=raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
-  var start=s.indexOf('{');
-  if(start===-1)throw new Error('No JSON in AI response');
-  var depth=0,end=-1;
-  for(var i=start;i<s.length;i++){if(s[i]==='{')depth++;else if(s[i]==='}'){depth--;if(depth===0){end=i;break;}}}
-  var js;
-  if(end===-1){
-    // Truncated response — take what we have and try to close it
-    js=s.slice(start);
-    // Close any open arrays and the object
-    var opens=(js.match(/\[/g)||[]).length-(js.match(/\]/g)||[]).length;
-    for(var x=0;x<opens;x++)js+=']';
-    var obrace=(js.match(/\{/g)||[]).length-(js.match(/\}/g)||[]).length;
-    for(var x=0;x<obrace;x++)js+='}';
-  } else {
-    js=s.slice(start,end+1);
-  }
-  js=js.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'');
-  // Remove trailing commas before ] or }
-  js=js.replace(/,\s*([\]\}])/g,'$1');
-  try{return JSON.parse(js);}catch(e){throw new Error('JSON parse failed: '+e.message);}
-}
 
 async function runAIMatch(){
   var btn=document.getElementById('ai-match-btn'),ld=document.getElementById('ai-loading'),se=document.getElementById('ai-summary'),st=document.getElementById('ai-summary-text'),err=document.getElementById('ai-error'),rd=document.getElementById('ai-results'),cd=document.getElementById('ai-cards'),cn=document.getElementById('ai-result-count'),md=document.getElementById('manual-match');
-  btn.disabled=true;btn.textContent='Analysing...';ld.style.display='block';se.style.display='none';err.style.display='none';rd.style.display='none';
+  btn.disabled=true;btn.textContent='Matching...';ld.style.display='block';se.style.display='none';err.style.display='none';rd.style.display='none';
   if(!liveColdstoreData||!liveColdstoreData.length){try{await loadColdstore();}catch(e){}}
   try{
     var stock=(allLiveStockData.length?allLiveStockData:[]).filter(s=>s.flr>0);
-    // Include active coldstore stock as available-but-flagged inventory
     var coldstoreActive=(liveColdstoreData||[]).filter(function(c){return c.status==='active';});
     var coldstoreAsStock=coldstoreActive.map(function(c){
       return {
@@ -521,34 +497,99 @@ async function runAIMatch(){
       };
     });
     stock=stock.concat(coldstoreAsStock);
-    if(!stock.length)throw new Error('No stock on floor.');    var buyers=liveBuyerData.length?liveBuyerData:[];
+    if(!stock.length)throw new Error('No stock on floor.');
+    var buyers=liveBuyerData.length?liveBuyerData:[];
     if(!buyers.length)throw new Error('No buyer history.');
-    var today=new Date().toLocaleDateString('en-ZA',{weekday:'long'}),dow=new Date().getDay(),td=dow===0?6:dow-1;
-    var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',NV:'Navel',LR:'Leanri',HM:'Honey Murcott',M1:'Mandarin',NAR:'Nardocott'},PN={TR040:'4KG Tray',CTT150:'15KG Carton',PTB005:'500G Punnet',PTB002:'160G Punnet',DL076:'DL076 Carton',PC030:'3KG Pocket'};
-    var sl=stock.filter(s=>s.flr>0).sort((a,b)=>b.flr-a.flr).slice(0,20).map(s=>{var v=s.variety!=='*'?(VN[s.variety]||s.variety):'';var cs=s.inColdstore?' [COLDSTORE-'+(s.coldstoreLocation||'')+']':'';return s.commodity+'|'+(PN[s.pack]||s.pack)+(v?'|'+v:'')+'|CL'+s.grade+'|sz'+s.size+'|'+s.flr+'u|'+s.producer.split(' ').slice(0,2).join(' ')+cs;}).join('\n');
-    var sc=new Set(stock.map(s=>s.commodity));
-    var bl=buyers.filter(b=>b.prefs.some(p=>sc.has(commMap[p.comm]||p.comm))).slice(0,10).map(b=>{var bt=b.buyingDays&&b.buyingDays[td]?'*':'';var pr=b.prefs.filter(p=>sc.has(commMap[p.comm]||p.comm)).slice(0,2).map(p=>p.comm+'|'+(p.pack||'any')+'|'+p.cls+'|sz'+p.sizes[0]+'|R'+Math.round(p.revenue)).join(',');return b.name+bt+'|R'+b.spend+'|'+pr;}).join('\n');
-    var prompt='JHB fresh produce market. '+today+'.\nSTOCK(comm|pack|var|grade|size|units|producer, [COLDSTORE-location] tag means stock must be retrieved from coldstore before sale):\n'+sl+'\nBUYERS(name*=buystoday|spend|comm|pack|grade|size|revenue):\n'+bl+'\nReturn JSON only: {"summary":"1 sentence","matches":[{"buyer":"","score":0,"commodity":"","stockLine":"","reason":"","tip":"","buysToday":false,"priority":"","inColdstore":false}]}\nmax 8 matches, score 1-100, priority HIGH/MEDIUM/LOW, genuine matches only. Set inColdstore true if the matched stock line has a [COLDSTORE-...] tag, and mention in the tip that stock needs removal from coldstore first.';
-    var response=await fetch('https://jdw-sync.onrender.com/ai-match',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
-    if(!response.ok){var et=await response.text();var em='API error '+response.status;try{em=JSON.parse(et).error||em;}catch(e){}throw new Error(em);}
-    var data=await response.json(),text=(data.content&&data.content[0]&&data.content[0].text)||'';
-    if(!text)throw new Error('Empty AI response');
-    var parsed=data.preparse?JSON.parse(text):extractJSON(text);
-    if(parsed.summary){st.textContent=parsed.summary;se.style.display='block';}
-    var matches=parsed.matches||[];
-    cn.textContent=matches.length+' AI-ranked matches'+(data.model?' · '+data.model:'');
-    cd.innerHTML=matches.map(m=>{var sc=Number(m.score)||0,sb=sc>=80?'#fff0e0':sc>=60?'#e8f5ec':'#f0f0f0',sc2=sc>=80?'#c9882a':sc>=60?'#1a5c2a':'#888',pl=m.priority||'LOW',pb=pl==='HIGH'?'var(--gold-light)':pl==='MEDIUM'?'var(--sage-light)':'#f0f0f0',pc=pl==='HIGH'?'#8a5a00':pl==='MEDIUM'?'#1a5c2a':'#888';var waMsg='Hi '+(m.buyer||'')+', we have '+(m.commodity||'')+' available - '+(m.stockLine||'')+'. Interested?';return'<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden"><div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)"><div style="width:46px;height:46px;border-radius:10px;background:'+sb+';color:'+sc2+';display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">'+sc+'</div><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px;word-break:break-word">'+(m.buyer||'')+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">'+(m.commodity||'')+' · '+(m.stockLine||'')+'</div></div><span style="background:'+pb+';color:'+pc+';font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;flex-shrink:0">'+pl+'</span></div><div style="padding:10px 14px">'+(m.buysToday?'<div style="margin-bottom:8px"><span class="b bg" style="font-size:10px">Buys today</span></div>':'')+(m.inColdstore?'<div style="margin-bottom:8px"><span class="b" style="background:#e3f2fd;color:#1565c0;font-size:10px">&#10052;&#65039; In Coldstore - retrieve first</span></div>':'')+(m.reason?'<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--sage)">'+m.reason+'</div>':'')+(m.tip?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Call tip: '+m.tip+'</div>':'')+'<button data-phone="+27824186030" data-msg="'+waMsg.replace(/"/g,'&quot;')+'" onclick="openWhatsApp(this.dataset.phone,this.dataset.msg)" style="width:100%;padding:9px;border:none;border-radius:8px;background:#25D366;color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">&#128241; WhatsApp (test)</button></div></div>';}).join('');
+
+    var dow=new Date().getDay(),td=dow===0?6:dow-1;
+    var matches=runDeterministicMatch(stock,buyers,td);
+
+    if(!matches.length){
+      st.textContent='No genuine matches found between current floor stock and buyer history.';
+      se.style.display='block';
+    }else{
+      var topComms=[...new Set(matches.slice(0,3).map(function(m){return m.commodity;}))];
+      st.textContent=matches.length+' matches found across '+topComms.length+' commodit'+(topComms.length>1?'ies':'y')+', ranked by stock fit and buying pattern.';
+      se.style.display='block';
+    }
+
     md.style.display='none';
     var si=document.getElementById('ai-status-inline');
     var ch2=document.getElementById('psc1');
     if(ch2){ch2.textContent='v';ch2.style.background='var(--sage)';}
     if(si)si.textContent=matches.length+' matches found';
-    try{localStorage.setItem('ai-results-'+new Date().toISOString().slice(0,10),JSON.stringify({summary:parsed.summary||'',matches:matches,model:data.model||''}));}catch(e){}
-    renderAICallList(matches,parsed.summary||'');
-    var list=document.getElementById('pipeline-call-list');var btn=document.getElementById('psc2');
-    if(list)list.style.display='block';if(btn)btn.textContent='Hide';
+    try{localStorage.setItem('ai-results-'+new Date().toISOString().slice(0,10),JSON.stringify({summary:st.textContent,matches:matches}));}catch(e){}
+    renderAICallList(matches,st.textContent);
+    var list=document.getElementById('pipeline-call-list');var btnEl=document.getElementById('psc2');
+    if(list)list.style.display='block';if(btnEl)btnEl.textContent='Hide';
   }catch(e){err.textContent=e.message;err.style.display='block';}
-  finally{btn.disabled=false;btn.textContent='Run AI';ld.style.display='none';}
+  finally{btn.disabled=false;btn.textContent='Run Match';ld.style.display='none';}
+}
+
+// ── DETERMINISTIC MATCHING ENGINE (no AI, no hallucination risk) ──────────────
+function runDeterministicMatch(stock, buyers, todayDow){
+  var results=[];
+  buyers.forEach(function(buyer){
+    if(!buyer.prefs||!buyer.prefs.length)return;
+    var buysToday=!!(buyer.buyingDays&&buyer.buyingDays[todayDow]);
+    buyer.prefs.forEach(function(pref){
+      var targetComm=commMap[pref.comm]||pref.comm;
+      var candidateLines=stock.filter(function(s){return s.commodity===targetComm&&s.flr>0;});
+      if(!candidateLines.length)return;
+
+      // Score each candidate line against this buyer preference
+      var best=null,bestScore=-1;
+      candidateLines.forEach(function(s){
+        var ms=matchScore(s,pref); // 'exact' | 'close' | 'none'
+        if(ms==='none')return;
+        var score=ms==='exact'?70:45;
+        // Bonus: stock quantity available (more stock = slightly higher confidence, capped)
+        score+=Math.min(15,Math.round((s.flr||0)/100));
+        // Bonus: buyer buys today
+        if(buysToday)score+=10;
+        // Bonus: buyer revenue/spend weight (normalize lightly)
+        score+=Math.min(10,Math.round((buyer.spend||0)/5000));
+        // Penalty: stock sitting in coldstore (needs extra step to fulfil)
+        if(s.inColdstore)score-=5;
+        score=Math.max(1,Math.min(100,score));
+        if(score>bestScore){bestScore=score;best=s;}
+      });
+      if(!best)return;
+
+      var exactness=matchScore(best,pref);
+      var priority=bestScore>=75?'HIGH':bestScore>=50?'MEDIUM':'LOW';
+      var packLabel=PACK_FULL[best.pack]||best.pack;
+      var varietyLabel=best.variety&&best.variety!=='*'?(varName[best.variety]||best.variety):'';
+      var stockLine=best.commodity+'|'+packLabel+'|'+varietyLabel+'|CL'+best.grade+'|sz'+best.size+'|'+best.flr+'u|'+best.producer;
+      var reasonParts=[];
+      reasonParts.push(exactness==='exact'?'Exact match on pack/grade/size for '+pref.comm+'.':'Close match on pack/grade for '+pref.comm+' (size differs from usual).');
+      if(buysToday)reasonParts.push(buyer.name+' typically buys on this day of the week.');
+      reasonParts.push('Floor stock: '+best.flr+' units from '+best.producer+'.');
+
+      results.push({
+        buyer:buyer.name,
+        score:bestScore,
+        commodity:best.commodity,
+        stockLine:stockLine,
+        reason:reasonParts.join(' '),
+        tip:best.inColdstore?'Stock is in coldstore ('+(best.coldstoreLocation||'')+') - arrange removal before confirming sale.':'Mention freshness and current floor availability.',
+        buysToday:buysToday,
+        priority:priority,
+        inColdstore:!!best.inColdstore
+      });
+    });
+  });
+
+  // Sort by score descending, dedupe to best match per buyer+commodity, cap at top 20
+  results.sort(function(a,b){return b.score-a.score;});
+  var seen={};
+  var deduped=results.filter(function(r){
+    var key=r.buyer+'|'+r.commodity;
+    if(seen[key])return false;
+    seen[key]=true;
+    return true;
+  });
+  return deduped.slice(0,20);
 }
 
 function filterMatches(){renderMatchPage(allLiveStockData.length?allLiveStockData:[]);}
@@ -1111,7 +1152,7 @@ async function renderPipelineOrders(elId,mode){
   catch(e){el.innerHTML='<div style="color:var(--red)">Error: '+e.message+'</div>';}
 }
 function togglePipelineOrderState(el){var orderId=el.getAttribute('data-oid'),stateKey=el.getAttribute('data-skey'),map=JSON.parse(sessionStorage.getItem(stateKey)||'{}');map[orderId]=!map[orderId];sessionStorage.setItem(stateKey,JSON.stringify(map));if(stateKey.includes('paid'))renderPipelineOrders('pipeline-orders','payment');if(stateKey.includes('packed'))renderPipelineOrders('pipeline-packers','packers');}
-function runAIFromPipeline(){var el=document.getElementById('ps1'),ch=document.getElementById('psc1');if(el)el.classList.add('done');if(ch){ch.textContent='...';}var si=document.getElementById('ai-status-inline');if(si)si.textContent='Analysing... (may take 30-60s)';var state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');state[1]=true;sessionStorage.setItem(pipelineKey,JSON.stringify(state));runAIMatch();}
+function runAIFromPipeline(){var el=document.getElementById('ps1'),ch=document.getElementById('psc1');if(el)el.classList.add('done');if(ch){ch.textContent='...';}var si=document.getElementById('ai-status-inline');if(si)si.textContent='Matching...';var state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');state[1]=true;sessionStorage.setItem(pipelineKey,JSON.stringify(state));runAIMatch();}
 function togglePipelineStep(n){var el=document.getElementById('ps'+n),ch=document.getElementById('psc'+n),state=JSON.parse(sessionStorage.getItem(pipelineKey)||'{}');if(el.classList.contains('done')){el.classList.remove('done');if(ch)ch.textContent='o';delete state[n];if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='none';}}else{el.classList.add('done');if(ch)ch.textContent='v';state[n]=true;if(n===4){var rb=document.getElementById('pipeline-reserve-banner');if(rb)rb.style.display='block';}}sessionStorage.setItem(pipelineKey,JSON.stringify(state));}
 function resetPipeline(){sessionStorage.removeItem(pipelineKey);for(var i=1;i<=6;i++){var el=document.getElementById('ps'+i),ch=document.getElementById('psc'+i);if(el)el.classList.remove('done');if(ch)ch.textContent='o';}}
 
@@ -1180,9 +1221,12 @@ function buildHumanStockLine(commodity, stockLine){
   var CN={AVOS:'avocados',LEMS:'lemons',ORGS:'oranges',KIWI:'kiwifruit',FIGS:'figs',GVS:'guavas',CLTM:'clementines',NAAR:'naartjies',BERS:'strawberries',MANG:'mangoes',DRAG:'dragon fruit',GFT:'grapefruit',SATS:'satsumas',NOVA:'nova',POME:'pomegranate',PAPO:'papino',EMP:'strawberries'};
   var PN={TR040:'4kg trays',BG150:'15kg bags',BG160:'16kg bags',CTT150:'15kg cartons',PTB005:'500g punnets',PTB025:'250g punnets',PTB002:'160g punnets',DL076:'cartons',PC030:'3kg pockets',PC060:'6kg pockets',CO100:'10kg cartons',CO150:'15kg cartons',SP170:'17kg sacks',EC020:'punnets'};
   var VN={AF:'Fuerte',AH:'Hass',AK:'Pinkerton',MA:'Maluma',MAH:'Maluma',MD:'Mendez',NV:'Navel',CN:'Cara Cara',AX:'Mixed',LR:'Leanri',HM:'Honey Murcott',M1:'Mandarin',NAR:'Nardocott'};
-  var commName=CN[commodity]||(commodity||'').toLowerCase();
   // stockLine format from AI: e.g. "ORGS|15KG Carton|Navel|CL1|sz88|960u|KOMATI FRUITS" or similar pipe-delimited text
   var parts=(stockLine||'').split('|').map(function(p){return p.trim();});
+  // Prefer the commodity code embedded in stockLine itself (first segment) since it's more reliable than the separate AI field
+  var lineCommCode=parts[0]&&CN[parts[0].toUpperCase()]?parts[0].toUpperCase():null;
+  var effectiveCommodity=lineCommCode||commodity;
+  var commName=CN[effectiveCommodity]||(effectiveCommodity||'').toLowerCase();
   var packRaw=parts[1]||'',varietyRaw=parts[2]||'';
   var packKey=Object.keys(PN).find(function(k){return packRaw.toUpperCase().indexOf(k)>-1;});
   var packName=packKey?PN[packKey]:(packRaw?packRaw.toLowerCase():'stock');
