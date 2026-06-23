@@ -1231,7 +1231,7 @@ async function printThermalOrders(){
 function openWhatsApp(phone, message){
   var clean=phone.replace(/[^0-9]/g,'');
   var url='https://wa.me/'+clean+'?text='+encodeURIComponent(message);
-  window.open(url,'_blank');
+  window.location.href=url;
 }
 
 function populateBuyerSuggestions(){var dl=document.getElementById('buyer-suggestions');if(!dl||!liveBuyerData.length)return;dl.innerHTML=liveBuyerData.map(function(b){return'<option value="'+b.name+'">';}).join('');}
