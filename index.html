@@ -356,6 +356,13 @@ main{padding:14px 12px}
 
 </div>
 <script>
+  // ===== CONFIGURATION - ADD THIS AT THE VERY TOP =====
+const CONFIG = {
+  FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
+  FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs',
+  SYNC_URL: 'https://jdw-sync.onrender.com'
+};
+window.CONFIG = CONFIG;
 const USERS={'riaan.joubert':{display:'Riaan Joubert',pw:'rsasubtrop2026'},'christoff.dewet':{display:'Christoff de Wet',pw:'rsasubtrop2026'}};
 const SK='st_sess';
 function saveSession(u){try{sessionStorage.setItem(SK,JSON.stringify({u,exp:Date.now()+28800000}));}catch(e){}}
