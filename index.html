@@ -315,7 +315,25 @@ main{padding:14px 12px}
 // Hardcoded config for simplicity (safe for GitHub Pages)
 const CONFIG = {
   FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
-  FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs',
+  // ===== CONFIGURATION =====
+// Load config from environment or fallback
+// Secret is loaded from Render environment variables or config.js
+const CONFIG = {
+  FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
+  FIREBASE_SECRET: '',  // ← EMPTY - loaded from environment
+  SYNC_URL: 'https://jdw-sync.onrender.com'
+};
+
+// Try to load secret from environment (Render) or config.js
+// For local dev, you can set this in js/config.js
+if (window.ENV && window.ENV.FIREBASE_SECRET) {
+  CONFIG.FIREBASE_SECRET = window.ENV.FIREBASE_SECRET;
+} else if (window.CONFIG && window.CONFIG.FIREBASE_SECRET) {
+  CONFIG.FIREBASE_SECRET = window.CONFIG.FIREBASE_SECRET;
+} else {
+  // This will only work if you set it manually in js/config.js
+  console.warn('⚠️ Firebase secret not found. Set it in js/config.js or environment variables.');
+}
   SYNC_URL: 'https://jdw-sync.onrender.com'
 };
 
