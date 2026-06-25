@@ -1,8 +1,7 @@
 // ===== MAIN APP INITIALIZATION =====
 
-// Load config from js/config.js
 // ===== CONFIGURATION =====
-// CONFIG should already be loaded from config.js or the HTML fallback
+// CONFIG is loaded from HTML - don't redeclare it!
 const FB_DB = CONFIG.FIREBASE_DATABASE_URL;
 const FB_SECRET = CONFIG.FIREBASE_SECRET;
 const SYNC_URL = CONFIG.SYNC_URL;
