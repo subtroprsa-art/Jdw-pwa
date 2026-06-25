@@ -1,19 +1,5 @@
 // ===== AUTH FUNCTIONS =====
-
-// ===== AUTH FUNCTIONS =====
 // USERS and SK are loaded from HTML - don't redeclare them!
-
-function doLogin() {
-  // ... your login code
-}
-
-function doLogout() {
-  // ... your logout code
-}
-
-function togglePw() {
-  // ... your toggle password code
-}
 
 function doLogin() {
   const u = document.getElementById('login-user').value;
