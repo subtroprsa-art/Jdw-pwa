@@ -9,7 +9,23 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="SubTrop CRM"/>
 <meta name="description" content="SubTrop RSA Market Agents CRM"/>
-<script src="js/config.js"></script>
+<script>
+// ===== CONFIGURATION - DIRECT IN HTML =====
+// ⚠️ This file is for LOCAL DEVELOPMENT only!
+// For production, use environment variables on Render.
+
+const CONFIG = {
+  FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
+  FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs',
+  SYNC_URL: 'https://jdw-sync.onrender.com'
+};
+
+// Make it available globally
+window.CONFIG = CONFIG;
+
+console.log('✅ Config loaded successfully');
+console.log('FIREBASE_SECRET:', CONFIG.FIREBASE_SECRET ? '✅ Set' : '❌ Missing');
+</script>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icon-192.png"/>
 <link rel="icon" type="image/png" href="icon-192.png"/>
