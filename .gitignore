@@ -1,0 +1,26 @@
+# Security - DO NOT commit files with secrets
+js/config.js
+.env
+.env.local
+*.secret
+*.key
+
+# System files
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build files
+dist/
+node_modules/
