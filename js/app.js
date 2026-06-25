@@ -1,6 +1,4 @@
-// ===== MAIN APP INITIALIZATION =====
 
-// ===== CONFIGURATION =====
 // CONFIG is loaded from HTML - don't redeclare it!
 const FB_DB = CONFIG.FIREBASE_DATABASE_URL;
 const FB_SECRET = CONFIG.FIREBASE_SECRET;
