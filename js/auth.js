@@ -1,10 +1,19 @@
 // ===== AUTH FUNCTIONS =====
 
-const USERS = {
-  'riaan.joubert': { display: 'Riaan Joubert', pw: 'rsasubtrop2026' },
-  'christoff.dewet': { display: 'Christoff de Wet', pw: 'rsasubtrop2026' }
-};
-const SK = 'st_sess';
+// ===== AUTH FUNCTIONS =====
+// USERS and SK are loaded from HTML - don't redeclare them!
+
+function doLogin() {
+  // ... your login code
+}
+
+function doLogout() {
+  // ... your logout code
+}
+
+function togglePw() {
+  // ... your toggle password code
+}
 
 function doLogin() {
   const u = document.getElementById('login-user').value;
