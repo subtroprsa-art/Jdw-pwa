@@ -1,20 +1,15 @@
 // ===== MAIN APP INITIALIZATION =====
 
 // Load config from js/config.js
-const CONFIG = window.CONFIG || {
-  FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
-  FIREBASE_SECRET: '',
-  SYNC_URL: 'https://jdw-sync.onrender.com'
-};
-
+// ===== CONFIGURATION =====
+// CONFIG should already be loaded from config.js or the HTML fallback
 const FB_DB = CONFIG.FIREBASE_DATABASE_URL;
 const FB_SECRET = CONFIG.FIREBASE_SECRET;
 const SYNC_URL = CONFIG.SYNC_URL;
 
 if (!FB_SECRET) {
-  console.warn('⚠️ Firebase secret not loaded. Make sure js/config.js exists.');
+  console.warn('⚠️ Firebase secret not loaded.');
 }
-
 function showApp(name) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
