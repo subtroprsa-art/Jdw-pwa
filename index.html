@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="SubTrop CRM"/>
 <meta name="description" content="SubTrop RSA Market Agents CRM"/>
+<script src="js/config.js"></script>
 <link rel="manifest" href="manifest.json"/>
 <link rel="apple-touch-icon" href="icon-192.png"/>
 <link rel="icon" type="image/png" href="icon-192.png"/>
@@ -312,34 +313,22 @@ main{padding:14px 12px}
 
 <script>
 // ===== CONFIGURATION =====
-// Hardcoded config for simplicity (safe for GitHub Pages)
-const CONFIG = {
+// Load secret from js/config.js (local only, not on GitHub)
+// If config.js is missing, this will fail gracefully
+const CONFIG = window.CONFIG || {
   FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
-  // ===== CONFIGURATION =====
-// Load config from environment or fallback
-// Secret is loaded from Render environment variables or config.js
-const CONFIG = {
-  FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
-  FIREBASE_SECRET: '',  // ← EMPTY - loaded from environment
-  SYNC_URL: 'https://jdw-sync.onrender.com'
-};
-
-// Try to load secret from environment (Render) or config.js
-// For local dev, you can set this in js/config.js
-if (window.ENV && window.ENV.FIREBASE_SECRET) {
-  CONFIG.FIREBASE_SECRET = window.ENV.FIREBASE_SECRET;
-} else if (window.CONFIG && window.CONFIG.FIREBASE_SECRET) {
-  CONFIG.FIREBASE_SECRET = window.CONFIG.FIREBASE_SECRET;
-} else {
-  // This will only work if you set it manually in js/config.js
-  console.warn('⚠️ Firebase secret not found. Set it in js/config.js or environment variables.');
-}
+  FIREBASE_SECRET: '',
   SYNC_URL: 'https://jdw-sync.onrender.com'
 };
 
 const FB_DB = CONFIG.FIREBASE_DATABASE_URL;
 const FB_SECRET = CONFIG.FIREBASE_SECRET;
 const SYNC_URL = CONFIG.SYNC_URL;
+
+// Check if secret is loaded
+if (!FB_SECRET) {
+  console.warn('⚠️ Firebase secret not loaded. Make sure js/config.js exists.');
+}
 
 const USERS = {
   'riaan.joubert': { display: 'Riaan Joubert', pw: 'rsasubtrop2026' },
@@ -432,7 +421,6 @@ window.addEventListener('load', function() {
       showApp(USERS[s.u].display);
     }
   } catch (e) {}
-  // Load pipeline state
   loadPipelineState();
 });
 
@@ -1697,7 +1685,7 @@ function renderPipelineBuyers() {
   const scored = buyers.map(b => {
     let he = 0;
     if (b.prefs) b.prefs.forEach(p => {
-      const targetComm = COMM_MAP[p.comm] || p.comm;
+      const targetComm = p.comm;
       const sf = stock.filter(s => s.commodity === targetComm && s.flr > 0);
       if (sf.length > 0) he++;
     });
