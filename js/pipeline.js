@@ -299,10 +299,8 @@ function renderAICallList(matches, summary) {
     const rid = 'aic-' + i + '-' + Math.random().toString(36).slice(2);
 
     const itemsHTML = items.map((m) => {
-      const stockParts = m.stockLine ? m.stockLine.split('|') : [];
-      const hl = stockParts.slice(0, 3).join(' ') || m.commodity;
       return '<div style="margin-bottom:6px">' +
-        (m.reason ? '<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:4px;border-left:3px solid var(--sage)"><b>' + hl + '</b><br>' + m.reason + '</div>' : '') +
+        (m.reason ? '<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:4px;border-left:3px solid var(--sage)"><b>' + m.stockLine + '</b><br>' + m.reason + '</div>' : '') +
         (m.inColdstore ? '<div style="margin-bottom:4px"><span class="b" style="background:#e3f2fd;color:#1565c0;font-size:10px">❄️ In Coldstore</span></div>' : '') +
         (m.tip ? '<div style="font-size:11px;color:var(--muted)">💡 ' + m.tip + '</div>' : '') +
         '</div>';
@@ -314,7 +312,7 @@ function renderAICallList(matches, summary) {
       '<div style="width:18px;height:18px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:9px;flex-shrink:0;margin-top:2px">' + (i + 1) + '</div>' +
       '<div style="flex:1;min-width:0;overflow:hidden">' +
       '<div style="font-weight:700;font-size:13px;' + (isCalled ? 'text-decoration:line-through;color:var(--muted);' : '') + 'word-break:break-word">' + buyer + (buysToday ? ' <span style="background:var(--sage-light);color:#1a5c2a;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap">Today</span>' : '') + (items.length > 1 ? ' <span style="background:var(--blue-light);color:var(--blue);font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap">' + items.length + ' items</span>' : '') + '</div>' +
-      '<div style="font-size:11px;color:var(--muted);margin-top:2px;word-break:break-word">' + items.map(m => m.stockLine ? m.stockLine.split('|').slice(0, 3).join(' ') : m.commodity).join(', ') + '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:2px;word-break:break-word">' + items.map(m => m.stockLine).join(', ') + '</div>' +
       '</div>' +
       '<div style="text-align:right;flex-shrink:0">' +
       '<span style="background:' + pb + ';color:' + pc + ';font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;display:block;margin-bottom:3px;white-space:nowrap">' + pl + '</span>' +
