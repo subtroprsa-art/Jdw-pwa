@@ -7,6 +7,19 @@ const SYNC_URL = CONFIG.SYNC_URL;
 if (!FB_SECRET) {
   console.warn('⚠️ Firebase secret not loaded.');
 }
+
+function loadPipelineState() {
+  const state = JSON.parse(sessionStorage.getItem('pipeline-' + new Date().toISOString().slice(0, 10)) || '{}');
+  for (let i = 1; i <= 6; i++) {
+    if (state[i]) {
+      const el = document.getElementById('ps' + i);
+      const ch = document.getElementById('psc' + i);
+      if (el) el.classList.add('done');
+      if (ch) ch.textContent = 'v';
+    }
+  }
+}
+
 function showApp(name) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
