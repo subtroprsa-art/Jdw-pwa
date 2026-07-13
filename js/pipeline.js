@@ -265,6 +265,78 @@ function runAIMatch() {
   resetMatchButton();
 }
 
+function sendWhatsAppToAllMatches() {
+  // Get matches from localStorage (saved after AI match)
+  const todayKey = 'ai-results-' + new Date().toISOString().slice(0, 10);
+  const saved = JSON.parse(localStorage.getItem(todayKey) || '{}');
+  const matches = saved.matches || [];
+  
+  if (!matches || !matches.length) {
+    alert('No matches found. Run the matching first.');
+    return;
+  }
+  
+  // Show summary first
+  let msg = '📱 WhatsApp All Matches\n\n';
+  msg += matches.slice(0, 10).map((m, i) => {
+    return (i+1) + '. ' + m.buyer + ' → ' + m.stockLine;
+  }).join('\n');
+  if (matches.length > 10) msg += '\n... and ' + (matches.length - 10) + ' more';
+  
+  if (!confirm(msg + '\n\nSend WhatsApp to all ' + matches.length + ' buyers?')) return;
+  
+  // Send one by one
+  let index = 0;
+  
+  function sendNext() {
+    if (index >= matches.length) {
+      alert('✅ All WhatsApp messages sent!');
+      return;
+    }
+    
+    const m = matches[index];
+    const message = 'Hi ' + m.buyer + ', we have ' + m.stockLine + ' available for you today. Are you interested?';
+    
+    // Get phone number from Firebase
+    firebase.database().ref('buyerPhones/' + m.buyer).once('value').then(snapshot => {
+      const phone = snapshot.val();
+      
+      if (!phone) {
+        alert('❌ No phone number for ' + m.buyer + '. Skipping...');
+        index++;
+        setTimeout(sendNext, 1000);
+        return;
+      }
+      
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const url = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(message);
+      
+      // Open WhatsApp in new tab
+      window.open(url, '_blank');
+      
+      // Ask if they want to send the next one
+      setTimeout(() => {
+        index++;
+        if (index < matches.length) {
+          if (confirm('✅ Sent to ' + m.buyer + '. Send next to ' + matches[index].buyer + '?')) {
+            sendNext();
+          } else {
+            alert('⏹️ Stopped at ' + matches[index].buyer);
+          }
+        } else {
+          alert('✅ All done!');
+        }
+      }, 3000);
+    }).catch(err => {
+      console.error('Error:', err);
+      index++;
+      setTimeout(sendNext, 1000);
+    });
+  }
+  
+  sendNext();
+}
+
 function resetMatchButton() {
   const btn = document.getElementById('ai-match-btn');
   const ld = document.getElementById('ai-loading');
@@ -300,10 +372,15 @@ try {
   }
 
   let html = '';
-  if (summary) {
-    html += '<div style="background:var(--sage-light);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#1a5c2a;border-left:3px solid var(--sage)">' + summary + '</div>';
-  }
-
+ if (summary) {
+  html += '<div style="background:var(--sage-light);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#1a5c2a;border-left:3px solid var(--sage)">' + summary + '</div>';
+  
+  // Add WhatsApp All button
+  html += '<div style="margin-top:10px;padding:10px;background:#f0faf0;border-radius:8px;border:1px solid #25D366;display:flex;gap:8px;flex-wrap:wrap">';
+  html += '<button onclick="sendWhatsAppToAllMatches()" style="padding:10px 20px;background:#25D366;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer">📱 WhatsApp All Matches</button>';
+  html += '<span style="font-size:12px;color:#666;align-self:center">Opens WhatsApp for each match (you send manually)</span>';
+  html += '</div>';
+}
   html += order.map((buyer, i) => {
     const items = byBuyer[buyer];
     const isCalled = !!called[buyer];
@@ -316,13 +393,17 @@ try {
 
     const rid = 'aic-' + i + '-' + Math.random().toString(36).slice(2);
 
-    const itemsHTML = items.map((m) => {
-      return '<div style="margin-bottom:6px">' +
-        (m.reason ? '<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:4px;border-left:3px solid var(--sage)"><b>' + m.stockLine + '</b><br>' + m.reason + '</div>' : '') +
-        (m.inColdstore ? '<div style="margin-bottom:4px"><span class="b" style="background:#e3f2fd;color:#1565c0;font-size:10px">❄️ In Coldstore</span></div>' : '') +
-        (m.tip ? '<div style="font-size:11px;color:var(--muted)">💡 ' + m.tip + '</div>' : '') +
-        '</div>';
-    }).join('');
+   const itemsHTML = items.map((m) => {
+  // Build WhatsApp message
+  const waMsg = 'Hi ' + m.buyer + ', we have ' + m.stockLine + ' available for you today. Are you interested?';
+  
+  return '<div style="margin-bottom:6px">' +
+    (m.reason ? '<div style="font-size:12px;background:var(--paper);border-radius:8px;padding:8px 10px;margin-bottom:4px;border-left:3px solid var(--sage)"><b>' + m.stockLine + '</b><br>' + m.reason + '</div>' : '') +
+    (m.inColdstore ? '<div style="margin-bottom:4px"><span class="b" style="background:#e3f2fd;color:#1565c0;font-size:10px">❄️ In Coldstore</span></div>' : '') +
+    (m.tip ? '<div style="font-size:11px;color:var(--muted)">💡 ' + m.tip + '</div>' : '') +
+    '<button onclick="sendWhatsAppToBuyer(\'' + m.buyer + '\', \'' + waMsg.replace(/'/g, "\\'") + '\')" style="margin-top:6px;padding:6px 14px;background:#25D366;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📱 WhatsApp ' + m.buyer + '</button>' +
+    '</div>';
+}).join('');
 
     return '<div style="border-bottom:1px solid var(--border);opacity:' + (isCalled ? '0.4' : '1') + '">' +
       '<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;cursor:pointer" onclick="toggleSection(\'' + rid + '\')">' +
@@ -340,6 +421,63 @@ try {
       '<div id="' + rid + '" style="display:none;padding:0 0 12px 30px">' + itemsHTML + '</div>' +
       '</div>';
   }).join('');
+
+  // ===== WHATSAPP SENDING =====
+
+function sendWhatsAppToBuyer(buyerName, message) {
+  // Get phone number from Firebase
+  const phoneRef = firebase.database().ref('buyerPhones/' + buyerName);
+  
+  phoneRef.once('value').then(snapshot => {
+    const phone = snapshot.val();
+    
+    if (!phone) {
+      alert('No phone number found for ' + buyerName + '. Please add it to the buyerPhones in Firebase.');
+      return;
+    }
+    
+    // Clean phone number (remove spaces, special chars)
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    
+    // Open WhatsApp
+    const url = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+  }).catch(err => {
+    console.error('Error getting phone:', err);
+    alert('Error: Could not get phone number.');
+  });
+}
+
+function sendWhatsAppToMultiple(buyers, messages) {
+  // Send to first buyer, then chain to next
+  let index = 0;
+  
+  function sendNext() {
+    if (index >= buyers.length) {
+      alert('✅ All WhatsApp messages sent!');
+      return;
+    }
+    
+    const buyer = buyers[index];
+    const message = messages[index] || 'Hi ' + buyer + ', we have stock available for you today.';
+    
+    sendWhatsAppToBuyer(buyer, message);
+    index++;
+    
+    // Ask user if they want to send the next one
+    setTimeout(() => {
+      if (index < buyers.length) {
+        if (confirm('Send next WhatsApp to ' + buyers[index] + '?')) {
+          sendNext();
+        } else {
+          alert('Stopped at ' + buyers[index]);
+        }
+      }
+    }, 2000);
+  }
+  
+  sendNext();
+}
 
   el.innerHTML = html || '<div style="color:var(--muted)">No matches found.</div>';
 }
