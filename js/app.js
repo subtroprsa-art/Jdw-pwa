@@ -30,7 +30,6 @@ function showApp(name) {
   loadStockFromFirebase('RJ');
   loadAllStockForMatcher();
   loadColdstore();
-  loadBuyerPhones();
 }
 
 function goToPage(id) {
