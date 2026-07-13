@@ -18,7 +18,21 @@ const CONFIG = {
 };
 window.CONFIG = CONFIG;
 console.log('✅ Config loaded');
-
+<!-- Firebase SDK for shared pipeline calls -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script>
+// Initialize Firebase for shared features
+try {
+  const firebaseConfig = {
+    databaseURL: CONFIG.FIREBASE_DATABASE_URL
+  };
+  firebase.initializeApp(firebaseConfig);
+  console.log('✅ Firebase initialized for shared features');
+} catch (e) {
+  console.warn('Firebase already initialized or error:', e.message);
+}
+</script>
 // ===== USERS =====
 const USERS = {
   'riaan.joubert': { display: 'Riaan Joubert', pw: 'rsasubtrop2026' },
