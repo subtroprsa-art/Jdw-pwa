@@ -1,4 +1,5 @@
-// ===== DETERMINISTIC MATCHING ENGINE =====
+// ===== SIMPLIFIED DETERMINISTIC MATCHING ENGINE =====
+// Matches on: COMMODITY + VARIETY + PACK SIZE only
 
 const COMM_MAP = {
   'Avocados': 'AVOS',
@@ -18,28 +19,43 @@ const COMM_MAP = {
   'Papino': 'PAPO'
 };
 
+const VARIETY_NAMES = {
+  'AF': 'Fuerte',
+  'AH': 'Hass',
+  'AK': 'Pinkerton',
+  'MA': 'Maluma',
+  'MAH': 'Maluma',
+  'MD': 'Mendez',
+  'NV': 'Navel',
+  'CN': 'Cara Cara',
+  'AX': 'Mixed',
+  'LR': 'Leanri',
+  'HM': 'Honey Murcott',
+  'M1': 'Mandarin',
+  'NAR': 'Nardocott',
+  '*': 'Any'
+};
+
+const PACK_NAMES = {
+  'TR040': '4KG Tray',
+  'TR060': '6KG Tray',
+  'BG150': '15KG Bag',
+  'BG160': '16KG Bag',
+  'CTT150': '15KG Carton',
+  'PTB005': '500G Punnet',
+  'PTB025': '250G Punnet',
+  'PTB002': '160G Punnet',
+  'DL076': 'DL076 Carton',
+  'PC030': '3KG Pocket',
+  'PC060': '6KG Pocket',
+  'CO100': '10KG Carton',
+  'CO150': '15KG Carton',
+  'SP170': '17KG Sack',
+  'EC020': '20KG Box'
+};
+
 function runDeterministicMatch(stock, buyers, todayDow) {
   const results = [];
-  const PACK_NAMES = {
-    '4KG TRAY': ['TR040'],
-    '15KG CARTON': ['CTT150'],
-    '500G PUNNET': ['PTB005'],
-    '250G PUNNET': ['PTB002'],
-    '160G PUNNET': ['PTB002'],
-    '3KG POCKET': ['PC030']
-  };
-
-  function matchScore(s, pref) {
-    if (s.commodity !== COMM_MAP[pref.comm]) return 'none';
-    const pg = pref.cls === 'CL 1' ? '1' : pref.cls === 'CL 2' ? '2' : null;
-    const packKeys = PACK_NAMES[pref.pack] || [];
-    const packMatch = packKeys.some(k => s.pack.startsWith(k));
-    const gradeMatch = !pg || s.grade === pg;
-    const sizeMatch = pref.sizes.includes('*') || pref.sizes.includes(s.size);
-    if (packMatch && gradeMatch && sizeMatch) return 'exact';
-    if (packMatch && gradeMatch) return 'close';
-    return 'none';
-  }
 
   for (const buyer of buyers) {
     if (!buyer.prefs || !buyer.prefs.length) continue;
@@ -47,20 +63,44 @@ function runDeterministicMatch(stock, buyers, todayDow) {
 
     for (const pref of buyer.prefs) {
       const targetComm = COMM_MAP[pref.comm] || pref.comm;
-      const candidates = stock.filter(s => s.commodity === targetComm && s.flr > 0);
+      const targetVariety = pref.variety || '*';
+      const targetPack = pref.pack || '';
+
+      // Find stock that matches: commodity + variety + pack
+      const candidates = stock.filter(s => {
+        // Must match commodity
+        if (s.commodity !== targetComm) return false;
+        
+        // Must match variety (if buyer specified one)
+        if (targetVariety !== '*' && s.variety !== targetVariety) return false;
+        
+        // Must match pack (if buyer specified one)
+        if (targetPack && s.pack !== targetPack) return false;
+        
+        return s.flr > 0;
+      });
+
       if (!candidates.length) continue;
 
+      // Find the best match (highest floor stock)
       let best = null;
       let bestScore = -1;
 
       for (const s of candidates) {
-        const ms = matchScore(s, pref);
-        if (ms === 'none') continue;
-        let score = ms === 'exact' ? 70 : 45;
-        score += Math.min(15, Math.round((s.flr || 0) / 100));
-        if (buysToday) score += 10;
-        score += Math.min(10, Math.round((buyer.spend || 0) / 5000));
+        let score = 60; // Base score for matching all three criteria
+        
+        // Bonus: more stock available
+        score += Math.min(20, Math.round((s.flr || 0) / 50));
+        
+        // Bonus: buyer buys today
+        if (buysToday) score += 15;
+        
+        // Bonus: high spending buyer
+        score += Math.min(10, Math.round((buyer.spend || 0) / 10000));
+        
+        // Penalty: stock in coldstore
         if (s.inColdstore) score -= 5;
+        
         score = Math.max(1, Math.min(100, score));
 
         if (score > bestScore) {
@@ -71,35 +111,52 @@ function runDeterministicMatch(stock, buyers, todayDow) {
 
       if (!best) continue;
 
-      const exactness = matchScore(best, pref);
-      const priority = bestScore >= 75 ? 'HIGH' : bestScore >= 50 ? 'MEDIUM' : 'LOW';
-      const packLabel = best.pack;
+      const priority = bestScore >= 70 ? 'HIGH' : bestScore >= 50 ? 'MEDIUM' : 'LOW';
+      
+      // Build a clean stock line description
+      const varietyDisplay = best.variety && best.variety !== '*' ? (VARIETY_NAMES[best.variety] || best.variety) : '';
+      const packDisplay = PACK_NAMES[best.pack] || best.pack || '';
+      const commDisplay = pref.comm || best.commodity;
+      
+      let stockLine = commDisplay;
+      if (varietyDisplay) stockLine += ' ' + varietyDisplay;
+      if (packDisplay) stockLine += ' (' + packDisplay + ')';
+      stockLine += ' | ' + best.flr + ' units | ' + best.producer;
 
-      const stockLine = best.commodity + '|' + (packLabel || '') + '|' + best.variety + '|CL' + best.grade + '|sz' + best.size + '|' + best.flr + 'u|' + best.producer;
-
+      // Build the reason
       const reasonParts = [];
-      reasonParts.push(exactness === 'exact' ? 'Exact match on pack/grade/size for ' + pref.comm + '.' : 'Close match on pack/grade for ' + pref.comm + '.');
-      if (buysToday) reasonParts.push(buyer.name + ' typically buys on this day.');
-      reasonParts.push('Floor stock: ' + best.flr + ' units from ' + best.producer + '.');
+      let matchDesc = commDisplay;
+      if (varietyDisplay) matchDesc += ' ' + varietyDisplay;
+      if (packDisplay) matchDesc += ' (' + packDisplay + ')';
+      reasonParts.push(`Matches ${matchDesc}`);
+      if (buysToday) reasonParts.push(`${buyer.name} typically buys today.`);
+      reasonParts.push(`${best.flr} units available from ${best.producer}.`);
 
       results.push({
         buyer: buyer.name,
         score: bestScore,
         commodity: best.commodity,
+        variety: best.variety,
+        pack: best.pack,
         stockLine: stockLine,
         reason: reasonParts.join(' '),
-        tip: best.inColdstore ? 'Stock is in coldstore - arrange removal first.' : 'Mention freshness and current floor availability.',
+        tip: best.inColdstore ? 'Stock is in coldstore - arrange removal first.' : `Contact ${buyer.name} about ${matchDesc} available.`,
         buysToday: buysToday,
         priority: priority,
-        inColdstore: !!best.inColdstore
+        inColdstore: !!best.inColdstore,
+        producer: best.producer,
+        flr: best.flr
       });
     }
   }
 
+  // Sort by score descending
   results.sort((a, b) => b.score - a.score);
+  
+  // Deduplicate: keep only the best match per buyer
   const seen = {};
   const deduped = results.filter(r => {
-    const key = r.buyer + '|' + r.commodity;
+    const key = r.buyer + '|' + r.commodity + '|' + r.variety + '|' + r.pack;
     if (seen[key]) return false;
     seen[key] = true;
     return true;
