@@ -1,15 +1,7 @@
-// ===== PIPELINE FUNCTIONS =====
-
-function loadPipelineState() {
-  const state = JSON.parse(sessionStorage.getItem('pipeline-' + new Date().toISOString().slice(0, 10)) || '{}');
-  for (let i = 1; i <= 6; i++) {
-    if (state[i]) {
-      const el = document.getElementById('ps' + i);
-      const ch = document.getElementById('psc' + i);
-      if (el) el.classList.add('done');
-      if (ch) ch.textContent = 'v';
-    }
-  }
+// Firebase reference for shared calls
+const firebase = window.firebase || {};
+if (!firebase.database) {
+  console.warn('Firebase not loaded - calls will not sync');
 }
 
 function resetPipeline() {
@@ -93,8 +85,8 @@ function togglePipelinePackers() {
 
 function renderPipelineBuyers() {
   const el = document.getElementById('pipeline-buyers');
-  const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
-  const called = JSON.parse(localStorage.getItem(todayKey) || '{}');
+  if (!el) return;
+
   const buyers = liveBuyerData || [];
   const todayDow = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
 
@@ -103,37 +95,55 @@ function renderPipelineBuyers() {
     return;
   }
 
-  const stock = allLiveStockData || [];
-  const scored = buyers.map(b => {
-    let he = 0;
-    if (b.prefs) b.prefs.forEach(p => {
-      const targetComm = p.comm;
-      const sf = stock.filter(s => s.commodity === targetComm && s.flr > 0);
-      if (sf.length > 0) he++;
-    });
-    const mp = he > 0 ? 3 : 0;
-    const bt = b.buyingDays && b.buyingDays[todayDow] ? 1 : 0;
-    return { ...b, _sort: mp * 100000 + (b.spend || 0) / 100 + bt * 10, _match: mp };
-  }).sort((a, b) => b._sort - a._sort).slice(0, 20);
+  // Get called list from Firebase
+  const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
+  const callsRef = firebase.database().ref('pipelineCalls/' + todayKey);
 
-  el.innerHTML = scored.map((b, i) => {
-    const isCalled = !!called[b.name];
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:${isCalled ? '0.4' : '1'}">
-      <div data-bname="${b.name}" onclick="togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid ${isCalled ? 'var(--sage)' : 'var(--border)'};background:${isCalled ? 'var(--sage)' : '#fff'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">${isCalled ? 'v' : ''}</div>
-      <div style="width:20px;height:20px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">${i + 1}</div>
-      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;${isCalled ? 'text-decoration:line-through;color:var(--muted);' : ''}word-break:break-word">${b.name}${b.buyingDays && b.buyingDays[todayDow] ? ' (Today)' : ''}</div></div>
-      <div style="font-size:11px;color:var(--muted);flex-shrink:0">R ${(b.spend || 0).toLocaleString()}</div>
-    </div>`;
-  }).join('');
+  callsRef.once('value').then(snapshot => {
+    const called = snapshot.val() || {};
+
+    const stock = allLiveStockData || [];
+    const scored = buyers.map(b => {
+      let he = 0;
+      if (b.prefs) b.prefs.forEach(p => {
+        const targetComm = p.comm;
+        const sf = stock.filter(s => s.commodity === targetComm && s.flr > 0);
+        if (sf.length > 0) he++;
+      });
+      const mp = he > 0 ? 3 : 0;
+      const bt = b.buyingDays && b.buyingDays[todayDow] ? 1 : 0;
+      return { ...b, _sort: mp * 100000 + (b.spend || 0) / 100 + bt * 10, _match: mp };
+    }).sort((a, b) => b._sort - a._sort).slice(0, 20);
+
+    el.innerHTML = scored.map((b, i) => {
+      const isCalled = !!called[b.name];
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:${isCalled ? '0.4' : '1'}">
+        <div data-bname="${b.name}" onclick="togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid ${isCalled ? 'var(--sage)' : 'var(--border)'};background:${isCalled ? 'var(--sage)' : '#fff'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">${isCalled ? 'v' : ''}</div>
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">${i + 1}</div>
+        <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;${isCalled ? 'text-decoration:line-through;color:var(--muted);' : ''}word-break:break-word">${b.name}${b.buyingDays && b.buyingDays[todayDow] ? ' (Today)' : ''}</div></div>
+        <div style="font-size:11px;color:var(--muted);flex-shrink:0">R ${(b.spend || 0).toLocaleString()}</div>
+      </div>`;
+    }).join('');
+  }).catch(err => {
+    console.error('Error loading calls:', err);
+    el.innerHTML = '<div style="color:var(--muted)">Error loading call list.</div>';
+  });
 }
 
 function togglePipelineCall(el) {
   const name = el.getAttribute('data-bname');
   const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
-  const called = JSON.parse(localStorage.getItem(todayKey) || '{}');
-  called[name] = !called[name];
-  localStorage.setItem(todayKey, JSON.stringify(called));
-  renderPipelineBuyers();
+  const callsRef = firebase.database().ref('pipelineCalls/' + todayKey + '/' + name);
+
+  // Toggle the call status
+  callsRef.once('value').then(snapshot => {
+    const current = snapshot.val() || false;
+    callsRef.set(!current).then(() => {
+      renderPipelineBuyers();
+    });
+  }).catch(err => {
+    console.error('Error toggling call:', err);
+  });
 }
 
 async function renderPipelineOrders(elId, mode) {
@@ -262,12 +272,20 @@ function resetMatchButton() {
   if (ld) ld.style.display = 'none';
 }
 
-function renderAICallList(matches, summary) {
+async function renderAICallList(matches, summary) {
   const el = document.getElementById('pipeline-buyers');
   if (!el) return;
 
-  const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
-  const called = JSON.parse(localStorage.getItem(todayKey) || '{}');
+ // Get called list from Firebase
+const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
+let called = {};
+try {
+  const snapshot = await firebase.database().ref('pipelineCalls/' + todayKey).once('value');
+  called = snapshot.val() || {};
+} catch (e) {
+  console.warn('Could not load calls from Firebase:', e);
+  called = {};
+}
 
   if (!matches || !matches.length) {
     el.innerHTML = '<div style="color:var(--muted)">No matches found.</div>';
