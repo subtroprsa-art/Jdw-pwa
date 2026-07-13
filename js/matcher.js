@@ -1,5 +1,5 @@
-// ===== SIMPLIFIED DETERMINISTIC MATCHING ENGINE =====
-// Matches on: COMMODITY + VARIETY + PACK SIZE only
+// ===== FLEXIBLE DETERMINISTIC MATCHING ENGINE =====
+// Matches on: COMMODITY + (VARIETY OR PACK) - whichever fits best
 
 const COMM_MAP = {
   'Avocados': 'AVOS',
@@ -66,34 +66,37 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       const targetVariety = pref.variety || '*';
       const targetPack = pref.pack || '';
 
-      // Find stock that matches: commodity + variety + pack
-      const candidates = stock.filter(s => {
-        // Must match commodity
-        if (s.commodity !== targetComm) return false;
-        
-        // Must match variety (if buyer specified one)
-        if (targetVariety !== '*' && s.variety !== targetVariety) return false;
-        
-        // Must match pack (if buyer specified one)
-        if (targetPack && s.pack !== targetPack) return false;
-        
-        return s.flr > 0;
-      });
+      // Step 1: Find ALL stock with matching commodity
+      let candidates = stock.filter(s => s.commodity === targetComm && s.flr > 0);
 
       if (!candidates.length) continue;
 
-      // Find the best match (highest floor stock)
+      // Score each candidate
       let best = null;
       let bestScore = -1;
 
       for (const s of candidates) {
-        let score = 60; // Base score for matching all three criteria
+        let score = 40; // Base score for matching commodity
+        
+        // Bonus: variety matches
+        if (targetVariety !== '*' && s.variety === targetVariety) {
+          score += 25;
+        } else if (targetVariety === '*' || s.variety === '*') {
+          score += 10; // Partial variety match
+        }
+        
+        // Bonus: pack matches
+        if (targetPack && s.pack === targetPack) {
+          score += 25;
+        } else if (!targetPack) {
+          score += 5; // No pack preference
+        }
         
         // Bonus: more stock available
-        score += Math.min(20, Math.round((s.flr || 0) / 50));
+        score += Math.min(15, Math.round((s.flr || 0) / 50));
         
         // Bonus: buyer buys today
-        if (buysToday) score += 15;
+        if (buysToday) score += 10;
         
         // Bonus: high spending buyer
         score += Math.min(10, Math.round((buyer.spend || 0) / 10000));
@@ -111,7 +114,7 @@ function runDeterministicMatch(stock, buyers, todayDow) {
 
       if (!best) continue;
 
-      const priority = bestScore >= 70 ? 'HIGH' : bestScore >= 50 ? 'MEDIUM' : 'LOW';
+      const priority = bestScore >= 65 ? 'HIGH' : bestScore >= 45 ? 'MEDIUM' : 'LOW';
       
       // Build a clean stock line description
       const varietyDisplay = best.variety && best.variety !== '*' ? (VARIETY_NAMES[best.variety] || best.variety) : '';
@@ -126,8 +129,15 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       // Build the reason
       const reasonParts = [];
       let matchDesc = commDisplay;
-      if (varietyDisplay) matchDesc += ' ' + varietyDisplay;
-      if (packDisplay) matchDesc += ' (' + packDisplay + ')';
+      const varietyMatch = targetVariety !== '*' && best.variety === targetVariety;
+      const packMatch = targetPack && best.pack === targetPack;
+      
+      if (varietyMatch) matchDesc += ' ' + varietyDisplay;
+      else if (varietyDisplay) matchDesc += ' ' + varietyDisplay + ' (close)';
+      
+      if (packMatch) matchDesc += ' (' + packDisplay + ')';
+      else if (packDisplay) matchDesc += ' (' + packDisplay + ' - close)';
+      
       reasonParts.push(`Matches ${matchDesc}`);
       if (buysToday) reasonParts.push(`${buyer.name} typically buys today.`);
       reasonParts.push(`${best.flr} units available from ${best.producer}.`);
@@ -140,7 +150,7 @@ function runDeterministicMatch(stock, buyers, todayDow) {
         pack: best.pack,
         stockLine: stockLine,
         reason: reasonParts.join(' '),
-        tip: best.inColdstore ? 'Stock is in coldstore - arrange removal first.' : `Contact ${buyer.name} about ${matchDesc} available.`,
+        tip: best.inColdstore ? 'Stock is in coldstore - arrange removal first.' : `Contact ${buyer.name} about ${commDisplay} available.`,
         buysToday: buysToday,
         priority: priority,
         inColdstore: !!best.inColdstore,
@@ -156,7 +166,7 @@ function runDeterministicMatch(stock, buyers, todayDow) {
   // Deduplicate: keep only the best match per buyer
   const seen = {};
   const deduped = results.filter(r => {
-    const key = r.buyer + '|' + r.commodity + '|' + r.variety + '|' + r.pack;
+    const key = r.buyer + '|' + r.commodity;
     if (seen[key]) return false;
     seen[key] = true;
     return true;
