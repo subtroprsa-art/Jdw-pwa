@@ -481,3 +481,24 @@ function sendWhatsAppToMultiple(buyers, messages) {
 
   el.innerHTML = html || '<div style="color:var(--muted)">No matches found.</div>';
 }
+
+function sendWhatsAppToBuyer(buyerName, message) {
+  // Get phone number from Firebase
+  const phoneRef = firebase.database().ref('buyerPhones/' + buyerName);
+  
+  phoneRef.once('value').then(snapshot => {
+    const phone = snapshot.val();
+    
+    if (!phone) {
+      alert('No phone number found for ' + buyerName + '. Please add it to the buyerPhones in Firebase.');
+      return;
+    }
+    
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const url = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(message);
+    window.open(url, '_blank');
+  }).catch(err => {
+    console.error('Error getting phone:', err);
+    alert('Error: Could not get phone number.');
+  });
+}
