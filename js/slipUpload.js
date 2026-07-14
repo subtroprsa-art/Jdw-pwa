@@ -129,54 +129,36 @@ async function performOCR(imageData) {
   const progressBar = document.getElementById('progress-bar');
   
   progressContainer.style.display = 'block';
-  progressBar.style.width = '0%';
-  status.textContent = '🔍 OCR in progress...';
-  status.style.color = 'var(--muted)';
+  progressBar.style.width = '30%';
   
-  try {
-    await initTesseract();
-    
-    const result = await ocrWorker.recognize(imageData);
-    
-    progressBar.style.width = '100%';
-    
-    const text = result.data.text;
-    console.log('📄 OCR Output:', text);
-    
-    if (!text || text.trim().length < 10) {
-      status.textContent = '❌ No text detected. Try a better photo.';
-      status.style.color = 'var(--red)';
-      progressContainer.style.display = 'none';
-      document.getElementById('take-photo-btn').style.display = 'block';
-      return;
-    }
-    
-    status.textContent = '✅ OCR complete! Parsing data...';
+  // Use EasyOCR instead of Tesseract
+  const text = await processWithEasyOCR(imageData);
+  
+  if (!text) {
+    progressContainer.style.display = 'none';
+    document.getElementById('take-photo-btn').style.display = 'block';
+    return;
+  }
+  
+  progressBar.style.width = '80%';
+  
+  // Parse the text
+  const parsed = parseSlipText(text);
+  
+  progressBar.style.width = '100%';
+  
+  if (parsed && parsed.items && parsed.items.length > 0) {
+    parsedSlipData = parsed;
+    displayParsedData(parsed);
+    status.textContent = '✅ Data extracted! Review and save.';
     status.style.color = 'var(--sage)';
-    
-    const parsed = parseSlipText(text);
-    
-    if (parsed && parsed.items && parsed.items.length > 0) {
-      parsedSlipData = parsed;
-      displayParsedData(parsed);
-      status.textContent = '✅ Data extracted! Review and save.';
-      status.style.color = 'var(--sage)';
-    } else {
-      status.textContent = '⚠️ Could not parse slip data. Try a clearer photo.';
-      status.style.color = 'var(--gold)';
-      progressContainer.style.display = 'none';
-      document.getElementById('take-photo-btn').style.display = 'block';
-    }
-    
-  } catch (err) {
-    console.error('OCR Error:', err);
-    status.textContent = '❌ OCR Error: ' + err.message;
-    status.style.color = 'var(--red)';
+  } else {
+    status.textContent = '⚠️ Could not parse slip data. Try a clearer photo.';
+    status.style.color = 'var(--gold)';
     progressContainer.style.display = 'none';
     document.getElementById('take-photo-btn').style.display = 'block';
   }
 }
-
 function displayParsedData(parsed) {
   const preview = document.getElementById('parsed-data-preview');
   const content = document.getElementById('parsed-content');
