@@ -146,6 +146,39 @@ async function performOCR(imageData) {
     progressBar.style.width = '100%';
     
     const text = result.data.text;
+    async function performOCR(imageData) {
+  const status = document.getElementById('ocr-status');
+  const progressContainer = document.getElementById('progress-container');
+  const progressBar = document.getElementById('progress-bar');
+  
+  progressContainer.style.display = 'block';
+  progressBar.style.width = '0%';
+  status.textContent = '🔍 OCR in progress...';
+  status.style.color = 'var(--muted)';
+  
+  try {
+    await initTesseract();
+    
+    const result = await ocrWorker.recognize(imageData);
+    
+    progressBar.style.width = '100%';
+    
+    const text = result.data.text;
+    
+    // 🔍 DEBUG: Show raw OCR text
+    console.log('📄 RAW OCR TEXT:');
+    console.log(text);
+    
+    // Show raw text in a debug box
+    const debugDiv = document.getElementById('debug-text');
+    if (debugDiv) {
+      debugDiv.textContent = text;
+      debugDiv.style.display = 'block';
+    }
+    
+    // ... rest of the function
+  }
+}
     console.log('📄 OCR Output:', text);
     
     if (!text || text.trim().length < 10) {
