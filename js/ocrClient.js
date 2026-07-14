@@ -9,7 +9,7 @@ async function processWithTesseractServer(imageData) {
   }
   
   try {
-    const response = await fetch('https://jdw-sync.onrender.com/ocr', {
+    const response = await fetch('https://jdw-ocr.onrender.com/ocr', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
