@@ -269,37 +269,67 @@ function parseSlipText(text) {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   const fullText = lines.join('\n');
   
+  console.log('📄 Full OCR Text:', fullText);
+  
   // --- Extract Buyer ---
   const buyerMatch = fullText.match(/BUYER\s*[:;]\s*([^\n]+)/i);
   if (buyerMatch) {
-    result.buyer = buyerMatch[1].trim().replace(/[^A-Za-z0-9\s\.\&\(\)\-]/g, '').trim();
+    result.buyer = buyerMatch[1].trim();
+    console.log('✅ Buyer found:', result.buyer);
   }
   
   // --- Extract GRN ---
-  const grnMatch = fullText.match(/GRN\s*[:;]\s*(\d+)/i);
+  // Try multiple patterns
+  let grnMatch = fullText.match(/GRN\s*[:;]\s*(\d+)/i);
+  if (!grnMatch) {
+    grnMatch = fullText.match(/GRN\s+(\d+)/i);
+  }
+  if (!grnMatch) {
+    grnMatch = fullText.match(/G\s*R\s*N\s*[:;]\s*(\d+)/i);
+  }
   if (grnMatch) {
     result.grn = grnMatch[1];
+    console.log('✅ GRN found:', result.grn);
+  } else {
+    console.log('❌ GRN not found');
   }
   
   // --- Extract Producer ---
   const producerMatch = fullText.match(/PRODUCER\s*[:;]\s*([^\n]+)/i);
   if (producerMatch) {
-    result.producer = producerMatch[1].trim().replace(/[^A-Za-z0-9\s\.\&\(\)\-]/g, '').trim();
+    result.producer = producerMatch[1].trim();
+    console.log('✅ Producer found:', result.producer);
   }
   
   // --- Extract Date ---
-  const dateMatch = fullText.match(/DATE\s*[:;]\s*(\d{2}\/\w{3}\/\d{4})/i);
+  const dateMatch = fullText.match(/DATE\s*[:;]\s*([^\n]+)/i);
   if (dateMatch) {
-    result.date = dateMatch[1];
+    result.date = dateMatch[1].trim();
+    console.log('✅ Date found:', result.date);
   }
   
-  // --- Extract Items ---
-  // Look for SALE line: "SALE    104 @ 50.00    5,200.00"
-  const saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)\s+([\d,.]+)/i);
+  // --- Extract SALE line ---
+  // Your slip format: "SALE    104 @ 50.00    5,200.00"
+  // Or maybe: "SALE 104 @ 50.00 5,200.00"
+  
+  let saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)\s+([\d,.]+)/i);
+  if (!saleMatch) {
+    // Try with less spaces
+    saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)/i);
+  }
+  if (!saleMatch) {
+    // Try without @ symbol
+    saleMatch = fullText.match(/SALE\s+([\d,]+)\s+([\d,.]+)\s+([\d,.]+)/i);
+  }
+  
   if (saleMatch) {
+    console.log('✅ SALE line found:', saleMatch[0]);
+    
     const qty = parseInt(saleMatch[1].replace(/,/g, ''));
     const price = parseFloat(saleMatch[2].replace(/,/g, ''));
-    const total = parseFloat(saleMatch[3].replace(/,/g, ''));
+    const total = saleMatch[3] ? parseFloat(saleMatch[3].replace(/,/g, '')) : qty * price;
+    
+    console.log('Qty:', qty, 'Price:', price, 'Total:', total);
     
     // Determine commodity from the text
     let commodity = 'UNK';
@@ -325,6 +355,7 @@ function parseSlipText(text) {
         break;
       }
     }
+    console.log('Commodity:', commodity);
     
     // Determine variety
     let variety = '*';
@@ -335,6 +366,7 @@ function parseSlipText(text) {
         break;
       }
     }
+    console.log('Variety:', variety);
     
     // Determine pack
     let pack = '';
@@ -345,6 +377,7 @@ function parseSlipText(text) {
         break;
       }
     }
+    console.log('Pack:', pack);
     
     result.items.push({
       commodity: commodity,
@@ -358,7 +391,13 @@ function parseSlipText(text) {
     });
     
     result.total = total;
+    console.log('✅ Item added:', result.items[0]);
+    
+  } else {
+    console.log('❌ SALE line not found');
+    console.log('Full text for debugging:', fullText);
   }
   
+  console.log('📄 Final result:', result);
   return result;
 }
