@@ -255,3 +255,127 @@ function resetSlipUpload() {
   document.getElementById('cancel-btn').style.display = 'none';
   parsedSlipData = null;
 }
+function parseSlipText(text) {
+  const result = {
+    buyer: '',
+    grn: '',
+    producer: '',
+    date: '',
+    items: [],
+    total: 0
+  };
+  
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  const fullText = lines.join('\n');
+  
+  // --- Extract Buyer ---
+  const buyerPatterns = [
+    /BUYER\s*[:;]\s*([^\n]+)/i,
+    /BUYER\s+([^\n]+)/i,
+    /^([A-Z][A-Z\s]+)$/m,
+  ];
+  for (const pattern of buyerPatterns) {
+    const match = fullText.match(pattern);
+    if (match) {
+      result.buyer = match[1].trim().replace(/[^A-Za-z0-9\s\.\&\(\)\-]/g, '').trim();
+      if (result.buyer.length > 2) break;
+    }
+  }
+  
+  // --- Extract GRN ---
+  const grnMatch = fullText.match(/GRN\s*[:;]\s*(\d+)/i);
+  if (grnMatch) result.grn = grnMatch[1];
+  
+  // --- Extract Producer ---
+  const producerMatch = fullText.match(/PRODUCER\s*[:;]\s*([^\n]+)/i);
+  if (producerMatch) {
+    result.producer = producerMatch[1].trim().replace(/[^A-Za-z0-9\s\.\&\(\)\-]/g, '').trim();
+  }
+  
+  // --- Extract Date ---
+  const dateMatch = fullText.match(/(\d{2}\/\d{2}\/\d{4})/);
+  if (dateMatch) result.date = dateMatch[1];
+  
+  // --- Extract Items ---
+  const commodities = ['AVOS', 'LEMS', 'ORGS', 'KIWI', 'FIGS', 'GVS', 'CLTM', 'NAAR', 'STRS', 'MANG', 'DRAG', 'GFT', 'SATS', 'PAPO'];
+  const commMap = {
+    'AVOCADO': 'AVOS', 'AVOCADOS': 'AVOS',
+    'LEMON': 'LEMS', 'LEMONS': 'LEMS',
+    'ORANGE': 'ORGS', 'ORANGES': 'ORGS',
+    'KIWI': 'KIWI', 'KIWIFRUIT': 'KIWI',
+    'CLEMENTINE': 'CLTM', 'CLEMENTINES': 'CLTM',
+    'NAARTJIE': 'NAAR', 'NAARTJIES': 'NAAR',
+    'STRAWBERRY': 'STRS', 'STRAWBERRIES': 'STRS',
+    'MANGO': 'MANG', 'MANGOES': 'MANG',
+    'FIG': 'FIGS', 'FIGS': 'FIGS',
+    'GUAVA': 'GVS', 'GUAVAS': 'GVS',
+    'GRAPEFRUIT': 'GFT'
+  };
+  
+  for (const line of lines) {
+    if (line.length < 5) continue;
+    if (/^(DATE|BUYER|PRODUCER|GRN|INVOICE|ACCOUNT|CARD|SALE|TOTAL)/i.test(line)) continue;
+    
+    const upper = line.toUpperCase();
+    let commodity = null;
+    
+    for (const code of commodities) {
+      if (upper.includes(code)) { commodity = code; break; }
+    }
+    if (!commodity) {
+      for (const [name, code] of Object.entries(commMap)) {
+        if (upper.includes(name)) { commodity = code; break; }
+      }
+    }
+    if (!commodity) continue;
+    
+    let variety = '*';
+    const varieties = ['AF', 'AH', 'AK', 'MA', 'MAH', 'MD', 'NV', 'CN', 'AX', 'LR', 'HM', 'M1', 'NAR'];
+    for (const v of varieties) {
+      if (upper.includes(v)) { variety = v; break; }
+    }
+    
+    let pack = '';
+    const packs = ['TR040', 'BG150', 'BG160', 'CTT150', 'PTB005', 'PTB002', 'DL076', 'PC030', 'PC060', 'CO100'];
+    for (const p of packs) {
+      if (upper.includes(p)) { pack = p; break; }
+    }
+    
+    let qty = 0, price = 0;
+    const numbers = line.match(/\d+\.?\d*/g);
+    if (numbers && numbers.length >= 2) {
+      const nums = numbers.map(n => parseFloat(n));
+      const whole = nums.filter(n => n % 1 === 0);
+      const decimal = nums.filter(n => n % 1 !== 0);
+      if (whole.length > 0 && decimal.length > 0) {
+        qty = whole[0];
+        price = decimal[0];
+      } else if (nums.length >= 2) {
+        qty = nums[0];
+        price = nums[1];
+      }
+    }
+    
+    const atMatch = line.match(/(\d+)\s*[@x]\s*([\d.]+)/i);
+    if (atMatch) {
+      qty = parseInt(atMatch[1]);
+      price = parseFloat(atMatch[2]);
+    }
+    
+    if (qty > 0 && price > 0) {
+      result.items.push({
+        commodity: commodity,
+        variety: variety,
+        pack: pack,
+        grade: '1',
+        size: '*',
+        qty: qty,
+        price: price,
+        total: qty * price
+      });
+    }
+  }
+  
+  result.total = result.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+  return result;
+}
