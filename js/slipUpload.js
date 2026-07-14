@@ -131,8 +131,8 @@ async function performOCR(imageData) {
   progressContainer.style.display = 'block';
   progressBar.style.width = '30%';
   
-  // Use EasyOCR instead of Tesseract
-  const text = await processWithEasyOCR(imageData);
+  // Use Tesseract on Render instead of Tesseract.js in browser
+  const text = await processWithTesseractServer(imageData);
   
   if (!text) {
     progressContainer.style.display = 'none';
@@ -159,6 +159,7 @@ async function performOCR(imageData) {
     document.getElementById('take-photo-btn').style.display = 'block';
   }
 }
+
 function displayParsedData(parsed) {
   const preview = document.getElementById('parsed-data-preview');
   const content = document.getElementById('parsed-content');
