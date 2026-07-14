@@ -269,77 +269,96 @@ function parseSlipText(text) {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   const fullText = lines.join('\n');
   
+  // --- Extract Buyer ---
   const buyerMatch = fullText.match(/BUYER\s*[:;]\s*([^\n]+)/i);
   if (buyerMatch) {
     result.buyer = buyerMatch[1].trim().replace(/[^A-Za-z0-9\s\.\&\(\)\-]/g, '').trim();
   }
   
+  // --- Extract GRN ---
   const grnMatch = fullText.match(/GRN\s*[:;]\s*(\d+)/i);
-  if (grnMatch) result.grn = grnMatch[1];
+  if (grnMatch) {
+    result.grn = grnMatch[1];
+  }
   
+  // --- Extract Producer ---
   const producerMatch = fullText.match(/PRODUCER\s*[:;]\s*([^\n]+)/i);
   if (producerMatch) {
     result.producer = producerMatch[1].trim().replace(/[^A-Za-z0-9\s\.\&\(\)\-]/g, '').trim();
   }
   
-  const dateMatch = fullText.match(/(\d{2}\/\d{2}\/\d{4})/);
-  if (dateMatch) result.date = dateMatch[1];
+  // --- Extract Date ---
+  const dateMatch = fullText.match(/DATE\s*[:;]\s*(\d{2}\/\w{3}\/\d{4})/i);
+  if (dateMatch) {
+    result.date = dateMatch[1];
+  }
   
-  const commodities = ['AVOS', 'LEMS', 'ORGS', 'KIWI', 'FIGS', 'GVS', 'CLTM', 'NAAR', 'STRS', 'MANG', 'DRAG', 'GFT', 'SATS', 'PAPO'];
-  
-  for (const line of lines) {
-    if (line.length < 5) continue;
-    if (/^(DATE|BUYER|PRODUCER|GRN|INVOICE|ACCOUNT|CARD|SALE|TOTAL)/i.test(line)) continue;
+  // --- Extract Items ---
+  // Look for SALE line: "SALE    104 @ 50.00    5,200.00"
+  const saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)\s+([\d,.]+)/i);
+  if (saleMatch) {
+    const qty = parseInt(saleMatch[1].replace(/,/g, ''));
+    const price = parseFloat(saleMatch[2].replace(/,/g, ''));
+    const total = parseFloat(saleMatch[3].replace(/,/g, ''));
     
-    const upper = line.toUpperCase();
-    let commodity = null;
+    // Determine commodity from the text
+    let commodity = 'UNK';
+    const commMap = {
+      'AVOCADO': 'AVOS', 'AVOCADOS': 'AVOS',
+      'LEMON': 'LEMS', 'LEMONS': 'LEMS',
+      'ORANGE': 'ORGS', 'ORANGES': 'ORGS',
+      'KIWI': 'KIWI', 'KIWIFRUIT': 'KIWI',
+      'CLEMENTINE': 'CLTM', 'CLEMENTINES': 'CLTM',
+      'NAARTJIE': 'NAAR', 'NAARTJIES': 'NAAR',
+      'STRAWBERRY': 'STRS', 'STRAWBERRIES': 'STRS',
+      'MANGO': 'MANG', 'MANGOES': 'MANG',
+      'FIG': 'FIGS', 'FIGS': 'FIGS',
+      'GUAVA': 'GVS', 'GUAVAS': 'GVS',
+      'GRAPEFRUIT': 'GFT',
+      'SATSUMA': 'SATS', 'SATSUMAS': 'SATS',
+      'PAPINO': 'PAPO'
+    };
     
-    for (const code of commodities) {
-      if (upper.includes(code)) { commodity = code; break; }
-    }
-    if (!commodity) continue;
-    
-    let variety = '*';
-    const varieties = ['AF', 'AH', 'AK', 'MA', 'MAH', 'MD', 'NV', 'CN', 'AX', 'LR', 'HM', 'M1', 'NAR'];
-    for (const v of varieties) {
-      if (upper.includes(v)) { variety = v; break; }
-    }
-    
-    let pack = '';
-    const packs = ['TR040', 'BG150', 'BG160', 'CTT150', 'PTB005', 'PTB002', 'DL076', 'PC030', 'PC060', 'CO100'];
-    for (const p of packs) {
-      if (upper.includes(p)) { pack = p; break; }
-    }
-    
-    let qty = 0, price = 0;
-    const numbers = line.match(/\d+\.?\d*/g);
-    if (numbers && numbers.length >= 2) {
-      const nums = numbers.map(n => parseFloat(n));
-      const whole = nums.filter(n => n % 1 === 0);
-      const decimal = nums.filter(n => n % 1 !== 0);
-      if (whole.length > 0 && decimal.length > 0) {
-        qty = whole[0];
-        price = decimal[0];
-      } else if (nums.length >= 2) {
-        qty = nums[0];
-        price = nums[1];
+    for (const [name, code] of Object.entries(commMap)) {
+      if (fullText.toUpperCase().includes(name)) {
+        commodity = code;
+        break;
       }
     }
     
-    if (qty > 0 && price > 0) {
-      result.items.push({
-        commodity: commodity,
-        variety: variety,
-        pack: pack,
-        grade: '1',
-        size: '*',
-        qty: qty,
-        price: price,
-        total: qty * price
-      });
+    // Determine variety
+    let variety = '*';
+    const varieties = ['AF', 'AH', 'AK', 'MA', 'MAH', 'MD', 'NV', 'CN', 'AX', 'LR', 'HM', 'M1', 'NAR'];
+    for (const v of varieties) {
+      if (fullText.toUpperCase().includes(v)) {
+        variety = v;
+        break;
+      }
     }
+    
+    // Determine pack
+    let pack = '';
+    const packs = ['TR040', 'BG150', 'BG160', 'CTT150', 'PTB005', 'PTB002', 'DL076', 'PC030', 'PC060', 'CO100'];
+    for (const p of packs) {
+      if (fullText.toUpperCase().includes(p)) {
+        pack = p;
+        break;
+      }
+    }
+    
+    result.items.push({
+      commodity: commodity,
+      variety: variety,
+      pack: pack,
+      grade: '1',
+      size: '*',
+      qty: qty,
+      price: price,
+      total: total
+    });
+    
+    result.total = total;
   }
   
-  result.total = result.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
   return result;
 }
