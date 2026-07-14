@@ -192,9 +192,10 @@ function displayParsedData(parsed) {
   if (parsed.items && parsed.items.length > 0) {
     html += `<div style="margin-top:8px;"><strong>Items (${parsed.items.length}):</strong></div>`;
     parsed.items.forEach((item, idx) => {
+      const total = item.qty * item.price;
       html += `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">`;
       html += `<span>${idx+1}. ${item.commodity} ${item.variety} x ${item.qty}</span>`;
-      html += `<span>R${(item.qty * item.price).toFixed(2)}</span>`;
+      html += `<span>R${total.toFixed(2)}</span>`;
       html += `</div>`;
     });
     html += `<div style="margin-top:8px;font-weight:700;text-align:right;">Total: R${parsed.total.toFixed(2)}</div>`;
@@ -266,9 +267,7 @@ function parseSlipText(text) {
     total: 0
   };
   
-  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  const fullText = lines.join('\n');
-  
+  const fullText = text;
   console.log('📄 Full OCR Text:', fullText);
   
   // --- Extract Buyer ---
@@ -279,13 +278,9 @@ function parseSlipText(text) {
   }
   
   // --- Extract GRN ---
-  // Try multiple patterns
   let grnMatch = fullText.match(/GRN\s*[:;]\s*(\d+)/i);
   if (!grnMatch) {
     grnMatch = fullText.match(/GRN\s+(\d+)/i);
-  }
-  if (!grnMatch) {
-    grnMatch = fullText.match(/G\s*R\s*N\s*[:;]\s*(\d+)/i);
   }
   if (grnMatch) {
     result.grn = grnMatch[1];
@@ -309,17 +304,13 @@ function parseSlipText(text) {
   }
   
   // --- Extract SALE line ---
-  // Your slip format: "SALE    104 @ 50.00    5,200.00"
-  // Or maybe: "SALE 104 @ 50.00 5,200.00"
-  
+  // Format: "SALE    104 @    50.00    5,200.00"
   let saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)\s+([\d,.]+)/i);
   if (!saleMatch) {
-    // Try with less spaces
-    saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)/i);
+    saleMatch = fullText.match(/SALE\s+([\d,]+)\s+([\d,.]+)\s+([\d,.]+)/i);
   }
   if (!saleMatch) {
-    // Try without @ symbol
-    saleMatch = fullText.match(/SALE\s+([\d,]+)\s+([\d,.]+)\s+([\d,.]+)/i);
+    saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)/i);
   }
   
   if (saleMatch) {
@@ -327,7 +318,12 @@ function parseSlipText(text) {
     
     const qty = parseInt(saleMatch[1].replace(/,/g, ''));
     const price = parseFloat(saleMatch[2].replace(/,/g, ''));
-    const total = saleMatch[3] ? parseFloat(saleMatch[3].replace(/,/g, '')) : qty * price;
+    let total = 0;
+    if (saleMatch[3]) {
+      total = parseFloat(saleMatch[3].replace(/,/g, ''));
+    } else {
+      total = qty * price;
+    }
     
     console.log('Qty:', qty, 'Price:', price, 'Total:', total);
     
@@ -359,7 +355,7 @@ function parseSlipText(text) {
     
     // Determine variety
     let variety = '*';
-    const varieties = ['AF', 'AH', 'AK', 'MA', 'MAH', 'MD', 'NV', 'CN', 'AX', 'LR', 'HM', 'M1', 'NAR'];
+    const varieties = ['NAR', 'AF', 'AH', 'AK', 'MA', 'MAH', 'MD', 'NV', 'CN', 'AX', 'LR', 'HM', 'M1'];
     for (const v of varieties) {
       if (fullText.toUpperCase().includes(v)) {
         variety = v;
