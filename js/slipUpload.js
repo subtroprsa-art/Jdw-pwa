@@ -3,8 +3,6 @@
 let stream = null;
 let capturedImageData = null;
 let parsedSlipData = null;
-
-// Tesseract.js worker
 let ocrWorker = null;
 
 async function initTesseract() {
@@ -14,22 +12,20 @@ async function initTesseract() {
     status.style.color = 'var(--muted)';
     
     try {
-      // Use the CDN version with a specific language
       ocrWorker = await Tesseract.createWorker('eng', 1, {
-        // Use the latest model
         corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.0/tesseract-core.wasm.js',
         logger: (m) => {
           if (m.status === 'recognizing text') {
             const progress = Math.round(m.progress * 100);
-            document.getElementById('progress-bar').style.width = progress + '%';
+            const bar = document.getElementById('progress-bar');
+            if (bar) bar.style.width = progress + '%';
           }
         }
       });
       
-      // Optimize for thermal receipts
       await ocrWorker.setParameters({
         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,-@/()*$%#:',
-        tessedit_pageseg_mode: '6', // Assume a single uniform text block
+        tessedit_pageseg_mode: '6',
       });
       
       status.textContent = '✅ OCR engine ready';
@@ -108,7 +104,6 @@ function capturePhoto() {
   document.getElementById('cancel-btn').style.display = 'none';
   document.getElementById('take-photo-btn').style.display = 'none';
   
-  // Start OCR
   performOCR(capturedImageData);
 }
 
@@ -146,43 +141,10 @@ async function performOCR(imageData) {
     progressBar.style.width = '100%';
     
     const text = result.data.text;
-    async function performOCR(imageData) {
-  const status = document.getElementById('ocr-status');
-  const progressContainer = document.getElementById('progress-container');
-  const progressBar = document.getElementById('progress-bar');
-  
-  progressContainer.style.display = 'block';
-  progressBar.style.width = '0%';
-  status.textContent = '🔍 OCR in progress...';
-  status.style.color = 'var(--muted)';
-  
-  try {
-    await initTesseract();
-    
-    const result = await ocrWorker.recognize(imageData);
-    
-    progressBar.style.width = '100%';
-    
-    const text = result.data.text;
-    
-    // 🔍 DEBUG: Show raw OCR text
-    console.log('📄 RAW OCR TEXT:');
-    console.log(text);
-    
-    // Show raw text in a debug box
-    const debugDiv = document.getElementById('debug-text');
-    if (debugDiv) {
-      debugDiv.textContent = text;
-      debugDiv.style.display = 'block';
-    }
-    
-    // ... rest of the function
-  }
-}
     console.log('📄 OCR Output:', text);
     
     if (!text || text.trim().length < 10) {
-      status.textContent = '❌ No text detected. Try a better photo (good lighting, straight angle).';
+      status.textContent = '❌ No text detected. Try a better photo.';
       status.style.color = 'var(--red)';
       progressContainer.style.display = 'none';
       document.getElementById('take-photo-btn').style.display = 'block';
@@ -212,13 +174,6 @@ async function performOCR(imageData) {
     status.style.color = 'var(--red)';
     progressContainer.style.display = 'none';
     document.getElementById('take-photo-btn').style.display = 'block';
-  } finally {
-    if (ocrWorker) {
-      // Keep worker alive for next use
-      ocrWorker.setParameters({
-        tessedit_pageseg_mode: '6'
-      });
-    }
   }
 }
 
@@ -227,30 +182,24 @@ function displayParsedData(parsed) {
   const content = document.getElementById('parsed-content');
   
   let html = '';
+  html += `<div style="background:#f0f8f0;padding:8px;border-radius:6px;margin-bottom:8px;">`;
+  html += `<div><strong>Buyer:</strong> ${parsed.buyer || '❌ Not found'}</div>`;
+  html += `<div><strong>GRN:</strong> ${parsed.grn || '❌ Not found'}</div>`;
+  html += `<div><strong>Producer:</strong> ${parsed.producer || '❌ Not found'}</div>`;
+  html += `<div><strong>Date:</strong> ${parsed.date || '❌ Not found'}</div>`;
+  html += `</div>`;
   
-  if (parsed.buyer) {
-    html += `<div><strong>Buyer:</strong> ${parsed.buyer}</div>`;
-  }
-  if (parsed.grn) {
-    html += `<div><strong>GRN:</strong> ${parsed.grn}</div>`;
-  }
-  if (parsed.producer) {
-    html += `<div><strong>Producer:</strong> ${parsed.producer}</div>`;
-  }
-  if (parsed.date) {
-    html += `<div><strong>Date:</strong> ${parsed.date}</div>`;
-  }
   if (parsed.items && parsed.items.length > 0) {
-    html += `<div style="margin-top:8px;"><strong>Items:</strong></div>`;
-    parsed.items.forEach(item => {
-      html += `<div style="font-size:11px;color:var(--muted);padding-left:8px;">`;
-      html += `${item.commodity} ${item.variety} x ${item.qty} @ R${item.price} = R${(item.qty * item.price).toFixed(2)}`;
-      if (item.pack) html += ` (${item.pack})`;
+    html += `<div style="margin-top:8px;"><strong>Items (${parsed.items.length}):</strong></div>`;
+    parsed.items.forEach((item, idx) => {
+      html += `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;">`;
+      html += `<span>${idx+1}. ${item.commodity} ${item.variety} x ${item.qty}</span>`;
+      html += `<span>R${(item.qty * item.price).toFixed(2)}</span>`;
       html += `</div>`;
     });
-  }
-  if (parsed.total) {
-    html += `<div style="margin-top:4px;"><strong>Total:</strong> R${parsed.total.toFixed(2)}</div>`;
+    html += `<div style="margin-top:8px;font-weight:700;text-align:right;">Total: R${parsed.total.toFixed(2)}</div>`;
+  } else {
+    html += `<div style="color:var(--red);margin-top:8px;">⚠️ No items found.</div>`;
   }
   
   content.innerHTML = html;
@@ -265,15 +214,13 @@ async function saveParsedData() {
   status.style.color = 'var(--muted)';
   
   try {
-    // Add metadata
     const record = {
       ...parsedSlipData,
       imported: new Date().toISOString(),
       source: 'mobile_photo_tesseract'
     };
     
-    // Save to Firebase
-    const response = await fetch(FB_DB + '/jdw/history.json?auth=' + FB_SECRET, {
+    const response = await fetch(CONFIG.FIREBASE_DATABASE_URL + '/jdw/history.json?auth=' + CONFIG.FIREBASE_SECRET, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(record)
@@ -284,9 +231,8 @@ async function saveParsedData() {
     status.textContent = '✅ Saved successfully!';
     status.style.color = 'var(--sage)';
     
-    // Refresh buyer data
-    loadBuyersFromFirebase();
-    loadAllStockForMatcher();
+    if (typeof loadBuyersFromFirebase === 'function') loadBuyersFromFirebase();
+    if (typeof loadAllStockForMatcher === 'function') loadAllStockForMatcher();
     
     setTimeout(() => {
       resetSlipUpload();
@@ -308,155 +254,4 @@ function resetSlipUpload() {
   document.getElementById('capture-btn').style.display = 'none';
   document.getElementById('cancel-btn').style.display = 'none';
   parsedSlipData = null;
-}
-
-// Parse function - extracts data from OCR text
-function parseSlipText(text) {
-  const result = {
-    buyer: '',
-    grn: '',
-    producer: '',
-    date: '',
-    items: [],
-    total: 0
-  };
-  
-  // Look for buyer
-  const buyerMatch = text.match(/BUYER\s*[:;]\s*([^\n]+)/i);
-  if (buyerMatch) {
-    result.buyer = buyerMatch[1].trim();
-  }
-  
-  // Look for GRN
-  const grnMatch = text.match(/GRN\s*[:;]\s*(\d+)/i);
-  if (grnMatch) {
-    result.grn = grnMatch[1];
-  }
-  
-  // Look for producer
-  const producerMatch = text.match(/PRODUCER\s*[:;]\s*([^\n]+)/i);
-  if (producerMatch) {
-    result.producer = producerMatch[1].trim();
-  }
-  
-  // Look for date
-  const dateMatch = text.match(/(\d{2}\/\d{2}\/\d{4})/);
-  if (dateMatch) {
-    result.date = dateMatch[1];
-  }
-  
-  // Commodity mapping
-  const commMap = {
-    'AVOCADO': 'AVOS',
-    'AVOCADOS': 'AVOS',
-    'LEMON': 'LEMS',
-    'LEMONS': 'LEMS',
-    'ORANGE': 'ORGS',
-    'ORANGES': 'ORGS',
-    'KIWI': 'KIWI',
-    'KIWIFRUIT': 'KIWI',
-    'CLEMENTINE': 'CLTM',
-    'CLEMENTINES': 'CLTM',
-    'NAARTJIE': 'NAAR',
-    'NAARTJIES': 'NAAR',
-    'STRAWBERRY': 'STRS',
-    'STRAWBERRIES': 'STRS',
-    'MANGO': 'MANG',
-    'MANGOES': 'MANG',
-    'FIG': 'FIGS',
-    'FIGS': 'FIGS',
-    'GUAVA': 'GVS',
-    'GUAVAS': 'GVS',
-    'GRAPEFRUIT': 'GFT'
-  };
-  
-  // Look for product lines
-  // Pattern: AVOS AF TR040 50 70.00 3500.00
-  // Or: AVOCADOS, 4KG TRAY, AF;CL 1;*;14;*;4 KG/L
-  
-  const lines = text.split('\n');
-  for (const line of lines) {
-    const upper = line.toUpperCase();
-    
-    // Try to find commodity code or name
-    let commodity = null;
-    let variety = '*';
-    let pack = '';
-    let qty = 0;
-    let price = 0;
-    
-    // Check for commodity codes
-    const commCodes = ['AVOS', 'LEMS', 'ORGS', 'KIWI', 'FIGS', 'GVS', 'CLTM', 'NAAR', 'STRS', 'MANG', 'DRAG', 'GFT', 'SATS', 'PAPO'];
-    for (const code of commCodes) {
-      if (upper.includes(code)) {
-        commodity = code;
-        break;
-      }
-    }
-    
-    // Check for commodity names
-    if (!commodity) {
-      for (const [name, code] of Object.entries(commMap)) {
-        if (upper.includes(name)) {
-          commodity = code;
-          break;
-        }
-      }
-    }
-    
-    if (!commodity) continue;
-    
-    // Try to extract variety
-    const varieties = ['AF', 'AH', 'AK', 'MA', 'MAH', 'MD', 'NV', 'CN', 'AX', 'LR', 'HM', 'M1', 'NAR'];
-    for (const varCode of varieties) {
-      if (upper.includes(varCode)) {
-        variety = varCode;
-        break;
-      }
-    }
-    
-    // Try to extract pack
-    const packCodes = ['TR040', 'BG150', 'BG160', 'CTT150', 'PTB005', 'PTB002', 'DL076', 'PC030', 'PC060', 'CO100'];
-    for (const packCode of packCodes) {
-      if (upper.includes(packCode)) {
-        pack = packCode;
-        break;
-      }
-    }
-    
-    // Extract numbers - look for qty and price patterns
-    const numbers = line.match(/\d+\.?\d*/g);
-    if (numbers && numbers.length >= 2) {
-      const nums = numbers.map(n => parseFloat(n));
-      
-      // Try to identify qty (usually a whole number) and price (has decimal)
-      if (nums[0] && nums[1]) {
-        if (nums[0] % 1 === 0) {
-          qty = nums[0];
-          price = nums[1];
-        } else {
-          qty = nums[1];
-          price = nums[0];
-        }
-      }
-    }
-    
-    if (qty > 0 && price > 0) {
-      result.items.push({
-        commodity: commodity,
-        variety: variety,
-        pack: pack,
-        grade: '1',
-        size: '*',
-        qty: qty,
-        price: price,
-        total: qty * price
-      });
-    }
-  }
-  
-  // Calculate total
-  result.total = result.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-  
-  return result;
 }
