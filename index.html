@@ -15,7 +15,9 @@
 const CONFIG = {
   FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
   FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs',
-  SYNC_URL: 'https://jdw-sync.onrender.com'
+  SYNC_URL: 'https://jdw-sync.onrender.com',
+  // Insert your Google Cloud Vision API key here
+  CLOUD_VISION_API_KEY: 'YOUR_GOOGLE_CLOUD_VISION_API_KEY'
 };
 window.CONFIG = CONFIG;
 
@@ -27,9 +29,6 @@ const SK = 'st_sess';
 
 console.log('✅ Config loaded');
 </script>
-  
-<!-- Tesseract.js for OCR in the browser -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   
 <!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -104,9 +103,7 @@ try {
     <button onclick="goToPage('floor')" style="padding:16px 14px;border:none;border-radius:14px;background:#5a3e8a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">📊</span>Floor Balance</button>
     <button onclick="goToPage('coldstore')" style="padding:16px 14px;border:none;border-radius:14px;background:#2c5f7a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">❄️</span>Coldstore</button>
     <button onclick="goToPage('commodities')" style="padding:16px 14px;border:none;border-radius:14px;background:#3a7a4a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">🌿</span>Commodities</button>
-    <button onclick="goToPage('slip-upload')" style="padding:16px 14px;border:none;border-radius:14px;background:#1a4479;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px">
-  <span style="font-size:22px">📷</span>Scan Slip
-</button>
+    <button onclick="goToPage('slip-upload')" style="padding:16px 14px;border:none;border-radius:14px;background:#8a3e5a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px"><span style="font-size:22px">📷</span>Scan Slip</button>
     <button onclick="toggleReportsMenu()" style="padding:16px 14px;border:none;border-radius:14px;background:#2c5f7a;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;grid-column:span 2"><span style="font-size:22px">📈</span>Reports</button>
   </div>
   <div id="reports-menu" style="display:none;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px;border-top:3px solid #2c5f7a">
@@ -156,6 +153,72 @@ try {
   <div id="ai-error" style="display:none;background:var(--red-light);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;margin-bottom:10px"></div>
 </div>
 
+<!-- ===== PAGE: SLIP UPLOAD & LIVE SCAN ===== -->
+<div class="page" id="page-slip-upload">
+  <div class="upload-box" style="border-top:3.5px solid #8a3e5a">
+    <div class="upload-title" style="color:#8a3e5a">📷 Scan Market Receipt</div>
+    <div class="upload-hint">Snap or upload a photo of the thermal payment slip</div>
+    
+    <!-- Unified File/Camera Trigger -->
+    <label class="upload-file-btn" style="background:#8a3e5a; display:inline-flex; align-items:center; gap:8px;">
+      <span>Take Photo / Choose File</span>
+      <input type="file" id="slip-file" accept="image/*" capture="environment" style="display:none" onchange="handleSlipSelection(this)"/>
+    </label>
+    
+    <div id="slip-filename" class="upload-fname" style="margin-top:8px;">No file chosen</div>
+
+    <!-- Live Preview Canvas Container -->
+    <div id="slip-preview-container" style="display:none; margin:14px 0; text-align:center;">
+      <canvas id="slip-preview-canvas" style="max-width:100%; max-height:220px; border:2px dashed var(--border); border-radius:10px; object-fit:contain;"></canvas>
+    </div>
+
+    <!-- API Execution Progress Bar -->
+    <div id="ocr-progress-container" style="display:none; margin:14px 0 8px 0;">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:4px; display:flex; justify-content:space-between;">
+        <span id="ocr-progress-status">Uploading to Google Cloud Vision...</span>
+        <span id="ocr-progress-pct">0%</span>
+      </div>
+      <div style="width:100%; height:8px; background:var(--border); border-radius:10px; overflow:hidden;">
+        <div id="ocr-progress-bar" style="width:0%; height:100%; background:#8a3e5a; transition:width 0.3s ease;"></div>
+      </div>
+    </div>
+
+    <button id="ocr-process-btn" class="upload-btn" onclick="processSlipImage()" style="background:#8a3e5a; width:100%; margin-top:12px; display:none;">
+      Run Cloud OCR
+    </button>
+  </div>
+
+  <!-- Parsed Output / Matcher Console -->
+  <div id="ocr-results-card" style="display:none; background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:16px; margin-bottom:14px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="font-weight:700; font-size:14px; color:#8a3e5a">Matched Transaction Details</div>
+      <button onclick="clearSlipOCR()" style="background:none; border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; color:var(--muted)">Reset</button>
+    </div>
+    
+    <!-- Extracted OCR Highlights -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; background:var(--paper); padding:10px; border-radius:8px;">
+      <div>
+        <label style="font-size:10px; text-transform:uppercase; color:var(--muted); font-weight:700;">Market No / Ref</label>
+        <div id="ocr-res-ref" style="font-weight:700; font-size:14px; color:var(--ink);">--</div>
+      </div>
+      <div>
+        <label style="font-size:10px; text-transform:uppercase; color:var(--muted); font-weight:700;">Calculated Qty</label>
+        <div id="ocr-res-qty" style="font-weight:700; font-size:14px; color:var(--ink);">--</div>
+      </div>
+      <div style="grid-column: span 2;">
+        <label style="font-size:10px; text-transform:uppercase; color:var(--muted); font-weight:700;">Matched Buyer</label>
+        <div id="ocr-res-buyer" style="font-weight:700; font-size:14px; color:#1a4479;">--</div>
+      </div>
+    </div>
+
+    <!-- Complete Raw Plain Text Output (Toggleable collapse) -->
+    <details style="margin-top:10px; font-family:monospace; font-size:11px; color:var(--muted); border-top:1px solid var(--border); padding-top:8px;">
+      <summary style="cursor:pointer; outline:none; font-family:inherit; font-size:12px; font-weight:600; color:#8a3e5a">View Full Extracted Text</summary>
+      <pre id="ocr-raw-text" style="white-space:pre-wrap; background:var(--paper); padding:8px; border-radius:6px; margin-top:6px; line-height:1.4; max-height:150px; overflow-y:auto; border:1px solid var(--border);"></pre>
+    </details>
+  </div>
+</div>
+
 <!-- ===== PAGE: BUYERS ===== -->
 <div class="page" id="page-buyers"><div class="ctrl-row"><input type="text" id="buyer-search" placeholder="🔍 Search buyer…" oninput="filterBuyers()"/></div><div id="buyer-list"></div></div>
 
@@ -202,89 +265,4 @@ try {
       </div>
     </div>
   </div>
-  <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">Open Orders<span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span><span style="flex:1;height:1px;background:var(--border);display:block"></span><button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">A4</button><button onclick="printThermalOrders()" style="background:#2c5f7a;border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700;margin-left:4px">Thermal</button><button onclick="loadOrders()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Refresh</button></div>
-  <span id="orders-badge" style="display:none"></span><div id="orders-list"><div class="empty">No open orders</div></div>
-</div>
-
-<!-- ===== PAGE: FLOOR ===== -->
-<div class="page" id="page-floor">
-  <div class="stock-tabs"><button class="stock-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ',this)">Riaan (RJ)</button><button class="stock-tab" id="ftab-CW" onclick="switchFloorTab('CW',this)">Christoff (CW)</button><button class="stock-tab" id="ftab-POT" onclick="switchFloorTab('POT',this)">Potgieter</button></div>
-  <div class="ctrl-row"><input type="text" id="floor-search" placeholder="🔍 Search producer or commodity…" oninput="filterFloor()"/><select id="floor-filter" onchange="filterFloor()"><option value="">All commodities</option><option value="AVOS">Avocados</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwi</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="NOVA">Nova</option><option value="ORGS">Oranges</option><option value="BERS">Strawberries</option></select></div>
-  <div id="floor-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
-  <div id="floor-salesman-note" style="display:none;font-size:11px;color:var(--muted);margin-bottom:6px;text-align:center"></div><div id="floor-list"></div>
-</div>
-
-<!-- ===== PAGE: COLDSTORE ===== -->
-<div class="page" id="page-coldstore">
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><select id="coldstore-filter" onchange="filterColdstore()" style="flex:1;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">All stock</option><option value="overdue">⚠ Overdue only</option><option value="pending">⏳ Awaiting confirmation</option><option value="ripening">Ripening Room</option><option value="coldroom">Cold Room</option></select></div>
-  <div id="coldstore-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
-  <div id="coldstore-list"><div class="empty">Loading coldstore...</div></div>
-</div>
-<!-- ===== PAGE: SLIP UPLOAD (Camera + Tesseract.js OCR) ===== -->
-<div class="page" id="page-slip-upload">
-  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border-top:3px solid var(--gold)">
-    <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">📷 Scan Slip</div>
-    
-    <div style="text-align:center;padding:10px;">
-      <!-- Camera video -->
-      <video id="video" style="width:100%;max-width:400px;border-radius:14px;display:none;background:#000;"></video>
-      <canvas id="canvas" style="display:none;"></canvas>
-      <img id="photo-preview" style="width:100%;max-width:400px;border-radius:14px;display:none;border:2px solid var(--border);">
-      
-      <!-- Status messages -->
-      <div id="ocr-status" style="margin-top:12px;font-size:14px;min-height:2em;color:var(--muted);"></div>
-      
-      <!-- Progress bar -->
-      <div id="progress-container" style="display:none;width:100%;max-width:400px;margin:10px auto;background:#e8ece8;border-radius:10px;overflow:hidden;height:8px;">
-        <div id="progress-bar" style="width:0%;height:100%;background:var(--sage);transition:width 0.3s;"></div>
-      </div>
-      
-      <!-- Buttons -->
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
-        <button id="take-photo-btn" onclick="startCamera()" style="padding:16px;border:none;border-radius:12px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:16px;cursor:pointer;">
-          📷 Take Photo
-        </button>
-        <button id="capture-btn" onclick="capturePhoto()" style="padding:16px;border:none;border-radius:12px;background:var(--gold);color:#fff;font-family:inherit;font-weight:700;font-size:16px;cursor:pointer;display:none;">
-          ✅ Capture
-        </button>
-        <button id="cancel-btn" onclick="cancelCamera()" style="padding:12px;border:1.5px solid var(--border);border-radius:12px;background:#fff;color:var(--muted);font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;display:none;">
-          Cancel
-        </button>
-      </div>
-      
-      <!-- Parsed Data Preview -->
-      <div id="parsed-data-preview" style="display:none;margin-top:16px;text-align:left;background:var(--paper);border-radius:10px;padding:12px;border:1px solid var(--border);">
-        <div style="font-weight:700;font-size:13px;color:var(--moss);margin-bottom:8px;">📋 Extracted Data</div>
-        <div id="parsed-content" style="font-size:12px;color:var(--ink);"></div>
-        <button onclick="saveParsedData()" style="margin-top:12px;padding:12px;width:100%;border:none;border-radius:10px;background:#25D366;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;">
-          💾 Save to CRM
-        </button>
-        <button onclick="resetSlipUpload()" style="margin-top:8px;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--muted);font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;">
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-</main>
-</div>
-
-<!-- ===== JAVASCRIPT LOAD ORDER (CRITICAL) ===== -->
-<script src="js/utils.js"></script>
-<script src="js/app.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/stock.js"></script>
-<script src="js/buyers.js"></script>
-<script src="js/orders.js"></script>
-<script src="js/floor.js"></script>
-<script src="js/coldstore.js"></script>
-<script src="js/commodities.js"></script>
-<script src="js/cart.js"></script>
-<script src="js/matcher.js"></script>
-<script src="js/pipeline.js"></script>
-<script src="js/reports.js"></script>
-<script src="js/slipUpload.js"></script>
-<script src="js/ocrClient.js"></script>
-</body>
-</html>
+  <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">Open Orders<span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span><span style="flex:1;height:1px;background:var(--border);display:block"></span><button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">A4</button><button onclick="printThermalOrders()" style="background:#2c5f7a;border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;
