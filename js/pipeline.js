@@ -511,6 +511,62 @@ function exportPipelineMatchesToPDF() {
 
   html2pdf().set(opt).from(tempContainer).save();
 }
+  /**
+ * PDF Export for Pipeline Matches
+ * Converts the generated matches into a clean, professional PDF report.
+ */
+function exportPipelineMatchesToPDF() {
+  const element = document.getElementById('pipeline-buyers');
+
+  if (!element || element.textContent.includes('Loading buyers...')) {
+    alert("Please run 'Match Stock to Buyers' (Step 1) and expand 'Call Buyers' (Step 2) to load the matches first.");
+    return;
+  }
+
+  // Define the PDF document layout settings
+  const opt = {
+    margin:       [15, 15, 15, 15], // Top, left, bottom, right margins in mm
+    filename:     `SubTrop_Matches_${new Date().toISOString().slice(0, 10)}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  // Temporarily clone the target div to clean it up before exporting
+  const printArea = element.cloneNode(true);
+
+  // Clean-up: Remove any interactive elements like WhatsApp buttons so they don't clutter the PDF
+  const buttonsToRemove = printArea.querySelectorAll('button, .wa-btn, .btn, [role="button"]');
+  buttonsToRemove.forEach(btn => btn.remove());
+
+  // Wrap inside a beautifully styled PDF container matching your SubTrop theme
+  const wrapper = document.createElement('div');
+  wrapper.style.fontFamily = "'Outfit', sans-serif";
+  wrapper.style.color = '#1c3d27'; // Dark green moss text
+  wrapper.style.padding = '10px';
+  
+  const today = new Date().toLocaleDateString('en-ZA', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
+  wrapper.innerHTML = `
+    <div style="border-bottom: 2.5px solid #1c3d27; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+      <div>
+        <h1 style="margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 0.5px;">SubTrop Sales Pipeline</h1>
+        <p style="margin: 3px 0 0 0; font-size: 11px; color: #666;">Daily Buyer Matches & Stock Analysis</p>
+      </div>
+      <div style="font-size: 11px; color: #555; font-weight: bold; text-align: right;">Date Generated: ${today}</div>
+    </div>
+    <div style="font-size: 12px; line-height: 1.5;">
+      ${printArea.innerHTML}
+    </div>
+  `;
+
+  // Generate and save the PDF file on the user's device
+  html2pdf().set(opt).from(wrapper).save();
+}
   function sendNext() {
     if (index >= matches.length) {
       alert('✅ All WhatsApp messages sent!');
