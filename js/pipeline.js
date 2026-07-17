@@ -119,7 +119,7 @@ function renderPipelineBuyers() {
   el.innerHTML = scored.map((b, i) => {
     const isCalled = !!called[b.name];
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);opacity:${isCalled ? '0.4' : '1'}">
-      <div data-bname="${b.name}" onclick="togglePipelineCall(this)" style="width:24px;height:24px;border-radius:6px;border:2px solid ${isCalled ? 'var(--sage)' : 'var(--border)'};background:${isCalled ? 'var(--sage)' : '#fff'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">${isCalled ? 'v' : ''}</div>
+      <div data-bname="${b.name}" onclick="togglePipelineCall(this, event)" style="width:24px;height:24px;border-radius:6px;border:2px solid ${isCalled ? 'var(--sage)' : 'var(--border)'};background:${isCalled ? 'var(--sage)' : '#fff'};display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px">${isCalled ? 'v' : ''}</div>
       <div style="width:20px;height:20px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0">${i + 1}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;${isCalled ? 'text-decoration:line-through;color:var(--muted);' : ''}word-break:break-word">${b.name}${b.buyingDays && b.buyingDays[todayDow] ? ' (Today)' : ''}</div></div>
       <div style="font-size:11px;color:var(--muted);flex-shrink:0">R ${(b.spend || 0).toLocaleString()}</div>
@@ -127,7 +127,11 @@ function renderPipelineBuyers() {
   }).join('');
 }
 
-function togglePipelineCall(el) {
+function togglePipelineCall(el, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
   const name = el.getAttribute('data-bname');
   const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
   const callsRef = firebase.database().ref('pipelineCalls/' + todayKey + '/' + name);
@@ -135,7 +139,14 @@ function togglePipelineCall(el) {
   callsRef.once('value').then(snapshot => {
     const current = snapshot.val() || false;
     callsRef.set(!current).then(() => {
-      renderPipelineBuyers();
+      // Intelligently re-render the view we are currently working in to prevent jumps
+      const todayMatchKey = 'ai-results-' + new Date().toISOString().slice(0, 10);
+      const saved = JSON.parse(localStorage.getItem(todayMatchKey) || '{}');
+      if (saved && saved.matches && saved.matches.length > 0) {
+        renderAICallList(saved.matches, saved.summary);
+      } else {
+        renderPipelineBuyers();
+      }
     });
   }).catch(err => {
     console.error('Error toggling call:', err);
@@ -333,7 +344,7 @@ async function renderAICallList(matches, summary) {
 
     return '<div style="border-bottom:1px solid var(--border);opacity:' + (isCalled ? '0.4' : '1') + '">' +
       '<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 0;cursor:pointer" onclick="toggleSection(\'' + rid + '\')">' +
-      '<div data-bname="' + buyer + '" onclick="event.stopPropagation();togglePipelineCall(this)" style="width:22px;height:22px;border-radius:6px;border:2px solid ' + (isCalled ? 'var(--sage)' : 'var(--border)') + ';background:' + (isCalled ? 'var(--sage)' : '#fff') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;margin-top:1px">' + (isCalled ? 'v' : '') + '</div>' +
+      '<div data-bname="' + buyer + '" onclick="togglePipelineCall(this, event)" style="width:22px;height:22px;border-radius:6px;border:2px solid ' + (isCalled ? 'var(--sage)' : 'var(--border)') + ';background:' + (isCalled ? 'var(--sage)' : '#fff') + ';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:12px;margin-top:1px">' + (isCalled ? 'v' : '') + '</div>' +
       '<div style="width:18px;height:18px;border-radius:50%;background:var(--moss);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:9px;flex-shrink:0;margin-top:2px">' + (i + 1) + '</div>' +
       '<div style="flex:1;min-width:0;overflow:hidden">' +
       '<div style="font-weight:700;font-size:13px;' + (isCalled ? 'text-decoration:line-through;color:var(--muted);' : '') + 'word-break:break-word">' + buyer + (buysToday ? ' <span style="background:var(--sage-light);color:#1a5c2a;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap">Today</span>' : '') + (items.length > 1 ? ' <span style="background:var(--blue-light);color:var(--blue);font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap">' + items.length + ' items</span>' : '') + '</div>' +
