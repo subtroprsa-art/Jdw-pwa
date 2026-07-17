@@ -30,6 +30,9 @@ console.log('✅ Config loaded');
   
 <!-- Tesseract.js for OCR in the browser -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<!-- html2pdf.js for client-side PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   
 <!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -132,11 +135,12 @@ try {
 </div>
 
 <!-- ===== PAGE: PIPELINE ===== -->
-<div class="page" id="page-pipeline">
-  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="font-weight:700;font-size:14px;color:var(--moss)">Sales Pipeline</div>
-      <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Reset</button>
+      <div style="display:flex; gap: 8px;">
+        <button onclick="exportPipelineMatchesToPDF()" style="background:var(--moss);border:none;border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700;">PDF</button>
+        <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Reset</button>
+      </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px">
       <div class="pipeline-step" id="ps1" onclick="runAIFromPipeline()"><div class="ps-num">1</div><div class="ps-body"><div class="ps-title">Match Stock to Buyers</div><div class="ps-sub" id="ai-status-inline">Analyse stock vs buyer history</div></div><div style="flex-shrink:0;background:var(--gold);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc1">Run</div></div>
