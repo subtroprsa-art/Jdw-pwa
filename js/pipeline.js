@@ -393,7 +393,124 @@ function sendWhatsAppToAllMatches() {
   if (!confirm(msg + '\n\nSend WhatsApp to all ' + matches.length + ' buyers?')) return;
   
   let index = 0;
+  // ===== PDF EXPORT FUNCTION =====
+
+function exportPipelineMatchesToPDF() {
+  const matchesContainer = document.getElementById('pipeline-buyers');
   
+  if (!matchesContainer || matchesContainer.textContent.includes('No matches found') || matchesContainer.textContent.includes('No buyer data')) {
+    alert("Please run 'Match Stock to Buyers' (Step 1) and wait for matches to compile first.");
+    return;
+  }
+
+  // Retrieve today's matches directly from your app's local storage state
+  const todayKey = 'ai-results-' + new Date().toISOString().slice(0, 10);
+  const saved = JSON.parse(localStorage.getItem(todayKey) || '{}');
+  const matches = saved.matches || [];
+  const summary = saved.summary || '';
+
+  if (!matches.length) {
+    alert("No matches found to export.");
+    return;
+  }
+
+  const todayRaw = new Date();
+  const todayFormatted = todayRaw.toLocaleDateString('en-ZA', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const fileDate = todayRaw.getDate().toString().padStart(2, '0') + '-' + 
+                   (todayRaw.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+                   todayRaw.getFullYear();
+  const filename = `SubTrop_Matches_${fileDate}.pdf`;
+
+  // Group matches by buyer (identical to your rendering logic)
+  const byBuyer = {};
+  const order = [];
+  for (const m of matches) {
+    if (!byBuyer[m.buyer]) { 
+      byBuyer[m.buyer] = []; 
+      order.push(m.buyer); 
+    }
+    byBuyer[m.buyer].push(m);
+  }
+
+  // Create a clean off-screen HTML block purely for the PDF (no WhatsApp buttons!)
+  const tempContainer = document.createElement('div');
+  tempContainer.style.fontFamily = "'Outfit', -apple-system, sans-serif";
+  tempContainer.style.color = '#1a1a1a';
+  tempContainer.style.padding = '20px';
+  tempContainer.style.background = '#fff';
+
+  let pdfHtml = `
+    <div style="border-bottom: 3px solid #1e4d2b; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+      <div>
+        <h1 style="font-size: 24px; font-weight: 800; color: #1e4d2b; text-transform: uppercase; margin: 0; letter-spacing: 0.5px;">DAILY SALES PIPELINE</h1>
+        <div style="font-size: 11px; color: #555; margin-top: 3px; font-weight: 600;">SubTrop CRM Market Agents</div>
+      </div>
+      <div style="font-size: 13px; color: #666; font-weight: 600;">${todayFormatted}</div>
+    </div>
+  `;
+
+  if (summary) {
+    pdfHtml += `
+      <div style="background:#f0faf0; border-radius:8px; padding:10px 12px; margin-bottom: 20px; font-size:12px; color:#1a5c2a; border-left:4px solid #1e4d2b; font-weight: 500;">
+        ${summary}
+      </div>
+    `;
+  }
+
+  // Generate clean buyer cards for the print layout
+  pdfHtml += order.map((buyer, i) => {
+    const items = byBuyer[buyer];
+    const top = items[0];
+    const pl = top.priority || 'LOW';
+    const pb = pl === 'HIGH' ? '#fdf6e2' : pl === 'MEDIUM' ? '#f0faf0' : '#f5f5f5';
+    const pc = pl === 'HIGH' ? '#8a5a00' : pl === 'MEDIUM' ? '#1a5c2a' : '#666';
+    const sc = Number(top.score) || 0;
+
+    const itemsMatchedHtml = items.map(m => `
+      <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee;">
+        <div style="font-size: 13px; font-weight: 700; color: #1e4d2b;">${m.stockLine}</div>
+        ${m.reason ? `<div style="font-size: 11px; color: #444; margin-top: 2px;">${m.reason}</div>` : ''}
+        ${m.tip ? `<div style="font-size: 10px; color: #666; font-style: italic; margin-top: 2px;">💡 ${m.tip}</div>` : ''}
+      </div>
+    `).join('');
+
+    return `
+      <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; page-break-inside: avoid; background: #fafafa;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 18px; height: 18px; border-radius: 50%; background: #1e4d2b; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px;">${i + 1}</div>
+            <span style="font-weight: 800; font-size: 14px; color: #111;">${buyer}</span>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <span style="background: ${pb}; color: ${pc}; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">${pl}</span>
+            <span style="font-size: 12px; font-weight: 800; color: #1e4d2b;">Score: ${sc}</span>
+          </div>
+        </div>
+        <div>
+          ${itemsMatchedHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  tempContainer.innerHTML = pdfHtml;
+
+  // Run html2pdf conversion engine
+  const opt = {
+    margin:       [15, 15, 15, 15], 
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true }, 
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(tempContainer).save();
+}
   function sendNext() {
     if (index >= matches.length) {
       alert('✅ All WhatsApp messages sent!');
