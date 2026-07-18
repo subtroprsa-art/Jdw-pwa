@@ -81,7 +81,6 @@ try {
   <div class="hdr-right"><div class="hdr-user" id="hdr-username"></div><div class="hdr-date" id="live-date"></div><button class="logout-btn" onclick="doLogout()">Sign Out</button></div>
 </div>
 <main>
-
 <!-- ===== PAGE: DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
   
@@ -99,7 +98,7 @@ try {
     </div>
   </div>
 
-  <!-- Dynamic Banners (Retained Layout Hooks) -->
+  <!-- Dynamic Banners -->
   <div id="kpi-urgent-banner" onclick="printUrgentStock()" style="display:none; background:var(--red-light); border:1.5px solid var(--red); border-radius:12px; padding:12px 16px; margin-bottom:12px; cursor:pointer; justify-content:space-between; align-items:center">
     <div>
       <div style="font-weight:800; font-size:15px; color:var(--red)">Urgent Stock</div>
@@ -126,8 +125,8 @@ try {
   <!-- Unified Main Hub Actions -->
   <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
     
-    <!-- Primary Hero Feature Line -->
-    <button onclick="goToPage('pipeline')" style="padding:18px 16px; border:none; border-radius:14px; background:#1a4479; color:#fff; font-family:inherit; font-weight:800; font-size:16px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:14px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+    <!-- Primary Hero Feature Line (Triggers Option B Pop-up Panel Below) -->
+    <button onclick="document.getElementById('dash-pipeline-panel').style.display='block'; document.getElementById('dash-pipeline-panel').scrollIntoView({behavior: 'smooth'});" style="padding:18px 16px; border:none; border-radius:14px; background:#1a4479; color:#fff; font-family:inherit; font-weight:800; font-size:16px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:14px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
       <span style="font-size:24px">🔗</span>
       <div>
         <div>Pipeline</div>
@@ -135,30 +134,49 @@ try {
       </div>
     </button>
 
-    <!-- Two-Column Functional Grid (Unified Slate Styling) -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+    <!-- Two-Column Functional Grid -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 12px;">
       
-      <!-- Left Column Header -->
-      <div style="grid-column: 1; font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:-4px;">Sales & Inflow</div>
-      <!-- Right Column Header -->
-      <div style="grid-column: 2; font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom:-4px;">Inventory & Ops</div>
+      <!-- Highly Visible Left Column Header Banner -->
+      <div style="grid-column: 1; font-size:12px; font-weight:800; text-transform:uppercase; color:#1e3a8a; background:#eff6ff; border-left:4px solid #3b82f6; padding:8px 12px; border-radius:0 8px 8px 0; letter-spacing:0.75px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+        💰 Sales & Inflow
+      </div>
+      
+      <!-- Highly Visible Right Column Header Banner -->
+      <div style="grid-column: 2; font-size:12px; font-weight:800; text-transform:uppercase; color:#065f46; background:#ecfdf5; border-left:4px solid #10b981; padding:8px 12px; border-radius:0 8px 8px 0; letter-spacing:0.75px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+        ⚙️ Operations & Inventory
+      </div>
 
       <!-- Column 1 Elements (Sales) -->
       <button onclick="goToPage('buyers')" style="grid-column:1; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">👥</span>Buyers</button>
       <button onclick="goToPage('orders')" style="grid-column:1; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📋</span>Orders</button>
 
-      <!-- Column 2 Elements (Ops/Stock) -->
+      <!-- Column 2 Elements (Ops) -->
       <button onclick="goToPage('stock')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📦</span>Stock</button>
       <button onclick="goToPage('floor')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📊</span>Floor Balance</button>
       <button onclick="goToPage('coldstore')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">❄️</span>Coldstore</button>
       <button onclick="goToPage('commodities')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">🌿</span>Commodities</button>
 
       <!-- Full Width Anchor Footer Button -->
-      <button onclick="toggleReportsMenu()" style="grid-column:span 2; padding:16px; border:none; border-radius:14px; background:#34495e; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px; margin-top:4px;"><span style="font-size:20px">📈</span>Reports & Analytics</button>
+      <button onclick="toggleReportsMenu()" style="grid-column:span 2; padding:16px; border:none; border-radius:14px; background:#34495e; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px; margin-top:8px;"><span style="font-size:20px">📈</span>Reports & Analytics</button>
     </div>
   </div>
 
-  <!-- Interactive Menus and Panels (Retained Layout Hooks) -->
+  <!-- [OPTION B] Hidden Pop-up Pipeline Steps Panel (Reveals smoothly when Pipeline is clicked) -->
+  <div id="dash-pipeline-panel" style="display:none; background:var(--card, #fff); border-radius:var(--r, 14px); box-shadow:var(--shadow, 0 4px 6px rgba(0,0,0,0.05)); padding:20px; margin-top:20px; border-top:4px solid #1a4479;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+      <div style="font-weight:800; font-size:16px; color:#1a4479; display:flex; align-items:center; gap:8px;">⚡ Sales Pipeline Workspace</div>
+      <button onclick="document.getElementById('dash-pipeline-panel').style.display='none'" style="background:none; border:none; font-size:22px; font-weight:bold; cursor:pointer; color:var(--muted, #94a3b8); line-height:1;">&times;</button>
+    </div>
+    
+    <!-- Direct target placement injection point for steps 1, 2, and 3 list nodes -->
+    <div id="pipeline-steps-container">
+      <!-- Your dynamic layout logic hooks your lists (Match Stock, Call Buyers, Type in Orders) right here -->
+      <p style="color:#64748b; font-size:13px; margin: 0;">Use the interactive workflow modules below to complete active orders...</p>
+    </div>
+  </div>
+
+  <!-- Interactive Menus and Panels -->
   <div id="reports-menu" style="display:none; background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:14px; margin-bottom:14px; border-top:3px solid #2c5f7a">
     <div style="font-weight:700; font-size:14px; color:#2c5f7a; margin-bottom:12px">Reports Menu</div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
@@ -182,6 +200,7 @@ try {
   <div class="stitle" style="margin-top:16px;">Sell-Through by Commodity</div>
   <div style="background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:14px; margin-bottom:16px" id="stock-chart"></div>
 </div>
+
 <!-- ===== PAGE: PIPELINE ===== -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="font-weight:700;font-size:14px;color:var(--moss)">Sales Pipeline</div>
