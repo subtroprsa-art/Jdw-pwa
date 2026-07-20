@@ -81,6 +81,7 @@ try {
   <div class="hdr-right"><div class="hdr-user" id="hdr-username"></div><div class="hdr-date" id="live-date"></div><button class="logout-btn" onclick="doLogout()">Sign Out</button></div>
 </div>
 <main>
+
 <!-- ===== PAGE: DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
   
@@ -126,7 +127,7 @@ try {
   <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
     
     <!-- Primary Hero Feature Line (Triggers Option B Pop-up Panel Below) -->
-    <button onclick="document.getElementById('dash-pipeline-panel').style.display='block'; document.getElementById('dash-pipeline-panel').scrollIntoView({behavior: 'smooth'});" style="padding:18px 16px; border:none; border-radius:14px; background:#1a4479; color:#fff; font-family:inherit; font-weight:800; font-size:16px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:14px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+    <button onclick="goToPage('pipeline')" style="padding:18px 16px; border:none; border-radius:14px; background:#1a4479; color:#fff; font-family:inherit; font-weight:800; font-size:16px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:14px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
       <span style="font-size:24px">🔗</span>
       <div>
         <div>Pipeline</div>
@@ -134,31 +135,27 @@ try {
       </div>
     </button>
 
-    <!-- Two-Column Functional Grid -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 12px;">
+    <!-- Corrected Two-Column Container Layout Grid -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;">
       
-      <!-- Highly Visible Left Column Header Banner -->
-      <div style="grid-column: 1; font-size:12px; font-weight:800; text-transform:uppercase; color:#1e3a8a; background:#eff6ff; border-left:4px solid #3b82f6; padding:8px 12px; border-radius:0 8px 8px 0; letter-spacing:0.75px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-        💰 Sales & Inflow
-      </div>
-      
-      <!-- Highly Visible Right Column Header Banner -->
-      <div style="grid-column: 2; font-size:12px; font-weight:800; text-transform:uppercase; color:#065f46; background:#ecfdf5; border-left:4px solid #10b981; padding:8px 12px; border-radius:0 8px 8px 0; letter-spacing:0.75px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-        ⚙️ Operations & Inventory
+      <!-- LEFT COLUMN: Sales & Inflow -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom: 2px;">💰 Sales & Inflow</div>
+        <button onclick="goToPage('buyers')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">👥</span>Buyers</button>
+        <button onclick="goToPage('orders')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📋</span>Orders</button>
       </div>
 
-      <!-- Column 1 Elements (Sales) -->
-      <button onclick="goToPage('buyers')" style="grid-column:1; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">👥</span>Buyers</button>
-      <button onclick="goToPage('orders')" style="grid-column:1; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📋</span>Orders</button>
+      <!-- RIGHT COLUMN: Operations & Inventory -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom: 2px;">⚙️ Operations & Inventory</div>
+        <button onclick="goToPage('stock')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📦</span>Stock</button>
+        <button onclick="goToPage('floor')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📊</span>Floor Balance</button>
+        <button onclick="goToPage('coldstore')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">❄️</span>Coldstore</button>
+        <button onclick="goToPage('commodities')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">🌿</span>Commodities</button>
+      </div>
 
-      <!-- Column 2 Elements (Ops) -->
-      <button onclick="goToPage('stock')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📦</span>Stock</button>
-      <button onclick="goToPage('floor')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📊</span>Floor Balance</button>
-      <button onclick="goToPage('coldstore')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">❄️</span>Coldstore</button>
-      <button onclick="goToPage('commodities')" style="grid-column:2; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">🌿</span>Commodities</button>
-
-      <!-- Full Width Anchor Footer Button -->
-      <button onclick="toggleReportsMenu()" style="grid-column:span 2; padding:16px; border:none; border-radius:14px; background:#34495e; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px; margin-top:8px;"><span style="font-size:20px">📈</span>Reports & Analytics</button>
+      <!-- Full Width Anchor Footer Button spanning across both columns -->
+      <button onclick="toggleReportsMenu()" style="grid-column: span 2; padding:16px; border:none; border-radius:14px; background:#34495e; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px; margin-top:4px;"><span style="font-size:20px">📈</span>Reports & Analytics</button>
     </div>
   </div>
 
@@ -171,7 +168,6 @@ try {
     
     <!-- Direct target placement injection point for steps 1, 2, and 3 list nodes -->
     <div id="pipeline-steps-container">
-      <!-- Your dynamic layout logic hooks your lists (Match Stock, Call Buyers, Type in Orders) right here -->
       <p style="color:#64748b; font-size:13px; margin: 0;">Use the interactive workflow modules below to complete active orders...</p>
     </div>
   </div>
@@ -202,29 +198,35 @@ try {
 </div>
 
 <!-- ===== PAGE: PIPELINE ===== -->
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div style="font-weight:700;font-size:14px;color:var(--moss)">Sales Pipeline</div>
-      <div style="display:flex; gap: 8px;">
-        <button onclick="exportPipelineMatchesToPDF()" style="background:var(--moss);border:none;border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700;">PDF</button>
-        <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Reset</button>
-      </div>
+<div class="page" id="page-pipeline">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-weight:700;font-size:14px;color:var(--moss)">Sales Pipeline</div>
+    <div style="display:flex; gap: 8px;">
+      <button onclick="exportPipelineMatchesToPDF()" style="background:var(--moss);border:none;border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700;">PDF</button>
+      <button onclick="resetPipeline()" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Reset</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <div class="pipeline-step" id="ps1" onclick="runAIFromPipeline()"><div class="ps-num">1</div><div class="ps-body"><div class="ps-title">Match Stock to Buyers</div><div class="ps-sub" id="ai-status-inline">Analyse stock vs buyer history</div></div><div style="flex-shrink:0;background:var(--gold);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc1">Run</div></div>
-      <div class="pipeline-step" id="ps2" onclick="togglePipelineCallList()"><div class="ps-num">2</div><div class="ps-body"><div class="ps-title">Call Buyers</div><div class="ps-sub">Work through top 20 buyers</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc2">Show</div></div>
-      <div id="pipeline-call-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div id="pipeline-buyers" style="font-size:13px;color:var(--muted)">Loading buyers...</div></div>
-      <div class="pipeline-step" id="ps3" onclick="goToOrders()"><div class="ps-num">3</div><div class="ps-body"><div class="ps-title">Type in Orders</div><div class="ps-sub">Record confirmed orders</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px">Orders</div></div>
-      <div class="pipeline-step" id="ps4" onclick="togglePipelineStep(4)"><div class="ps-num">4</div><div class="ps-body"><div class="ps-title">Reserve Stock</div><div class="ps-sub">Book on market workstation</div></div><div class="ps-check" id="psc4">o</div></div>
-      <div id="pipeline-reserve-banner" style="display:none;background:#fff3cd;border:1.5px solid #c9882a;border-radius:10px;padding:12px 14px;margin-top:-4px"><div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:4px">Go to Booking Clerk Workstation</div><div style="font-size:12px;color:#8a5a00">Reserve the stock on the market sales system before continuing. Tick step 4 once done.</div></div>
-      <div class="pipeline-step" id="ps5" onclick="togglePipelinePayment()"><div class="ps-num">5</div><div class="ps-body"><div class="ps-title">Check Payment</div><div class="ps-sub">Confirm reservations are paid</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc5">Show</div></div>
-      <div id="pipeline-payment-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Tap order to mark as paid</div><div id="pipeline-orders" style="font-size:13px;color:var(--muted)">Loading...</div></div>
-      <div class="pipeline-step" id="ps6" onclick="togglePipelinePackers()"><div class="ps-num">6</div><div class="ps-body"><div class="ps-title">Floor Packers</div><div class="ps-sub">Confirm orders are packed</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc6">Show</div></div>
-      <div id="pipeline-packers-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Check floor packers have packed these orders</div><div id="pipeline-packers" style="font-size:13px;color:var(--muted)">Loading...</div></div>
-    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="pipeline-step" id="ps1" onclick="runAIFromPipeline()"><div class="ps-num">1</div><div class="ps-body"><div class="ps-title">Match Stock to Buyers</div><div class="ps-sub" id="ai-status-inline">Analyse stock vs buyer history</div></div><div style="flex-shrink:0;background:var(--gold);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc1">Run</div></div>
+    <div class="pipeline-step" id="ps2" onclick="togglePipelineCallList()"><div class="ps-num">2</div><div class="ps-body"><div class="ps-title">Call Buyers</div><div class="ps-sub">Work through top 20 buyers</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc2">Show</div></div>
+    <div id="pipeline-call-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div id="pipeline-buyers" style="font-size:13px;color:var(--muted)">Loading buyers...</div></div>
+    <div class="pipeline-step" id="ps3" onclick="goToOrders()"><div class="ps-num">3</div><div class="ps-body"><div class="ps-title">Type in Orders</div><div class="ps-sub">Record confirmed orders</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px">Orders</div></div>
+    <div class="pipeline-step" id="ps4" onclick="togglePipelineStep(4)"><div class="ps-num">4</div><div class="ps-body"><div class="ps-title">Reserve Stock</div><div class="ps-sub">Book on market workstation</div></div><div class="ps-check" id="psc4">o</div></div>
+    <div id="pipeline-reserve-banner" style="display:none;background:#fff3cd;border:1.5px solid #c9882a;border-radius:10px;padding:12px 14px;margin-top:-4px"><div style="font-weight:800;font-size:14px;color:#8a5a00;margin-bottom:4px">Go to Booking Clerk Workstation</div><div style="font-size:12px;color:#8a5a00">Reserve the stock on the market sales system before continuing. Tick step 4 once done.</div></div>
+    <div class="pipeline-step" id="ps5" onclick="togglePipelinePayment()"><div class="ps-num">5</div><div class="ps-body"><div class="ps-title">Check Payment</div><div class="ps-sub">Confirm reservations are paid</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc5">Show</div></div>
+    <div id="pipeline-payment-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Tap order to mark as paid</div><div id="pipeline-orders" style="font-size:13px;color:var(--muted)">Loading...</div></div>
+    <div class="pipeline-step" id="ps6" onclick="togglePipelinePackers()"><div class="ps-num">6</div><div class="ps-body"><div class="ps-title">Floor Packers</div><div class="ps-sub">Confirm orders are packed</div></div><div style="flex-shrink:0;background:var(--moss);border-radius:8px;padding:5px 12px;color:#fff;font-weight:700;font-size:12px" id="psc6">Show</div></div>
+    <div id="pipeline-packers-list" style="display:none;background:var(--paper);border-radius:10px;padding:10px;margin-top:-4px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600">Check floor packers have packed these orders</div><div id="pipeline-packers" style="font-size:13px;color:var(--muted)">Loading...</div></div>
   </div>
   <div id="ai-loading" style="display:none;text-align:center;color:var(--muted);font-size:13px;padding:10px">Analysing...</div>
   <div id="ai-summary" style="display:none;background:var(--sage-light);border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="color:var(--moss);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Summary</div><div id="ai-summary-text" style="color:var(--ink);font-size:13px;line-height:1.5"></div></div>
   <div id="ai-error" style="display:none;background:var(--red-light);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;margin-bottom:10px"></div>
+</div>
+
+<!-- ===== PAGE: FLOOR BALANCE ===== -->
+<div class="page" id="page-floor">
+  <!-- Dynamic floor data injection nodes live here -->
+  <div id="floor-list"></div>
 </div>
 
 <!-- ===== PAGE: BUYERS ===== -->
@@ -266,96 +268,14 @@ try {
     <div id="manual-order-form" style="display:none;margin-top:12px">
       <div style="display:flex;flex-direction:column;gap:10px">
         <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Buyer Name</label><input id="m-order-buyer" list="buyer-suggestions" type="text" placeholder="e.g. MANDELA MARKET" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Commodity</label><select id="m-order-commodity" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select...</option><option value="AVOS">Avocados</option><option value="BERS">Strawberries</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwifruit</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="NOVA">Nova</option><option value="ORGS">Oranges</option><option value="PAPO">Papino</option><option value="POME">Pomegranate</option><option value="SATS">Satsumas</option></select></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Variety</label><input id="m-order-variety" type="text" placeholder="e.g. Hass" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Pack</label><input id="m-order-pack" type="text" placeholder="e.g. 4KG Tray" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Class</label><select id="m-order-grade" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="1">CL 1</option><option value="2">CL 2</option><option value="">Any</option></select></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Size</label><input id="m-order-size" type="text" placeholder="e.g. 14" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Qty</label><input id="m-order-qty" type="number" placeholder="e.g. 50" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Price (R)</label><input id="m-order-price" type="number" placeholder="e.g. 120" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Collection Date</label><input id="m-order-collect-date" type="date" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div></div>
-        <div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Notes</label><input id="m-order-notes" type="text" placeholder="e.g. Expected next week" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div>
-        <button onclick="saveManualOrder()" style="padding:13px;border:none;border-radius:10px;background:var(--muted);color:#fff;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer">Save Manual Order</button>
-        <div id="m-order-status" style="font-size:12px;color:var(--sage);min-height:1em;text-align:center"></div>
-      </div>
-    </div>
-  </div>
-  <div style="font-size:13px;font-weight:700;color:var(--moss);margin-bottom:10px;display:flex;align-items:center;gap:8px">Open Orders<span id="orders-count" style="background:var(--gold);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px">0</span><span style="flex:1;height:1px;background:var(--border);display:block"></span><button onclick="printOrders()" style="background:var(--moss);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700">A4</button><button onclick="printThermalOrders()" style="background:#2c5f7a;border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#fff;font-weight:700;margin-left:4px">Thermal</button><button onclick="loadOrders()" style="background:var(--paper);border:1.5px solid var(--border);border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:var(--muted)">Refresh</button></div>
-  <span id="orders-badge" style="display:none"></span><div id="orders-list"><div class="empty">No open orders</div></div>
-</div>
-
-<!-- ===== PAGE: FLOOR ===== -->
-<div class="page" id="page-floor">
-  <div class="stock-tabs"><button class="stock-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ',this)">Riaan (RJ)</button><button class="stock-tab" id="ftab-CW" onclick="switchFloorTab('CW',this)">Christoff (CW)</button><button class="stock-tab" id="ftab-POT" onclick="switchFloorTab('POT',this)">Potgieter</button></div>
-  <div class="ctrl-row"><input type="text" id="floor-search" placeholder="🔍 Search producer or commodity…" oninput="filterFloor()"/><select id="floor-filter" onchange="filterFloor()"><option value="">All commodities</option><option value="AVOS">Avocados</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwi</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="NOVA">Nova</option><option value="ORGS">Oranges</option><option value="BERS">Strawberries</option></select></div>
-  <div id="floor-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
-  <div id="floor-salesman-note" style="display:none;font-size:11px;color:var(--muted);margin-bottom:6px;text-align:center"></div><div id="floor-list"></div>
-</div>
-
-<!-- ===== PAGE: COLDSTORE ===== -->
-<div class="page" id="page-coldstore">
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><select id="coldstore-filter" onchange="filterColdstore()" style="flex:1;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">All stock</option><option value="overdue">⚠ Overdue only</option><option value="pending">⏳ Awaiting confirmation</option><option value="ripening">Ripening Room</option><option value="coldroom">Cold Room</option></select></div>
-  <div id="coldstore-summary" style="font-size:12px;color:var(--muted);margin-bottom:10px"></div>
-  <div id="coldstore-list"><div class="empty">Loading coldstore...</div></div>
-</div>
-<!-- ===== PAGE: SLIP UPLOAD (Camera + Tesseract.js OCR) ===== -->
-<div class="page" id="page-slip-upload">
-  <div style="background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;border-top:3px solid var(--gold)">
-    <div style="font-weight:700;font-size:14px;color:var(--moss);margin-bottom:12px">📷 Scan Slip</div>
-    
-    <div style="text-align:center;padding:10px;">
-      <!-- Camera video -->
-      <video id="video" style="width:100%;max-width:400px;border-radius:14px;display:none;background:#000;"></video>
-      <canvas id="canvas" style="display:none;"></canvas>
-      <img id="photo-preview" style="width:100%;max-width:400px;border-radius:14px;display:none;border:2px solid var(--border);">
-      
-      <!-- Status messages -->
-      <div id="ocr-status" style="margin-top:12px;font-size:14px;min-height:2em;color:var(--muted);"></div>
-      
-      <!-- Progress bar -->
-      <div id="progress-container" style="display:none;width:100%;max-width:400px;margin:10px auto;background:#e8ece8;border-radius:10px;overflow:hidden;height:8px;">
-        <div id="progress-bar" style="width:0%;height:100%;background:var(--sage);transition:width 0.3s;"></div>
-      </div>
-      
-      <!-- Buttons -->
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
-        <button id="take-photo-btn" onclick="startCamera()" style="padding:16px;border:none;border-radius:12px;background:var(--moss);color:#fff;font-family:inherit;font-weight:700;font-size:16px;cursor:pointer;">
-          📷 Take Photo
-        </button>
-        <button id="capture-btn" onclick="capturePhoto()" style="padding:16px;border:none;border-radius:12px;background:var(--gold);color:#fff;font-family:inherit;font-weight:700;font-size:16px;cursor:pointer;display:none;">
-          ✅ Capture
-        </button>
-        <button id="cancel-btn" onclick="cancelCamera()" style="padding:12px;border:1.5px solid var(--border);border-radius:12px;background:#fff;color:var(--muted);font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;display:none;">
-          Cancel
-        </button>
-      </div>
-      
-      <!-- Parsed Data Preview -->
-      <div id="parsed-data-preview" style="display:none;margin-top:16px;text-align:left;background:var(--paper);border-radius:10px;padding:12px;border:1px solid var(--border);">
-        <div style="font-weight:700;font-size:13px;color:var(--moss);margin-bottom:8px;">📋 Extracted Data</div>
-        <div id="parsed-content" style="font-size:12px;color:var(--ink);"></div>
-        <button onclick="saveParsedData()" style="margin-top:12px;padding:12px;width:100%;border:none;border-radius:10px;background:#25D366;color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;">
-          💾 Save to CRM
-        </button>
-        <button onclick="resetSlipUpload()" style="margin-top:8px;padding:10px;width:100%;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--muted);font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;">
-          Cancel
-        </button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Commodity</label><select id="m-order-commodity" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"><option value="">Select...</option><option value="AVOS">Avocados</option><option value="BERS">Strawberries</option><option value="CLTM">Clementines</option><option value="DRAG">Dragon Fruit</option><option value="FIGS">Figs</option><option value="GFT">Grapefruit</option><option value="GVS">Guavas</option><option value="KIWI">Kiwifruit</option><option value="LEMS">Lemons</option><option value="MANG">Mangoes</option><option value="NAAR">Naartjies</option><option value="NOVA">Nova</option><option value="ORGS">Oranges</option><option value="PAPO">Papino</option><option value="POME">Pomegranate</option><option value="SATS">Satsumas</option></select></div><div><label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px">Variety</label><input id="m-order-variety" type="text" placeholder="e.g. Hass" style="width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);outline:none"/></div></div>
       </div>
     </div>
   </div>
 </div>
+
 </main>
 </div>
 
-<!-- ===== JAVASCRIPT LOAD ORDER (CRITICAL) ===== -->
-<script src="js/utils.js"></script>
-<script src="js/app.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/stock.js"></script>
-<script src="js/buyers.js"></script>
-<script src="js/orders.js"></script>
-<script src="js/floor.js"></script>
-<script src="js/coldstore.js"></script>
-<script src="js/commodities.js"></script>
-<script src="js/cart.js"></script>
-<script src="js/matcher.js"></script>
-<script src="js/pipeline.js"></script>
-<script src="js/reports.js"></script>
-<script src="js/slipUpload.js"></script>
-<script src="js/ocrClient.js"></script>
 </body>
 </html>
