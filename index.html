@@ -356,7 +356,7 @@ function startDatabaseListeners() {
 function updateDashboardKPIs() {
   let totalUnits = 0;
   globalStockData.forEach(item => {
-    const quantity = parseInt(item.qty || item.quantity || item.Qty || 0, 10);
+    const quantity = parseInt(item.qty || item.quantity || item.Qty || item.Quantity || 0, 10);
     totalUnits += quantity;
   });
   const floorElement = document.getElementById('kpi-floor');
@@ -378,7 +378,7 @@ function switchFloorTab(salesman, btn) {
   renderFloorView();
 }
 
-// Filter and Render UI Rows
+// Filter and Render UI Rows (Flexible Property Key Fallbacks)
 function renderStockView() {
   const container = document.getElementById('stock-list');
   if (!container) return;
@@ -387,16 +387,19 @@ function renderStockView() {
   const filterVal = document.getElementById('stock-filter').value;
   
   let filtered = globalStockData.filter(item => {
-    const itemSalesman = (item.salesman || item.Agent || 'RJ').toUpperCase();
+    // Check all possible salesman/agent key variations
+    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || 'RJ').toUpperCase();
     if (currentStockSalesman === 'RJ' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
     if (currentStockSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
     if (currentStockSalesman === 'POT' && !['POT', 'POTGIETER'].includes(itemSalesman)) return false;
     
-    const commodity = (item.commodity || item.Commodity || '');
+    const commodity = (item.commodity || item.Commodity || item.product || item.Product || '');
     if (filterVal && commodity !== filterVal) return false;
     
     if (searchVal) {
-      const matchString = `${item.producer || item.Producer} ${commodity} ${item.variety || item.Variety}`.toLowerCase();
+      const prod = (item.producer || item.Producer || item.grower || item.Grower || '');
+      const varty = (item.variety || item.Variety || '');
+      const matchString = `${prod} ${commodity} ${varty}`.toLowerCase();
       if (!matchString.includes(searchVal)) return false;
     }
     return true;
@@ -409,11 +412,12 @@ function renderStockView() {
   
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const prod = item.producer || item.Producer || 'Unknown Producer';
-    const comm = item.commodity || item.Commodity || '---';
+    // Extract properties cleanly regardless of uppercase/lowercase database schema
+    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown Producer';
+    const comm = item.commodity || item.Commodity || item.product || item.Product || '---';
     const varty = item.variety || item.Variety || '---';
     const sz = item.size || item.Size || 'N/A';
-    const q = item.qty || item.quantity || item.Qty || 0;
+    const q = item.qty || item.quantity || item.Qty || item.Quantity || 0;
     
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid #1e4d2b">
@@ -442,13 +446,15 @@ function renderFloorView() {
   const searchVal = document.getElementById('floor-search').value.toLowerCase();
   
   let filtered = globalStockData.filter(item => {
-    const itemSalesman = (item.salesman || item.Agent || 'RJ').toUpperCase();
+    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || 'RJ').toUpperCase();
     if (currentFloorSalesman === 'RJ' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
     if (currentFloorSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
     if (currentFloorSalesman === 'POT' && !['POT', 'POTGIETER'].includes(itemSalesman)) return false;
     
     if (searchVal) {
-      const matchString = `${item.producer || item.Producer} ${item.commodity || item.Commodity}`.toLowerCase();
+      const prod = (item.producer || item.Producer || item.grower || item.Grower || '');
+      const comm = (item.commodity || item.Commodity || item.product || item.Product || '');
+      const matchString = `${prod} ${comm}`.toLowerCase();
       if (!matchString.includes(searchVal)) return false;
     }
     return true;
@@ -461,9 +467,9 @@ function renderFloorView() {
 
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const prod = item.producer || item.Producer || 'Unknown';
-    const comm = item.commodity || item.Commodity || '---';
-    const q = item.qty || item.quantity || item.Qty || 0;
+    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown';
+    const comm = item.commodity || item.Commodity || item.product || item.Product || '---';
+    const q = item.qty || item.quantity || item.Qty || item.Quantity || 0;
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.04)">
         <div>
