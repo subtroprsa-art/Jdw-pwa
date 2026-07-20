@@ -8,7 +8,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="SubTrop CRM"/>
-<meta name="description" content="SubTrop RSA Market Agents CRM"/>
 
 <!-- ===== CONFIGURATION ===== -->
 <script>
@@ -23,14 +22,10 @@ const USERS = {
   'riaan.joubert': { display: 'Riaan Joubert', pw: 'rsasubtrop2026' },
   'christoff.dewet': { display: 'Christoff de Wet', pw: 'rsasubtrop2026' }
 };
-
-console.log('✅ Config loaded');
+const SK = 'st_sess';
 </script>
   
-<!-- Tesseract.js for OCR in the browser -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
-<!-- html2pdf.js for client-side PDF generation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   
 <!-- ===== FIREBASE SDK ===== -->
@@ -44,15 +39,13 @@ try {
     projectId: "jdw-crm"
   };
   firebase.initializeApp(firebaseConfig);
-  console.log('✅ Firebase initialized');
+  console.log('✅ Firebase SDK Initialized Successfully');
 } catch (e) {
-  console.warn('Firebase init:', e.message);
+  console.error('Firebase Initialization Error:', e.message);
 }
 </script>
 
 <link rel="manifest" href="manifest.json"/>
-<link rel="apple-touch-icon" href="icon-192.png"/>
-<link rel="icon" type="image/png" href="icon-192.png"/>
 <title>SubTrop CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/styles.css"/>
@@ -65,12 +58,11 @@ try {
   <div class="login-title">SubTrop <span>CRM</span></div>
   <div class="login-sub">Market Agents CRM</div>
   <form class="login-box" onsubmit="event.preventDefault(); doLogin();">
-    <div class="login-field"><label class="login-label">Username</label><input class="login-input" type="text" id="login-user" placeholder="e.g. riaan.joubert" autocomplete="username" autocapitalize="none" spellcheck="false"/></div>
+    <div class="login-field"><label class="login-label">Username</label><input class="login-input" type="text" id="login-user" placeholder="e.g. riaan.joubert" autocomplete="username"/></div>
     <div class="login-field"><label class="login-label">Password</label><div class="login-pw-wrap"><input class="login-input" type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password"/><button class="login-eye" onclick="togglePw()" type="button" id="eye-btn">👁</button></div></div>
     <button class="login-btn" type="submit">Sign In</button>
-    <div class="login-error" id="login-error" style="display:none;">Incorrect username or password.</div>
+    <div class="login-error" id="login-error" style="display:none;">Incorrect credentials.</div>
   </form>
-  <div class="login-footer">Authorised users only</div>
 </div>
 
 <!-- ===== MAIN APP ===== -->
@@ -87,74 +79,43 @@ try {
 
 <!-- ===== PAGE: DASHBOARD ===== -->
 <div class="page active" id="page-dashboard">
-  
-  <!-- Top KPI Cards -->
   <div class="kpi-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
     <div class="kpi" style="background: #fff; border-radius: 14px; padding: 16px; border-top: 4px solid #cc3333; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
       <div class="kpi-lbl" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Floor Stock</div>
       <div class="kpi-val" id="kpi-floor" style="font-size: 28px; font-weight: 800; color: #1e293b; margin-top: 4px;">0</div>
-      <div class="kpi-sub" id="kpi-floor-sub" style="font-size: 11px; color: #94a3b8;">units on floor</div>
+      <div class="kpi-sub" style="font-size: 11px; color: #94a3b8;">units active</div>
     </div>
     <div class="kpi" style="background: #fff; border-radius: 14px; padding: 16px; border-top: 4px solid #3a7a4a; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
       <div class="kpi-lbl" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Clearance Rate</div>
       <div class="kpi-val" id="kpi-clearance" style="font-size: 28px; font-weight: 800; color: #1e293b; margin-top: 4px;">0%</div>
-      <div class="kpi-sub" id="kpi-clearance-sub" style="font-size: 11px; color: #94a3b8;">% stock sold</div>
+      <div class="kpi-sub" style="font-size: 11px; color: #94a3b8;">% stock sold</div>
     </div>
   </div>
 
-  <!-- Dynamic Banners -->
-  <div id="kpi-urgent-banner" style="display:none; background:var(--red-light); border:1.5px solid var(--red); border-radius:12px; padding:12px 16px; margin-bottom:12px; justify-content:space-between; align-items:center">
-    <div>
-      <div style="font-weight:800; font-size:15px; color:var(--red)">Urgent Stock</div>
-      <div style="font-size:12px; color:var(--red); margin-top:2px" id="kpi-urgent-sub">lines 14+ days</div>
-    </div>
-    <div style="font-size:32px; font-weight:800; color:var(--red)" id="kpi-urgent">0</div>
-  </div>
-
-  <!-- Unified Main Hub Actions -->
   <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
-    <button onclick="goToPage('pipeline')" style="padding:18px 16px; border:none; border-radius:14px; background:#1a4479; color:#fff; font-family:inherit; font-weight:800; font-size:16px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:14px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+    <button onclick="goToPage('pipeline')" style="padding:18px 16px; border:none; border-radius:14px; background:#1a4479; color:#fff; font-family:inherit; font-weight:800; font-size:16px; text-align:left; display:flex; align-items:center; gap:14px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
       <span style="font-size:24px">🔗</span>
-      <div>
-        <div>Pipeline</div>
-        <div style="font-size:11px; font-weight:400; opacity:.8">Match + Call Buyers</div>
-      </div>
+      <div><div>Pipeline</div><div style="font-size:11px; font-weight:400; opacity:.8">Match + Call Buyers</div></div>
     </button>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;">
-      
-      <!-- LEFT COLUMN: Sales & Inflow -->
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom: 2px;">💰 Sales & Inflow</div>
-        <button onclick="goToPage('buyers')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">👥</span>Buyers</button>
-        <button onclick="goToPage('orders')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📋</span>Orders</button>
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px;">💰 Sales & Inflow</div>
+        <button onclick="goToPage('buyers')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">👥</span>Buyers</button>
+        <button onclick="goToPage('orders')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📋</span>Orders</button>
       </div>
-
-      <!-- RIGHT COLUMN: Operations & Inventory -->
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px; margin-bottom: 2px;">⚙️ Operations & Inventory</div>
-        <button onclick="goToPage('stock')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📦</span>Stock</button>
-        <button onclick="goToPage('floor')" style="width: 100%; padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📊</span>Floor Balance</button>
+        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px;">⚙️ Operations & Inventory</div>
+        <button onclick="goToPage('stock')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📦</span>Stock</button>
+        <button onclick="goToPage('floor')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📊</span>Floor Balance</button>
       </div>
-
-      <button onclick="toggleReportsMenu()" style="grid-column: span 2; padding:16px; border:none; border-radius:14px; background:#34495e; color:#fff; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:10px; margin-top:4px;"><span style="font-size:20px">📈</span>Reports & Analytics</button>
-    </div>
-  </div>
-
-  <div id="reports-menu" style="display:none; background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:14px; margin-bottom:14px; border-top:3px solid #2c5f7a">
-    <div style="font-weight:700; font-size:14px; color:#2c5f7a; margin-bottom:12px">Reports Menu</div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
-      <button onclick="alert('Generating Sales Report...')" style="padding:12px; border:1.5px solid var(--border); border-radius:10px; background:#fff; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; color:var(--ink); text-align:left">Sales Summary</button>
     </div>
   </div>
 </div>
 
 <!-- ===== PAGE: PIPELINE ===== -->
 <div class="page" id="page-pipeline">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <div style="font-weight:700;font-size:14px;color:var(--moss)">Sales Pipeline</div>
-  </div>
-  <div id="pipeline-list" style="padding:10px; color:var(--muted);">Connecting pipeline records...</div>
+  <div id="pipeline-list" style="padding:10px;">Awaiting pipeline data streams...</div>
 </div>
 
 <!-- ===== PAGE: FLOOR BALANCE ===== -->
@@ -164,89 +125,62 @@ try {
     <button class="stock-tab" id="floor-tab-CW" onclick="switchFloorTab('CW',this)">Christoff (CW)</button>
     <button class="stock-tab" id="floor-tab-POT" onclick="switchFloorTab('POT',this)">Potgieter</button>
   </div>
-  <div class="ctrl-row">
-    <input type="text" id="floor-search" placeholder="🔍 Search floor stock…" oninput="filterFloor()"/>
-  </div>
+  <div class="ctrl-row"><input type="text" id="floor-search" placeholder="🔍 Search floor stock…" oninput="filterFloor()"/></div>
   <div id="floor-list"></div>
 </div>
 
 <!-- ===== PAGE: BUYERS ===== -->
 <div class="page" id="page-buyers">
-  <div class="ctrl-row"><input type="text" id="buyer-search" placeholder="🔍 Search buyer…" oninput="filterBuyers()"/></div>
+  <div class="ctrl-row"><input type="text" id="buyer-search" placeholder="🔍 Search buyer profile…" oninput="filterBuyers()"/></div>
   <div id="buyer-list"></div>
 </div>
 
 <!-- ===== PAGE: STOCK ===== -->
 <div class="page" id="page-stock">
-  <div class="upload-box">
-    <div class="upload-title">📄 Upload Stock PDF</div>
-    <div class="upload-hint">POT.pdf · CDW.pdf · RIAAN.pdf</div>
-    <label class="upload-file-btn">📎 Choose PDF<input type="file" id="stockFile" accept=".pdf" style="display:none" onchange="document.getElementById('stockFileName').textContent=this.files[0]?.name||'No file chosen'"/></label>
-    <span id="stockFileName" class="upload-fname">No file chosen</span>
-    <div class="upload-btn-row">
-      <button class="upload-btn" onclick="alert('PDF Upload connected.')">Upload</button>
-    </div>
-  </div>
-  
   <div class="stock-tabs">
     <button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button>
     <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button>
     <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button>
   </div>
-  
   <div class="ctrl-row">
-    <input type="text" id="stock-search" placeholder="🔍 Search stock…" oninput="filterStock()"/>
-    <select id="stock-filter" onchange="filterStock()">
-      <option value="">All Commodities</option>
-      <option value="AVOS">Avocados</option>
-      <option value="CLTM">Clementines</option>
-      <option value="LEMS">Lemons</option>
-      <option value="ORGS">Oranges</option>
-    </select>
+    <input type="text" id="stock-search" placeholder="🔍 Search active stock…" oninput="filterStock()"/>
   </div>
   <div id="stock-list"></div>
 </div>
 
 <!-- ===== PAGE: ORDERS ===== -->
 <div class="page" id="page-orders">
-  <div style="background:var(--card);padding:16px;border-radius:14px;box-shadow:var(--shadow)">
-    <div style="font-weight:700;margin-bottom:12px">Orders Registry</div>
-    <div id="orders-list" style="color:var(--muted); font-size:13px;">Syncing orders stream...</div>
+  <div style="background:#fff;padding:16px;border-radius:14px;">
+    <div style="font-weight:700;margin-bottom:12px">Active Orders Registry</div>
+    <div id="orders-list">Awaiting incoming sync data...</div>
   </div>
 </div>
-
 </main>
 </div>
 
-<!-- ===== APPLICATION LOGIC & REAL-TIME DATABASE ROUTINES ===== -->
+<!-- ===== APPLICATION EVENT SYNC ENGINE ===== -->
 <script>
-const SK = 'st_sess';
 let globalStockData = [];
 let globalFloorData = [];
 let globalBuyerPhones = [];
+let globalOrdersData = [];
+let globalPipelineData = [];
 let currentStockSalesman = 'RJ';
 let currentFloorSalesman = 'RJ';
 
-// Toggle Password Visibility Eye Icon
 function togglePw() {
   const passInput = document.getElementById('login-pass');
   const eyeBtn = document.getElementById('eye-btn');
-  if (passInput.type === 'password') {
-    passInput.type = 'text';
-    eyeBtn.textContent = '🙈';
-  } else {
-    passInput.type = 'password';
-    eyeBtn.textContent = '👁';
-  }
+  passInput.type = (passInput.type === 'password') ? 'text' : 'password';
+  eyeBtn.textContent = (passInput.type === 'text') ? '🙈' : '👁';
 }
 
-// User Authentication Implementation
 function doLogin() {
   const user = document.getElementById('login-user').value.trim().toLowerCase();
-  const pass = document.getElementById('login-pass').value;
+  const pass = document.getElementById('login-pass');
   const errorDiv = document.getElementById('login-error');
   
-  if (USERS[user] && USERS[user].pw === pass) {
+  if (USERS[user] && USERS[user].pw === pass.value) {
     if (errorDiv) errorDiv.style.display = 'none';
     localStorage.setItem(SK, JSON.stringify({ username: user, name: USERS[user].display, expiry: Date.now() + 86400000 }));
     initApp(USERS[user].display);
@@ -256,39 +190,22 @@ function doLogin() {
 }
 
 function initApp(displayName) {
-  const loginScreen = document.getElementById('login-screen');
-  const appContainer = document.getElementById('app');
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('hdr-username').textContent = displayName;
+  document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
   
-  if (loginScreen) loginScreen.style.display = 'none';
-  if (appContainer) appContainer.style.display = 'block';
-  
-  const hdrUsername = document.getElementById('hdr-username');
-  if (hdrUsername) hdrUsername.textContent = displayName;
-  
-  const now = new Date();
-  const liveDate = document.getElementById('live-date');
-  if (liveDate) {
-    liveDate.textContent = now.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
-  }
-  
-  // Connect to Firebase Realtime listeners with specific /jdw root context
   startDatabaseListeners();
-  
   goToPage('dashboard');
 }
 
-// SPA Navigation Router Engine
 function goToPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  
   const targetPage = document.getElementById('page-' + pageId);
-  if (targetPage) {
-    targetPage.classList.add('active');
-  }
+  if (targetPage) targetPage.classList.add('active');
   
   const hdrName = document.getElementById('hdr-page-name');
   const homeBtn = document.getElementById('home-btn');
-  
   if (pageId === 'dashboard') {
     if (hdrName) hdrName.textContent = 'Home';
     if (homeBtn) homeBtn.style.display = 'none';
@@ -298,91 +215,78 @@ function goToPage(pageId) {
   }
 }
 
-function goHome() {
-  goToPage('dashboard');
-}
-
+function goHome() { goToPage('dashboard'); }
 function doLogout() {
   localStorage.removeItem(SK);
-  const appContainer = document.getElementById('app');
-  const loginScreen = document.getElementById('login-screen');
-  if (appContainer) appContainer.style.display = 'none';
-  if (loginScreen) loginScreen.style.display = 'flex';
-  
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
 }
 
-function toggleSection(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  if (el.style.display === 'none' || !el.style.display) {
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-
-function toggleReportsMenu() {
-  toggleSection('reports-menu');
-}
-
-// Database Connection Listeners referencing /jdw Root
+// Global Database Synchronization Engine Listening to Root "/" to protect child paths
 function startDatabaseListeners() {
   if (typeof firebase === 'undefined') return;
-  
-  console.log('📡 Synchronizing jdw records stream...');
   const db = firebase.database();
   
-  // 1. Stock Path Listener
-  db.ref('jdw/stock').on('value', (snapshot) => {
-    const data = snapshot.val();
+  console.log('📡 Listening to database connection tree...');
+
+  // Catch ALL modifications at root to dynamically parse nodes safely regardless of wrapper syntax
+  db.ref('/').on('value', (snapshot) => {
+    const rootData = snapshot.val();
+    console.log("📥 Raw Payload Ingested From Firebase Root:", rootData);
+    
+    if (!rootData) {
+      console.warn("⚠️ Warning: Realtime Database returned an empty payload.");
+      return;
+    }
+    
+    // Safely check if wrapped in 'jdw' or accessible immediately from absolute root
+    const source = rootData.jdw ? rootData.jdw : rootData;
+    
+    // 1. Ingest Stock
     globalStockData = [];
-    if (data) {
-      Object.keys(data).forEach(key => {
-        globalStockData.push({ id: key, ...data[key] });
+    if (source.stock) {
+      Object.keys(source.stock).forEach(k => { if(source.stock[k]) globalStockData.push({ id: k, ...source.stock[k] })});
+    }
+    
+    // 2. Ingest Floor Balance
+    globalFloorData = [];
+    if (source.floor) {
+      Object.keys(source.floor).forEach(k => { if(source.floor[k]) globalFloorData.push({ id: k, ...source.floor[k] })});
+    }
+    
+    // 3. Ingest Buyer Contacts
+    globalBuyerPhones = [];
+    if (source.buyerPhones) {
+      Object.keys(source.buyerPhones).forEach(k => { 
+        if(source.buyerPhones[k]) globalBuyerPhones.push({ 
+          id: k, 
+          name: source.buyerPhones[k].name || source.buyerPhones[k].buyer || k, 
+          phone: source.buyerPhones[k].phone || source.buyerPhones[k].telephone || 'No Phone Number' 
+        });
       });
     }
-    console.log(`✅ Loaded ${globalStockData.length} stock rows.`);
+
+    // 4. Ingest Orders
+    globalOrdersData = [];
+    if (source.orders) {
+      Object.keys(source.orders).forEach(k => { if(source.orders[k]) globalOrdersData.push({ id: k, ...source.orders[k] })});
+    }
+
+    // 5. Ingest Pipeline Data
+    globalPipelineData = [];
+    if (source.pipelineCalls) {
+      Object.keys(source.pipelineCalls).forEach(k => { if(source.pipelineCalls[k]) globalPipelineData.push({ id: k, ...source.pipelineCalls[k] })});
+    }
+
+    // Force global screen re-renders across all active UI frames
     updateDashboardKPIs();
     renderStockView();
-  });
-
-  // 2. Floor Path Listener
-  db.ref('jdw/floor').on('value', (snapshot) => {
-    const data = snapshot.val();
-    globalFloorData = [];
-    if (data) {
-      Object.keys(data).forEach(key => {
-        globalFloorData.push({ id: key, ...data[key] });
-      });
-    }
-    console.log(`✅ Loaded ${globalFloorData.length} floor records.`);
     renderFloorView();
-  });
-
-  // 3. Buyer Phones Listener
-  db.ref('jdw/buyerPhones').on('value', (snapshot) => {
-    const data = snapshot.val();
-    globalBuyerPhones = [];
-    if (data) {
-      Object.keys(data).forEach(key => {
-        globalBuyerPhones.push({ id: key, ...data[key] });
-      });
-    }
     renderBuyersView();
-  });
-
-  // 4. Orders Tracker Stream
-  db.ref('jdw/orders').on('value', (snapshot) => {
-    const data = snapshot.val();
-    const container = document.getElementById('orders-list');
-    if (!container) return;
-    if (data) {
-      container.innerHTML = `<div style="color:#1e4d2b; font-weight:700;">Active pipeline entries present in cloud registry.</div>`;
-    } else {
-      container.innerHTML = `No active orders listed in directory.`;
-    }
+    renderOrdersView();
+    renderPipelineView();
+  }, error => {
+    console.error("❌ Firebase Database Access Denied/Failed:", error);
   });
 }
 
@@ -396,7 +300,6 @@ function updateDashboardKPIs() {
   if (floorElement) floorElement.textContent = totalUnits.toLocaleString('en-ZA');
 }
 
-// Tab Switches
 function switchStockTab(salesman, btn) {
   currentStockSalesman = salesman;
   document.querySelectorAll('#page-stock .stock-tab').forEach(b => b.classList.remove('active'));
@@ -411,152 +314,143 @@ function switchFloorTab(salesman, btn) {
   renderFloorView();
 }
 
-// Filter and Render Stock UI View Rows
 function renderStockView() {
   const container = document.getElementById('stock-list');
   if (!container) return;
-  
   const searchVal = document.getElementById('stock-search').value.toLowerCase();
-  const filterVal = document.getElementById('stock-filter').value;
   
   let filtered = globalStockData.filter(item => {
-    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || 'RJ').toUpperCase();
-    if (currentStockSalesman === 'RJ' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
+    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || '').toUpperCase();
+    if (currentStockSalesman === 'RJ' && itemSalesman !== '' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
     if (currentStockSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
     if (currentStockSalesman === 'POT' && !['POT', 'POTGIETER'].includes(itemSalesman)) return false;
     
-    const commodity = (item.commodity || item.Commodity || item.product || item.Product || '');
-    if (filterVal && commodity !== filterVal) return false;
-    
     if (searchVal) {
-      const prod = (item.producer || item.Producer || item.grower || item.Grower || '');
-      const varty = (item.variety || item.Variety || '');
-      const matchString = `${prod} ${commodity} ${varty}`.toLowerCase();
-      if (!matchString.includes(searchVal)) return false;
+      const prod = (item.producer || item.Producer || item.grower || item.Grower || '').toLowerCase();
+      const comm = (item.commodity || item.Commodity || item.product || item.Product || '').toLowerCase();
+      if (!prod.includes(searchVal) && !comm.includes(searchVal)) return false;
     }
     return true;
   });
   
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted)">No active stock rows for this section.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No records available in this profile tab.</div>`;
     return;
   }
   
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown Producer';
+    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown Entry';
     const comm = item.commodity || item.Commodity || item.product || item.Product || '---';
     const varty = item.variety || item.Variety || '---';
     const sz = item.size || item.Size || 'N/A';
     const q = item.qty || item.quantity || item.Qty || item.Quantity || 0;
-    
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid #1e4d2b">
         <div style="font-weight:700; font-size:14px; color:#1e293b">${prod}</div>
-        <div style="font-size:12px; color:#64748b; margin-top:2px;">
-          <strong>${comm}</strong> · ${varty} · Size ${sz}
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; font-size:13px">
-          <span style="color:#1e4d2b; font-weight:700;">Qty: ${q}</span>
-        </div>
+        <div style="font-size:12px; color:#64748b; margin-top:2px;"><strong>${comm}</strong> · ${varty} · Size ${sz}</div>
+        <div style="margin-top:6px; font-weight:700; color:#1e4d2b;">Qty: ${q}</div>
       </div>
     `;
   });
-  html += '</div>';
-  container.innerHTML = html;
+  container.innerHTML = html + '</div>';
 }
 
-function filterStock() {
-  renderStockView();
-}
+function filterStock() { renderStockView(); }
 
-// Render Floor UI View Rows
 function renderFloorView() {
   const container = document.getElementById('floor-list');
   if (!container) return;
-  
   const searchVal = document.getElementById('floor-search').value.toLowerCase();
   
   let filtered = globalFloorData.filter(item => {
-    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || 'RJ').toUpperCase();
-    if (currentFloorSalesman === 'RJ' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
+    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || '').toUpperCase();
+    if (currentFloorSalesman === 'RJ' && itemSalesman !== '' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
     if (currentFloorSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
     if (currentFloorSalesman === 'POT' && !['POT', 'POTGIETER'].includes(itemSalesman)) return false;
     
     if (searchVal) {
-      const prod = (item.producer || item.Producer || item.grower || item.Grower || '');
-      const comm = (item.commodity || item.Commodity || item.product || item.Product || '');
-      const matchString = `${prod} ${comm}`.toLowerCase();
-      if (!matchString.includes(searchVal)) return false;
+      const prod = (item.producer || item.Producer || item.grower || item.Grower || '').toLowerCase();
+      if (!prod.includes(searchVal)) return false;
     }
     return true;
   });
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted)">No floor stock balance listed.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No active floor balance items found.</div>`;
     return;
   }
 
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown';
+    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown Row';
     const comm = item.commodity || item.Commodity || item.product || item.Product || '---';
     const q = item.qty || item.quantity || item.Qty || item.Quantity || 0;
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.04)">
-        <div>
-          <div style="font-weight:600; font-size:13px">${prod}</div>
-          <div style="font-size:11px; color:var(--muted)">${comm}</div>
-        </div>
-        <div style="font-weight:700; color:var(--moss)">${q} units</div>
+        <div><div style="font-weight:600; font-size:13px">${prod}</div><div style="font-size:11px; color:#64748b">${comm}</div></div>
+        <div style="font-weight:700; color:#1e4d2b">${q} units</div>
       </div>
     `;
   });
-  html += '</div>';
-  container.innerHTML = html;
+  container.innerHTML = html + '</div>';
 }
 
-function filterFloor() {
-  renderFloorView();
-}
+function filterFloor() { renderFloorView(); }
 
-// Render Buyers Contact Directory List
 function renderBuyersView() {
   const container = document.getElementById('buyer-list');
   if (!container) return;
   const searchVal = document.getElementById('buyer-search').value.toLowerCase();
   
-  let filtered = globalBuyerPhones.filter(b => {
-    if (!searchVal) return true;
-    const name = (b.name || b.buyer || b.id || '').toLowerCase();
-    return name.includes(searchVal);
-  });
-  
+  let filtered = globalBuyerPhones.filter(b => !searchVal || b.name.toLowerCase().includes(searchVal));
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted)">No buyers directory index available.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No buyer profiles matching data tree records.</div>`;
     return;
   }
   
   let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
   filtered.forEach(b => {
-    const bName = b.name || b.buyer || b.id || 'Unnamed Buyer';
-    const bPhone = b.phone || b.telephone || 'No phone recorded';
     html += `
       <div style="background:#fff; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.03)">
-        <div style="font-weight:600; font-size:13px; color:#1e293b">${bName}</div>
-        <div style="font-size:12px; color:#2563eb; font-weight:500;">📞 ${bPhone}</div>
+        <div style="font-weight:600; font-size:13px; color:#1e293b">${b.name}</div>
+        <div style="font-size:12px; color:#2563eb; font-weight:500;">📞 ${b.phone}</div>
       </div>
     `;
   });
-  html += '</div>';
-  container.innerHTML = html;
+  container.innerHTML = html + '</div>';
 }
 
-function filterBuyers() {
-  renderBuyersView();
+function filterBuyers() { renderBuyersView(); }
+
+function renderOrdersView() {
+  const container = document.getElementById('orders-list');
+  if (!container) return;
+  if (globalOrdersData.length === 0) {
+    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:10px;">No listed records in orders node.</div>`;
+    return;
+  }
+  let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
+  globalOrdersData.forEach(o => {
+    html += `<div style="padding:10px; background:#f8fafc; border-radius:6px; font-size:12px; border-left:3px solid #34495e;"><strong>ID:</strong> ${o.id}</div>`;
+  });
+  container.innerHTML = html + '</div>';
 }
 
-// Session Initialization Watcher
+function renderPipelineView() {
+  const container = document.getElementById('pipeline-list');
+  if (!container) return;
+  if (globalPipelineData.length === 0) {
+    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:10px;">No items listed in current match channels.</div>`;
+    return;
+  }
+  let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
+  globalPipelineData.forEach(p => {
+    html += `<div style="padding:10px; background:#f8fafc; border-radius:6px; font-size:12px; border-left:3px solid #1a4479;"><strong>Pipeline Entry:</strong> ${p.id}</div>`;
+  });
+  container.innerHTML = html + '</div>';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const sessionStr = localStorage.getItem(SK);
   if (sessionStr) {
@@ -566,8 +460,7 @@ window.addEventListener('DOMContentLoaded', () => {
       return;
     }
   }
-  const loginScreen = document.getElementById('login-screen');
-  if (loginScreen) loginScreen.style.display = 'flex';
+  document.getElementById('login-screen').style.display = 'flex';
 });
 </script>
 
