@@ -222,25 +222,20 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-// Global Database Synchronization Engine Listening to Root "/" to protect child paths
 function startDatabaseListeners() {
   if (typeof firebase === 'undefined') return;
   const db = firebase.database();
   
-  console.log('📡 Listening to database connection tree...');
+  console.log('📡 Listening to database root directory...');
 
-  // Catch ALL modifications at root to dynamically parse nodes safely regardless of wrapper syntax
   db.ref('/').on('value', (snapshot) => {
-    const rootData = snapshot.val();
-    console.log("📥 Raw Payload Ingested From Firebase Root:", rootData);
+    const source = snapshot.val();
+    console.log("📥 Parsing structural components directly from absolute root:", source);
     
-    if (!rootData) {
-      console.warn("⚠️ Warning: Realtime Database returned an empty payload.");
+    if (!source) {
+      console.warn("⚠️ Warning: Root node returned empty.");
       return;
     }
-    
-    // Safely check if wrapped in 'jdw' or accessible immediately from absolute root
-    const source = rootData.jdw ? rootData.jdw : rootData;
     
     // 1. Ingest Stock
     globalStockData = [];
@@ -272,13 +267,14 @@ function startDatabaseListeners() {
       Object.keys(source.orders).forEach(k => { if(source.orders[k]) globalOrdersData.push({ id: k, ...source.orders[k] })});
     }
 
-    // 5. Ingest Pipeline Data
+    // 5. Ingest Pipeline Data (Handles both possible node keys)
     globalPipelineData = [];
-    if (source.pipelineCalls) {
-      Object.keys(source.pipelineCalls).forEach(k => { if(source.pipelineCalls[k]) globalPipelineData.push({ id: k, ...source.pipelineCalls[k] })});
+    const pipeNode = source.pipelineCalls || source.pipeline;
+    if (pipeNode) {
+      Object.keys(pipeNode).forEach(k => { if(pipeNode[k]) globalPipelineData.push({ id: k, ...pipeNode[k] })});
     }
 
-    // Force global screen re-renders across all active UI frames
+    // Re-render UI
     updateDashboardKPIs();
     renderStockView();
     renderFloorView();
@@ -286,7 +282,7 @@ function startDatabaseListeners() {
     renderOrdersView();
     renderPipelineView();
   }, error => {
-    console.error("❌ Firebase Database Access Denied/Failed:", error);
+    console.error("❌ Database sync error:", error);
   });
 }
 
@@ -405,7 +401,7 @@ function renderBuyersView() {
   
   let filtered = globalBuyerPhones.filter(b => !searchVal || b.name.toLowerCase().includes(searchVal));
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No buyer profiles matching data tree records.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No buyer profiles matching records.</div>`;
     return;
   }
   
@@ -432,7 +428,9 @@ function renderOrdersView() {
   }
   let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
   globalOrdersData.forEach(o => {
-    html += `<div style="padding:10px; background:#f8fafc; border-radius:6px; font-size:12px; border-left:3px solid #34495e;"><strong>ID:</strong> ${o.id}</div>`;
+    const buyerName = o.buyer || o.Buyer || 'Unknown Buyer';
+    const details = o.details || o.commodity || '';
+    html += `<div style="padding:12px; background:#fff; border-radius:10px; font-size:13px; border-left:4px solid #2c3e50; box-shadow:0 1px 2px rgba(0,0,0,0.04);"><strong>${buyerName}</strong> <span style="color:#64748b; font-size:11px;">(${o.id})</span><div>${details}</div></div>`;
   });
   container.innerHTML = html + '</div>';
 }
@@ -446,7 +444,8 @@ function renderPipelineView() {
   }
   let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
   globalPipelineData.forEach(p => {
-    html += `<div style="padding:10px; background:#f8fafc; border-radius:6px; font-size:12px; border-left:3px solid #1a4479;"><strong>Pipeline Entry:</strong> ${p.id}</div>`;
+    const title = p.title || p.description || p.buyer || `Pipeline Node: ${p.id}`;
+    html += `<div style="padding:12px; background:#fff; border-radius:10px; font-size:13px; border-left:4px solid #1a4479; box-shadow:0 1px 2px rgba(0,0,0,0.04);"><strong>${title}</strong></div>`;
   });
   container.innerHTML = html + '</div>';
 }
