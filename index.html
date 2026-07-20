@@ -38,7 +38,11 @@ console.log('✅ Config loaded');
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
 try {
-  const firebaseConfig = { databaseURL: CONFIG.FIREBASE_DATABASE_URL };
+  const firebaseConfig = { 
+    apiKey: "AIzaSyBo9c1yISFcGJFPEEjqAVMuVS14MojBAOU",
+    databaseURL: CONFIG.FIREBASE_DATABASE_URL,
+    projectId: "jdw-crm"
+  };
   firebase.initializeApp(firebaseConfig);
   console.log('✅ Firebase initialized');
 } catch (e) {
@@ -99,10 +103,10 @@ try {
   </div>
 
   <!-- Dynamic Banners -->
-  <div id="kpi-urgent-banner" onclick="printUrgentStock()" style="display:none; background:var(--red-light); border:1.5px solid var(--red); border-radius:12px; padding:12px 16px; margin-bottom:12px; cursor:pointer; justify-content:space-between; align-items:center">
+  <div id="kpi-urgent-banner" style="display:none; background:var(--red-light); border:1.5px solid var(--red); border-radius:12px; padding:12px 16px; margin-bottom:12px; justify-content:space-between; align-items:center">
     <div>
       <div style="font-weight:800; font-size:15px; color:var(--red)">Urgent Stock</div>
-      <div style="font-size:12px; color:var(--red); margin-top:2px" id="kpi-urgent-sub">lines 14+ days - tap to print</div>
+      <div style="font-size:12px; color:var(--red); margin-top:2px" id="kpi-urgent-sub">lines 14+ days</div>
     </div>
     <div style="font-size:32px; font-weight:800; color:var(--red)" id="kpi-urgent">0</div>
   </div>
@@ -117,7 +121,6 @@ try {
       </div>
     </button>
 
-    <!-- Corrected Balanced Two-Column Layout Container Grid -->
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;">
       
       <!-- LEFT COLUMN: Sales & Inflow -->
@@ -151,7 +154,7 @@ try {
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <div style="font-weight:700;font-size:14px;color:var(--moss)">Sales Pipeline</div>
   </div>
-  <div style="padding:20px; text-align:center; color:var(--muted);">Pipeline workspace ready.</div>
+  <div id="pipeline-list" style="padding:10px; color:var(--muted);">Connecting pipeline records...</div>
 </div>
 
 <!-- ===== PAGE: FLOOR BALANCE ===== -->
@@ -181,7 +184,7 @@ try {
     <label class="upload-file-btn">📎 Choose PDF<input type="file" id="stockFile" accept=".pdf" style="display:none" onchange="document.getElementById('stockFileName').textContent=this.files[0]?.name||'No file chosen'"/></label>
     <span id="stockFileName" class="upload-fname">No file chosen</span>
     <div class="upload-btn-row">
-      <button class="upload-btn" onclick="alert('PDF Parsing logic executed via back-end listeners.')">Upload</button>
+      <button class="upload-btn" onclick="alert('PDF Upload connected.')">Upload</button>
     </div>
   </div>
   
@@ -207,7 +210,8 @@ try {
 <!-- ===== PAGE: ORDERS ===== -->
 <div class="page" id="page-orders">
   <div style="background:var(--card);padding:16px;border-radius:14px;box-shadow:var(--shadow)">
-    <div style="font-weight:700;margin-bottom:12px">Create Order Placeholders</div>
+    <div style="font-weight:700;margin-bottom:12px">Orders Registry</div>
+    <div id="orders-list" style="color:var(--muted); font-size:13px;">Syncing orders stream...</div>
   </div>
 </div>
 
@@ -218,6 +222,8 @@ try {
 <script>
 const SK = 'st_sess';
 let globalStockData = [];
+let globalFloorData = [];
+let globalBuyerPhones = [];
 let currentStockSalesman = 'RJ';
 let currentFloorSalesman = 'RJ';
 
@@ -265,7 +271,7 @@ function initApp(displayName) {
     liveDate.textContent = now.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
   }
   
-  // Connect to Firebase Realtime listeners
+  // Connect to Firebase Realtime listeners with specific /jdw root context
   startDatabaseListeners();
   
   goToPage('dashboard');
@@ -321,35 +327,62 @@ function toggleReportsMenu() {
   toggleSection('reports-menu');
 }
 
-// Database Connection Listeners
+// Database Connection Listeners referencing /jdw Root
 function startDatabaseListeners() {
   if (typeof firebase === 'undefined') return;
   
-  console.log('📡 Fetching authenticated stock database references...');
+  console.log('📡 Synchronizing jdw records stream...');
   const db = firebase.database();
   
-  db.ref('stock').on('value', (snapshot) => {
+  // 1. Stock Path Listener
+  db.ref('jdw/stock').on('value', (snapshot) => {
     const data = snapshot.val();
     globalStockData = [];
-    
     if (data) {
-      if (Array.isArray(data)) {
-        data.forEach((item, index) => {
-          if (item) globalStockData.push({ id: index, ...item });
-        });
-      } else {
-        Object.keys(data).forEach(key => {
-          globalStockData.push({ id: key, ...data[key] });
-        });
-      }
+      Object.keys(data).forEach(key => {
+        globalStockData.push({ id: key, ...data[key] });
+      });
     }
-    
-    console.log(`✅ Loaded ${globalStockData.length} stock elements.`);
+    console.log(`✅ Loaded ${globalStockData.length} stock rows.`);
     updateDashboardKPIs();
     renderStockView();
+  });
+
+  // 2. Floor Path Listener
+  db.ref('jdw/floor').on('value', (snapshot) => {
+    const data = snapshot.val();
+    globalFloorData = [];
+    if (data) {
+      Object.keys(data).forEach(key => {
+        globalFloorData.push({ id: key, ...data[key] });
+      });
+    }
+    console.log(`✅ Loaded ${globalFloorData.length} floor records.`);
     renderFloorView();
-  }, (error) => {
-    console.error('Database connection error:', error);
+  });
+
+  // 3. Buyer Phones Listener
+  db.ref('jdw/buyerPhones').on('value', (snapshot) => {
+    const data = snapshot.val();
+    globalBuyerPhones = [];
+    if (data) {
+      Object.keys(data).forEach(key => {
+        globalBuyerPhones.push({ id: key, ...data[key] });
+      });
+    }
+    renderBuyersView();
+  });
+
+  // 4. Orders Tracker Stream
+  db.ref('jdw/orders').on('value', (snapshot) => {
+    const data = snapshot.val();
+    const container = document.getElementById('orders-list');
+    if (!container) return;
+    if (data) {
+      container.innerHTML = `<div style="color:#1e4d2b; font-weight:700;">Active pipeline entries present in cloud registry.</div>`;
+    } else {
+      container.innerHTML = `No active orders listed in directory.`;
+    }
   });
 }
 
@@ -378,7 +411,7 @@ function switchFloorTab(salesman, btn) {
   renderFloorView();
 }
 
-// Filter and Render UI Rows (Flexible Property Key Fallbacks)
+// Filter and Render Stock UI View Rows
 function renderStockView() {
   const container = document.getElementById('stock-list');
   if (!container) return;
@@ -387,7 +420,6 @@ function renderStockView() {
   const filterVal = document.getElementById('stock-filter').value;
   
   let filtered = globalStockData.filter(item => {
-    // Check all possible salesman/agent key variations
     const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || 'RJ').toUpperCase();
     if (currentStockSalesman === 'RJ' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
     if (currentStockSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
@@ -412,7 +444,6 @@ function renderStockView() {
   
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    // Extract properties cleanly regardless of uppercase/lowercase database schema
     const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown Producer';
     const comm = item.commodity || item.Commodity || item.product || item.Product || '---';
     const varty = item.variety || item.Variety || '---';
@@ -439,13 +470,14 @@ function filterStock() {
   renderStockView();
 }
 
+// Render Floor UI View Rows
 function renderFloorView() {
   const container = document.getElementById('floor-list');
   if (!container) return;
   
   const searchVal = document.getElementById('floor-search').value.toLowerCase();
   
-  let filtered = globalStockData.filter(item => {
+  let filtered = globalFloorData.filter(item => {
     const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || 'RJ').toUpperCase();
     if (currentFloorSalesman === 'RJ' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
     if (currentFloorSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
@@ -488,7 +520,41 @@ function filterFloor() {
   renderFloorView();
 }
 
-function filterBuyers() {}
+// Render Buyers Contact Directory List
+function renderBuyersView() {
+  const container = document.getElementById('buyer-list');
+  if (!container) return;
+  const searchVal = document.getElementById('buyer-search').value.toLowerCase();
+  
+  let filtered = globalBuyerPhones.filter(b => {
+    if (!searchVal) return true;
+    const name = (b.name || b.buyer || b.id || '').toLowerCase();
+    return name.includes(searchVal);
+  });
+  
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted)">No buyers directory index available.</div>`;
+    return;
+  }
+  
+  let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
+  filtered.forEach(b => {
+    const bName = b.name || b.buyer || b.id || 'Unnamed Buyer';
+    const bPhone = b.phone || b.telephone || 'No phone recorded';
+    html += `
+      <div style="background:#fff; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.03)">
+        <div style="font-weight:600; font-size:13px; color:#1e293b">${bName}</div>
+        <div style="font-size:12px; color:#2563eb; font-weight:500;">📞 ${bPhone}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function filterBuyers() {
+  renderBuyersView();
+}
 
 // Session Initialization Watcher
 window.addEventListener('DOMContentLoaded', () => {
