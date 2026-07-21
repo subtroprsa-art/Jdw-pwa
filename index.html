@@ -6,18 +6,26 @@
 <meta name="theme-color" content="#1e4d2b"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
 
+<!-- ===== CONFIGURATION ===== -->
 <script>
 const CONFIG = {
   FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
   FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs'
 };
 const USERS = {
-  'riaan.joubert': { display: 'Riaan Joubert', pw: 'rsasubtrop2026' },
-  'christoff.dewet': { display: 'Christoff de Wet', pw: 'rsasubtrop2026' }
+  'riaan.joubert': { display: 'Riaan Joubert', code: 'RJ', pw: 'rsasubtrop2026' },
+  'christoff.dewet': { display: 'Christoff de Wet', code: 'CW', pw: 'rsasubtrop2026' }
 };
+const SALESMEN = [
+  { code: 'ALL', name: 'All Salesmen' },
+  { code: 'RJ', name: 'Riaan Joubert (RJ)' },
+  { code: 'CW', name: 'Christoff de Wet (CW)' },
+  { code: 'POT', name: 'Potgieter (POT)' }
+];
 const SK = 'st_sess';
 </script>
 
+<!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -27,7 +35,7 @@ try {
     databaseURL: CONFIG.FIREBASE_DATABASE_URL,
     projectId: "jdw-crm"
   });
-} catch (e) { console.error('Firebase error:', e); }
+} catch (e) { console.error('Firebase initialization error:', e); }
 </script>
 
 <title>SubTrop CRM</title>
@@ -36,21 +44,29 @@ try {
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
   body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 30px; }
   
+  /* Header */
   .hdr { background: #1e4d2b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
   .hdr-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; }
   .hdr-brand span { color: #86efac; font-weight: 500; font-size: 14px; }
-  .hdr-right { display: flex; align-items: center; gap: 10px; }
-  .hdr-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; }
+  .hdr-right { display: flex; align-items: center; gap: 8px; }
+  .hdr-btn { background: rgba(255,255,255,0.18); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; }
 
+  /* Main Container */
   .container { max-width: 900px; margin: 0 auto; padding: 16px; }
 
+  /* Salesman Filter Bar */
+  .salesman-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px; }
+  .sm-chip { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer; whitespace: nowrap; }
+  .sm-chip.active { background: #1e4d2b; color: white; border-color: #1e4d2b; }
+
+  /* KPIs */
   .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .kpi-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .kpi-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
   .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }
 
+  /* Actions & Grid */
   .pipeline-btn { width: 100%; padding: 16px; background: #1a4479; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; text-align: left; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
-
   .cols-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
   .col-sec { display: flex; flex-direction: column; gap: 10px; }
   .sec-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
@@ -58,15 +74,17 @@ try {
   .nav-btn { width: 100%; padding: 14px 16px; background: #2c3e50; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
   .analytics-btn { width: 100%; padding: 14px 16px; background: #334155; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 
-  .nav-bar-sub { display: flex; gap: 8px; margin-bottom: 12px; }
-  .nav-bar-sub button { background: #e2e8f0; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; color: #334155; }
-  .nav-bar-sub button.home-btn { background: #1e4d2b; color: white; }
+  /* Sub-page Controls */
+  .nav-bar-sub { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .nav-bar-sub button { background: #1e4d2b; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 
   .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
   .list-container { display: flex; flex-direction: column; gap: 8px; }
 
   .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #334155; margin-left: 6px; }
 
+  /* Auth Screen */
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
   .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
   .login-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
@@ -77,6 +95,7 @@ try {
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login-screen">
   <h2 style="margin-bottom: 16px;">SubTrop CRM</h2>
   <form class="login-box" onsubmit="event.preventDefault(); doLogin();">
@@ -92,6 +111,7 @@ try {
   </form>
 </div>
 
+<!-- APP -->
 <div id="app" style="display:none;">
   <div class="hdr">
     <div class="hdr-brand">
@@ -105,6 +125,10 @@ try {
   </div>
 
   <div class="container">
+    
+    <!-- SALESMAN SELECTOR BAR -->
+    <div class="salesman-bar" id="salesman-selector"></div>
+
     <!-- DASHBOARD VIEW -->
     <div class="page active" id="page-dashboard">
       <div class="kpi-grid">
@@ -147,72 +171,72 @@ try {
     <!-- SUB-PAGES -->
     <div class="page" id="page-buyers">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
-      <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers..." oninput="renderBuyers()"/>
-      <div class="list-container" id="list-buyers">Loading...</div>
+      <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers or phone numbers..." oninput="renderBuyers()"/>
+      <div class="list-container" id="list-buyers">Loading buyers...</div>
     </div>
 
     <div class="page" id="page-orders">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
-      <div class="list-container" id="list-orders">Loading...</div>
+      <div class="list-container" id="list-orders">Loading orders...</div>
     </div>
 
     <div class="page" id="page-scanslip">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
         <h3>📷 Scan Delivery Slip</h3>
-        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip.</p>
+        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory.</p>
         <input type="file" accept="image/*" capture="environment"/>
       </div>
     </div>
 
     <div class="page" id="page-stock">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
-      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock..." oninput="renderStock()"/>
-      <div class="list-container" id="list-stock">Loading...</div>
+      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by salesman, grower, or commodity..." oninput="renderStock()"/>
+      <div class="list-container" id="list-stock">Loading stock...</div>
     </div>
 
     <div class="page" id="page-floor">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
-      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance..." oninput="renderFloor()"/>
-      <div class="list-container" id="list-floor">Loading...</div>
+      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by salesman, grower, or commodity..." oninput="renderFloor()"/>
+      <div class="list-container" id="list-floor">Loading floor balance...</div>
     </div>
 
     <div class="page" id="page-coldstore">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
       <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="renderColdstore()"/>
-      <div class="list-container" id="list-coldstore">Loading...</div>
+      <div class="list-container" id="list-coldstore">Loading coldstore...</div>
     </div>
 
     <div class="page" id="page-commodities">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
-      <div class="list-container" id="list-commodities">Loading...</div>
+      <div class="list-container" id="list-commodities">Loading commodities...</div>
     </div>
 
     <div class="page" id="page-pipeline">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
       <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches..." oninput="renderPipeline()"/>
-      <div class="list-container" id="list-pipeline">Loading...</div>
+      <div class="list-container" id="list-pipeline">Loading pipeline...</div>
     </div>
 
     <div class="page" id="page-analytics">
       <div class="nav-bar-sub">
-        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+        <button onclick="goHome()">🏠 Home</button>
       </div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
         <h3>📈 Reports & Analytics</h3>
@@ -224,6 +248,7 @@ try {
 </div>
 
 <script>
+let currentSalesman = 'ALL';
 let store = {
   stock: [],
   floor: [],
@@ -238,6 +263,7 @@ function doLogin() {
   const p = document.getElementById('login-pass').value;
   if (USERS[u] && USERS[u].pw === p) {
     localStorage.setItem(SK, USERS[u].display);
+    if (USERS[u].code) currentSalesman = USERS[u].code;
     initApp(USERS[u].display);
   } else {
     alert('Invalid credentials');
@@ -248,8 +274,28 @@ function initApp(name) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('hdr-user-display').textContent = `(${name})`;
+  renderSalesmanSelector();
   startFirebaseListener();
   goToPage('dashboard');
+}
+
+function renderSalesmanSelector() {
+  const container = document.getElementById('salesman-selector');
+  container.innerHTML = SALESMEN.map(s => `
+    <button class="sm-chip ${currentSalesman === s.code ? 'active' : ''}" onclick="setSalesman('${s.code}')">
+      ${s.name}
+    </button>
+  `).join('');
+}
+
+function setSalesman(code) {
+  currentSalesman = code;
+  renderSalesmanSelector();
+  updateDashboardKPIs();
+  renderStock();
+  renderFloor();
+  renderColdstore();
+  renderBuyers();
 }
 
 function goToPage(pageId) {
@@ -267,19 +313,50 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-function flattenNode(raw) {
-  if (!raw) return [];
-  let arr = [];
-  if (Array.isArray(raw)) {
-    raw.forEach(item => { if (item) arr.push(item); });
-  } else if (typeof raw === 'object') {
-    Object.keys(raw).forEach(k => {
-      if (raw[k] && typeof raw[k] === 'object') {
-        arr.push({ _id: k, ...raw[k] });
+// Deep recursive object traversal to extract records with salesman assignment detection
+function extractRecords(node, defaultSalesman = '') {
+  let records = [];
+  if (!node || typeof node !== 'object') return records;
+
+  function traverse(obj, pathSalesman = '') {
+    if (Array.isArray(obj)) {
+      obj.forEach(item => traverse(item, pathSalesman));
+      return;
+    }
+    if (typeof obj === 'object' && obj !== null) {
+      // Check if current node represents a salesman code
+      let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.salesperson || pathSalesman;
+      
+      const keys = Object.keys(obj);
+      const isDataLeaf = keys.some(k => typeof obj[k] !== 'object' || obj[k] === null);
+
+      if (isDataLeaf && (obj.qty || obj.quantity || obj.balance || obj.units || obj.commodity || obj.producer || obj.buyer)) {
+        records.push({
+          salesmanCode: String(sm).toUpperCase(),
+          ...obj
+        });
       }
-    });
+
+      keys.forEach(k => {
+        let childSm = sm;
+        if (['RJ', 'CW', 'POT'].includes(k.toUpperCase())) childSm = k.toUpperCase();
+        if (typeof obj[k] === 'object' && obj[k] !== null) {
+          traverse(obj[k], childSm);
+        }
+      });
+    }
   }
-  return arr;
+
+  traverse(node, defaultSalesman);
+  return records;
+}
+
+function filterBySalesman(list) {
+  if (currentSalesman === 'ALL') return list;
+  return list.filter(item => {
+    const sm = (item.salesmanCode || item.salesman || item.rep || item.trader || '').toUpperCase();
+    return sm.includes(currentSalesman) || sm === '';
+  });
 }
 
 function startFirebaseListener() {
@@ -289,20 +366,20 @@ function startFirebaseListener() {
   db.ref('/').on('value', (snapshot) => {
     const raw = snapshot.val() || {};
 
-    store.coldstore = flattenNode(raw.coldstore || raw.coldStore);
-    store.floor = flattenNode(raw.floor);
-    store.stock = flattenNode(raw.stock).concat(store.coldstore).concat(store.floor);
-    store.orders = flattenNode(raw.orders || raw.cart);
-    store.pipeline = flattenNode(raw.pipelineCalls || raw.pipeline);
+    store.floor = extractRecords(raw.floor);
+    store.stock = extractRecords(raw.stock);
+    store.coldstore = extractRecords(raw.coldstore || raw.coldStore);
+    store.orders = extractRecords(raw.orders || raw.cart);
+    store.pipeline = extractRecords(raw.pipelineCalls || raw.pipeline);
 
     // Buyers & Phone Mappings
     store.buyers = [];
     const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
     const buyersNode = raw.buyers || raw.buyerStats || raw.buyerTurnover;
     
-    if (buyersNode) {
+    if (buyersNode && typeof buyersNode === 'object') {
       Object.keys(buyersNode).forEach(k => {
-        const item = buyersNode[k];
+        const item = buyersNode[k] || {};
         const bName = item.name || item.buyer || k;
         const bPhone = item.phone || phoneMap[bName] || 'No Contact';
         const turnover = item.turnover || item.total || 0;
@@ -314,7 +391,6 @@ function startFirebaseListener() {
       });
     }
 
-    // Sort Buyers Highest Turnover First
     store.buyers.sort((a, b) => (b.turnover || 0) - (a.turnover || 0));
 
     updateDashboardKPIs();
@@ -329,8 +405,9 @@ function startFirebaseListener() {
 }
 
 function updateDashboardKPIs() {
+  const activeFloor = filterBySalesman(store.floor);
   let floorUnits = 0;
-  store.floor.forEach(item => {
+  activeFloor.forEach(item => {
     const q = parseInt(item.qty || item.quantity || item.units || item.balance || 0, 10);
     floorUnits += (isNaN(q) ? 0 : q);
   });
@@ -370,7 +447,8 @@ function renderStock() {
   if (!container) return;
   const q = (document.getElementById('search-stock')?.value || '').toLowerCase();
 
-  let filtered = store.stock.filter(s => JSON.stringify(s).toLowerCase().includes(q));
+  let activeStock = filterBySalesman(store.stock);
+  let filtered = activeStock.filter(s => JSON.stringify(s).toLowerCase().includes(q));
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
@@ -379,7 +457,10 @@ function renderStock() {
 
   container.innerHTML = filtered.map(s => `
     <div class="card-item" style="border-left:4px solid #1e4d2b;">
-      <div style="font-weight:700;">${s.commodity || s.product || s.desc || 'Stock Item'} ${s.producer ? '· ' + s.producer : ''}</div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:700;">${s.commodity || s.product || s.desc || 'Stock Item'} ${s.producer ? '· ' + s.producer : ''}</div>
+        ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
+      </div>
       <div style="font-size:12px; color:#64748b; margin-top:4px;">Quantity / Units: <strong>${s.qty || s.quantity || s.units || s.count || '0'}</strong></div>
     </div>
   `).join('');
@@ -390,7 +471,8 @@ function renderFloor() {
   if (!container) return;
   const q = (document.getElementById('search-floor')?.value || '').toLowerCase();
 
-  let filtered = store.floor.filter(f => JSON.stringify(f).toLowerCase().includes(q));
+  let activeFloor = filterBySalesman(store.floor);
+  let filtered = activeFloor.filter(f => JSON.stringify(f).toLowerCase().includes(q));
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
@@ -400,7 +482,10 @@ function renderFloor() {
   container.innerHTML = filtered.map(f => `
     <div class="card-item" style="display:flex; justify-content:space-between; align-items:center; border-left:4px solid #b91c1c;">
       <div>
-        <div style="font-weight:700;">${f.producer || f.grower || f.commodity || 'Floor Stock'}</div>
+        <div style="font-weight:700;">
+          ${f.producer || f.grower || f.commodity || 'Floor Stock'}
+          ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
+        </div>
         <div style="font-size:12px; color:#64748b;">${f.commodity || f.product || ''}</div>
       </div>
       <div style="font-weight:800; color:#b91c1c;">${f.qty || f.quantity || f.units || f.balance || '0'} units</div>
@@ -413,7 +498,8 @@ function renderColdstore() {
   if (!container) return;
   const q = (document.getElementById('search-coldstore')?.value || '').toLowerCase();
 
-  let filtered = store.coldstore.filter(c => JSON.stringify(c).toLowerCase().includes(q));
+  let activeCold = filterBySalesman(store.coldstore);
+  let filtered = activeCold.filter(c => JSON.stringify(c).toLowerCase().includes(q));
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No coldstore records found</div>`;
@@ -422,7 +508,10 @@ function renderColdstore() {
 
   container.innerHTML = filtered.map(c => `
     <div class="card-item" style="border-left:4px solid #0284c7;">
-      <div style="font-weight:700;">${c.commodity || c.product || 'Coldstore Batch'} ${c.producer ? '· ' + c.producer : ''}</div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:700;">${c.commodity || c.product || 'Coldstore Batch'} ${c.producer ? '· ' + c.producer : ''}</div>
+        ${c.salesmanCode ? `<span class="badge">${c.salesmanCode}</span>` : ''}
+      </div>
       <div style="font-size:12px; color:#64748b; margin-top:4px;">Deposit/Batch: #${c.depositNo || c.id || c.batch || '---'} | Qty: <strong>${c.qty || c.quantity || c.count || '0'}</strong></div>
     </div>
   `).join('');
@@ -472,7 +561,7 @@ function renderCommodities() {
   if (!container) return;
 
   let set = new Set();
-  store.stock.forEach(i => {
+  store.stock.concat(store.floor).forEach(i => {
     if (i.commodity) set.add(i.commodity);
     if (i.product) set.add(i.product);
   });
