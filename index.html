@@ -40,9 +40,9 @@ try {
     projectId: "jdw-crm"
   };
   firebase.initializeApp(firebaseConfig);
-  console.log('✅ Firebase SDK Initialized Successfully');
+  console.log('✅ Firebase Initialized');
 } catch (e) {
-  console.error('Firebase Initialization Error:', e.message);
+  console.error('Firebase Error:', e.message);
 }
 </script>
 
@@ -89,7 +89,7 @@ try {
     <div class="kpi" style="background: #fff; border-radius: 14px; padding: 16px; border-top: 4px solid #3a7a4a; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
       <div class="kpi-lbl" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Active Buyers</div>
       <div class="kpi-val" id="kpi-buyers" style="font-size: 28px; font-weight: 800; color: #1e293b; margin-top: 4px;">0</div>
-      <div class="kpi-sub" style="font-size: 11px; color: #94a3b8;">registered phone contacts</div>
+      <div class="kpi-sub" style="font-size: 11px; color: #94a3b8;">registered contacts</div>
     </div>
   </div>
 
@@ -128,13 +128,13 @@ try {
     <button class="stock-tab" id="floor-tab-CW" onclick="switchFloorTab('CW',this)">Christoff (CW)</button>
     <button class="stock-tab" id="floor-tab-POT" onclick="switchFloorTab('POT',this)">Potgieter (POT)</button>
   </div>
-  <div class="ctrl-row"><input type="text" id="floor-search" placeholder="🔍 Search floor stock…" oninput="filterFloor()"/></div>
+  <div class="ctrl-row"><input type="text" id="floor-search" placeholder="🔍 Search floor stock…" oninput="renderFloorView()"/></div>
   <div id="floor-list"></div>
 </div>
 
 <!-- ===== PAGE: BUYERS ===== -->
 <div class="page" id="page-buyers">
-  <div class="ctrl-row"><input type="text" id="buyer-search" placeholder="🔍 Search buyer profile…" oninput="filterBuyers()"/></div>
+  <div class="ctrl-row"><input type="text" id="buyer-search" placeholder="🔍 Search buyer profile…" oninput="renderBuyersView()"/></div>
   <div id="buyer-list"></div>
 </div>
 
@@ -147,7 +147,7 @@ try {
     <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter (POT)</button>
   </div>
   <div class="ctrl-row">
-    <input type="text" id="stock-search" placeholder="🔍 Search coldstore stock…" oninput="filterStock()"/>
+    <input type="text" id="stock-search" placeholder="🔍 Search coldstore stock…" oninput="renderStockView()"/>
   </div>
   <div id="stock-list"></div>
 </div>
@@ -162,7 +162,7 @@ try {
 </main>
 </div>
 
-<!-- ===== APPLICATION EVENT SYNC ENGINE ===== -->
+<!-- ===== APP SCRIPT ===== -->
 <script>
 let globalStockData = [];
 let globalFloorData = [];
@@ -238,66 +238,40 @@ function matchSalesman(item, targetCode) {
   if (targetCode === 'ALL') return true;
   const allText = JSON.stringify(item).toUpperCase();
   
-  if (targetCode === 'RJ') {
-    return ['RJ', 'RIAAN', 'JOUBERT'].some(t => allText.includes(t));
-  }
-  if (targetCode === 'CW') {
-    return ['CW', 'CDW', 'CHRISTOFF', 'DE WET', 'DEWET'].some(t => allText.includes(t));
-  }
-  if (targetCode === 'POT') {
-    return ['POT', 'POTGIETER', 'POTG'].some(t => allText.includes(t));
-  }
+  if (targetCode === 'RJ') return ['RJ', 'RIAAN', 'JOUBERT'].some(t => allText.includes(t));
+  if (targetCode === 'CW') return ['CW', 'CDW', 'CHRISTOFF', 'DE WET', 'DEWET'].some(t => allText.includes(t));
+  if (targetCode === 'POT') return ['POT', 'POTGIETER', 'POTG'].some(t => allText.includes(t));
   return true;
 }
 
-function unrollNode(node) {
+// Flat recursive reader that safely converts Firebase nodes into array lists
+function parseNodeToArray(node) {
   let list = [];
   if (!node || typeof node !== 'object') return list;
-  
-  const recordKeys = [
-    'buyer', 'Buyer', 'name', 'phone', 'commodity', 'Commodity', 'product', 'Product',
-    'producer', 'Producer', 'grower', 'Grower', 'qty', 'Qty', 'quantity', 'Quantity',
-    'count', 'Count', 'boxes', 'Boxes', 'pallets', 'Pallets', 'bags', 'Bags',
-    'depositNo', 'Deposit', 'deposit', 'salesman', 'Salesman', 'agent', 'Agent'
-  ];
 
-  function recurse(currObj, parentKeyName = '') {
-    if (Array.isArray(currObj)) {
-      currObj.forEach((sub, idx) => {
-        if (sub && typeof sub === 'object') {
-          recurse(sub, parentKeyName || `item-${idx}`);
-        } else if (sub) {
-          list.push({ id: `item-${idx}`, parentKey: parentKeyName, value: sub });
+  function recurse(curr, parentKey = '') {
+    if (Array.isArray(curr)) {
+      curr.forEach((item, idx) => {
+        if (item && typeof item === 'object') recurse(item, parentKey);
+        else if (item) list.push({ parentKey, value: item });
+      });
+    } else if (typeof curr === 'object') {
+      const keys = Object.keys(curr);
+      // If object holds direct properties, consider it an item entry
+      const hasDirectData = keys.some(k => typeof curr[k] !== 'object' || curr[k] === null);
+      if (hasDirectData) {
+        list.push({ parentKey, ...curr });
+      }
+      keys.forEach(k => {
+        if (curr[k] && typeof curr[k] === 'object') {
+          recurse(curr[k], parentKey ? `${parentKey} > ${k}` : k);
         }
       });
-    } else if (typeof currObj === 'object') {
-      const keys = Object.keys(currObj);
-      const isLeafRecord = keys.some(k => recordKeys.includes(k));
-      
-      if (isLeafRecord) {
-        list.push({ id: parentKeyName, parentKey: parentKeyName, ...currObj });
-      } else {
-        keys.forEach(k => {
-          if (currObj[k] && typeof currObj[k] === 'object') {
-            recurse(currObj[k], parentKeyName ? `${parentKeyName} > ${k}` : k);
-          }
-        });
-      }
     }
   }
 
   recurse(node);
-  
-  const unique = [];
-  const seen = new Set();
-  list.forEach(item => {
-    const sig = JSON.stringify(item);
-    if (!seen.has(sig)) {
-      seen.add(sig);
-      unique.push(item);
-    }
-  });
-  return unique;
+  return list;
 }
 
 function startDatabaseListeners() {
@@ -308,76 +282,15 @@ function startDatabaseListeners() {
     const source = snapshot.val();
     if (!source) return;
 
-    // Combine all potential coldstore/stock roots
-    const stockNodes = [
-      source.coldstore,
-      source.stock,
-      source.inventory,
-      source.coldStore
-    ].filter(Boolean);
+    // Read stock directly from coldstore node
+    globalStockData = parseNodeToArray(source.coldstore || source.stock);
+    globalFloorData = parseNodeToArray(source.floor);
+    globalOrdersData = parseNodeToArray(source.orders || source.cart);
+    globalPipelineData = parseNodeToArray(source.pipelineCalls || source.pipeline);
 
-    globalStockData = [];
-    stockNodes.forEach(node => {
-      globalStockData = globalStockData.concat(unrollNode(node));
-    });
-
-    globalFloorData = unrollNode(source.floor);
-    globalOrdersData = unrollNode(source.orders || source.cart);
-    globalPipelineData = unrollNode(source.pipelineCalls || source.pipeline);
-
-    // Extract Buyers with Turnover and Match information
-    globalBuyersData = [];
-    const phoneMap = source.buyerPhones || {};
-    const buyerStatsNode = source.buyers || source.buyerStats || source.buyerTurnover || {};
-
-    let rawBuyers = unrollNode(buyerStatsNode);
-    if (rawBuyers.length === 0 && typeof phoneMap === 'object') {
-      Object.keys(phoneMap).forEach(name => {
-        const val = phoneMap[name];
-        let phoneNum = 'No Contact';
-        if (typeof val === 'string' || typeof val === 'number') phoneNum = String(val);
-        else if (val && typeof val === 'object') phoneNum = parseVal(val, ['phone', 'telephone', 'Phone', 'tel', 'cell'], 'No Contact');
-
-        globalBuyersData.push({
-          name: name,
-          phone: phoneNum,
-          turnover: 0,
-          currentMatch: '---'
-        });
-      });
-    } else {
-      rawBuyers.forEach(b => {
-        const bName = parseVal(b, ['name', 'buyer', 'Buyer', 'client'], b.id || 'Buyer');
-        const phone = parseVal(b, ['phone', 'telephone', 'Phone', 'tel', 'cell'], phoneMap[bName] || 'No Contact');
-        const turnover = parseFloat(parseVal(b, ['turnover', 'Turnover', 'val', 'value', 'total', 'sales'], 0)) || 0;
-        const currentMatch = parseVal(b, ['currentMatch', 'match', 'Match', 'product', 'commodity'], '---');
-
-        globalBuyersData.push({
-          name: bName,
-          phone: typeof phone === 'object' ? parseVal(phone, ['phone', 'tel'], 'No Contact') : String(phone),
-          turnover: turnover,
-          currentMatch: currentMatch,
-          ...b
-        });
-      });
-    }
-
-    // Attach current match from pipeline if available
-    globalBuyersData.forEach(b => {
-      if (b.currentMatch === '---') {
-        const match = globalPipelineData.find(p => {
-          const pName = parseVal(p, ['buyer', 'Buyer', 'buyerName', 'name'], '').toLowerCase();
-          return pName && b.name.toLowerCase().includes(pName);
-        });
-        if (match) {
-          b.currentMatch = parseVal(match, ['commodity', 'Commodity', 'product', 'notes', 'desc'], 'Matched');
-        }
-      }
-    });
-
-    // Sort Top Buyers by highest Turnover/Value first
-    globalBuyersData.sort((a, b) => b.turnover - a.turnover);
-
+    // Read buyers
+    globalBuyersData = parseNodeToArray(source.buyers || source.buyerStats);
+    
     updateDashboardKPIs();
     renderStockView();
     renderFloorView();
@@ -390,7 +303,7 @@ function startDatabaseListeners() {
 function updateDashboardKPIs() {
   let totalUnits = 0;
   globalStockData.concat(globalFloorData).forEach(item => {
-    const q = parseInt(parseVal(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units', 'Count', 'count', 'balance', 'Balance', 'boxes', 'Boxes'], 0), 10);
+    const q = parseInt(parseVal(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units', 'Count', 'count', 'balance', 'Boxes'], 0), 10);
     totalUnits += (isNaN(q) ? 0 : q);
   });
   const floorElement = document.getElementById('kpi-floor');
@@ -422,25 +335,24 @@ function renderStockView() {
   let filtered = globalStockData.filter(item => {
     if (!matchSalesman(item, currentStockSalesman)) return false;
     if (searchVal) {
-      const comm = String(parseVal(item, ['commodity', 'Commodity', 'product', 'Product', 'producer', 'Producer', 'grower', 'Grower'], '')).toLowerCase();
+      const comm = String(parseVal(item, ['commodity', 'Commodity', 'product', 'Product', 'producer', 'Producer'], '')).toLowerCase();
       if (!comm.includes(searchVal)) return false;
     }
     return true;
   });
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No coldstore records found matching criteria.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No coldstore records found.</div>`;
     return;
   }
 
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
     const comm = parseVal(item, ['commodity', 'Commodity', 'product', 'Product'], 'Stock Item');
-    const producer = parseVal(item, ['producer', 'Producer', 'grower', 'Grower', 'target'], '');
-    const cnt = parseVal(item, ['count', 'Count', 'size', 'Size', 'qty', 'Qty', 'quantity', 'Quantity', 'boxes', 'Boxes'], 'N/A');
+    const producer = parseVal(item, ['producer', 'Producer', 'grower', 'Grower'], '');
+    const cnt = parseVal(item, ['count', 'Count', 'qty', 'Qty', 'quantity', 'Quantity', 'boxes'], 'N/A');
     const dep = parseVal(item, ['depositNo', 'Deposit', 'batch', 'id'], '---');
-    const dt = parseVal(item, ['date', 'Date', 'depositedAt'], '');
-    const agent = parseVal(item, ['salesman', 'Agent', 'agent', 'Salesman', 'marketer', 'parentKey'], '');
+    const dt = parseVal(item, ['date', 'Date'], '');
 
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid #1e4d2b">
@@ -449,15 +361,13 @@ function renderStockView() {
           <span style="font-size:11px; background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:600; color:#475569;">#${dep}</span>
         </div>
         <div style="font-size:12px; color:#64748b; margin-top:4px;">
-          Qty/Count: <strong>${cnt}</strong> ${agent ? '· Ref: <strong>' + agent + '</strong>' : ''} ${dt ? '· Date: ' + dt : ''}
+          Qty/Count: <strong>${cnt}</strong> ${dt ? '· Date: ' + dt : ''}
         </div>
       </div>
     `;
   });
   container.innerHTML = html + '</div>';
 }
-
-function filterStock() { renderStockView(); }
 
 function renderFloorView() {
   const container = document.getElementById('floor-list');
@@ -467,29 +377,28 @@ function renderFloorView() {
   let filtered = globalFloorData.filter(item => {
     if (!matchSalesman(item, currentFloorSalesman)) return false;
     if (searchVal) {
-      const prod = String(parseVal(item, ['producer', 'Producer', 'grower', 'Grower', 'commodity'], '')).toLowerCase();
+      const prod = String(parseVal(item, ['producer', 'Producer', 'grower', 'commodity'], '')).toLowerCase();
       if (!prod.includes(searchVal)) return false;
     }
     return true;
   });
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No active floor balance records found.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No floor balance records found.</div>`;
     return;
   }
 
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const prod = parseVal(item, ['producer', 'Producer', 'grower', 'Grower', 'target'], 'Floor Batch Item');
+    const prod = parseVal(item, ['producer', 'Producer', 'grower'], 'Floor Batch Item');
     const comm = parseVal(item, ['commodity', 'Commodity', 'product'], '---');
-    const q = parseVal(item, ['qty', 'quantity', 'Qty', 'Quantity', 'balance', 'Count'], 0);
-    const agent = parseVal(item, ['salesman', 'Agent', 'agent', 'Salesman', 'parentKey'], '');
+    const q = parseVal(item, ['qty', 'quantity', 'Qty', 'balance'], 0);
 
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.04); border-left:4px solid #cc3333">
         <div>
           <div style="font-weight:700; font-size:14px; color:#1e293b">${prod}</div>
-          <div style="font-size:12px; color:#64748b">${comm} ${agent ? '· Agent: ' + agent : ''}</div>
+          <div style="font-size:12px; color:#64748b">${comm}</div>
         </div>
         <div style="font-size:16px; font-weight:800; color:#1e4d2b">${q} units</div>
       </div>
@@ -498,66 +407,49 @@ function renderFloorView() {
   container.innerHTML = html + '</div>';
 }
 
-function filterFloor() { renderFloorView(); }
-
 function renderBuyersView() {
   const container = document.getElementById('buyer-list');
   if (!container) return;
   const searchVal = document.getElementById('buyer-search').value.toLowerCase();
 
-  let filtered = globalBuyersData.filter(b => !searchVal || b.name.toLowerCase().includes(searchVal) || (b.phone && b.phone.includes(searchVal)));
-
-  if (!searchVal) {
-    filtered = filtered.slice(0, 20);
-  }
+  let filtered = globalBuyersData.filter(b => {
+    const name = parseVal(b, ['name', 'buyer', 'Buyer'], '').toLowerCase();
+    const phone = parseVal(b, ['phone', 'tel'], '');
+    return !searchVal || name.includes(searchVal) || phone.includes(searchVal);
+  });
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No matching buyer records found.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No buyer records found.</div>`;
     return;
   }
 
-  let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
-  filtered.forEach((b, index) => {
-    const turnoverFormatted = b.turnover ? `R ${b.turnover.toLocaleString('en-ZA')}` : 'R 0';
-    
+  let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+  filtered.forEach(b => {
+    const name = parseVal(b, ['name', 'buyer', 'Buyer'], 'Buyer');
+    const phone = parseVal(b, ['phone', 'tel', 'Phone'], 'No Contact');
+
     html += `
-      <div style="background:#fff; padding:14px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.04); border-left:5px solid #2563eb;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div>
-            <div style="font-weight:800; font-size:15px; color:#1e293b;">
-              <span style="color:#2563eb; font-size:13px;">#${index + 1}</span> ${b.name}
-            </div>
-            <div style="font-size:12px; font-weight:600; color:#059669; margin-top:2px;">
-              Turnover: <strong>${turnoverFormatted}</strong>
-            </div>
-          </div>
-          ${b.phone && b.phone !== 'No Contact' ? `<a href="tel:${b.phone}" style="font-size:12px; color:#2563eb; font-weight:700; text-decoration:none; background:#eff6ff; padding:6px 10px; border-radius:6px;">📞 ${b.phone}</a>` : ''}
-        </div>
-        
-        <div style="margin-top:8px; font-size:12px; color:#475569; background:#f8fafc; padding:6px 10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
-          <span>🎯 Current Match:</span>
-          <strong style="color:#1e293b">${b.currentMatch}</strong>
-        </div>
+      <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.04); border-left:4px solid #2563eb;">
+        <div style="font-weight:700; font-size:14px; color:#1e293b">${name}</div>
+        ${phone !== 'No Contact' ? `<a href="tel:${phone}" style="font-size:12px; color:#2563eb; font-weight:700; text-decoration:none;">📞 ${phone}</a>` : '<span style="font-size:12px; color:#94a3b8;">No Contact</span>'}
       </div>
     `;
   });
   container.innerHTML = html + '</div>';
 }
 
-function filterBuyers() { renderBuyersView(); }
-
 function renderOrdersView() {
   const container = document.getElementById('orders-list');
   if (!container) return;
   if (globalOrdersData.length === 0) {
-    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:10px;">No records listed in active orders/cart.</div>`;
+    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:10px;">No active orders found.</div>`;
     return;
   }
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   globalOrdersData.forEach(o => {
-    const name = parseVal(o, ['buyer', 'Buyer', 'name', 'client'], `Order #${o.id}`);
-    const details = parseVal(o, ['details', 'commodity', 'product', 'desc'], 'Active Registry Item');
-    html += `<div style="padding:12px; background:#fff; border-radius:10px; font-size:13px; border-left:4px solid #2c3e50; box-shadow:0 1px 2px rgba(0,0,0,0.04);"><strong>${name}</strong><div style="color:#64748b; font-size:12px; margin-top:2px;">${details}</div></div>`;
+    const name = parseVal(o, ['buyer', 'Buyer', 'name'], 'Order Record');
+    const details = parseVal(o, ['details', 'commodity', 'product'], 'Active Order Item');
+    html += `<div style="padding:12px; background:#fff; border-radius:10px; font-size:13px; border-left:4px solid #2c3e50;"><strong>${name}</strong><div style="color:#64748b; font-size:12px; margin-top:2px;">${details}</div></div>`;
   });
   container.innerHTML = html + '</div>';
 }
@@ -565,45 +457,33 @@ function renderOrdersView() {
 function renderPipelineView() {
   const container = document.getElementById('pipeline-list');
   if (!container) return;
-  const searchInput = document.getElementById('pipeline-search');
-  const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+  const searchVal = document.getElementById('pipeline-search').value.toLowerCase();
 
   if (globalPipelineData.length === 0) {
-    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:20px;">No active matches found in pipeline.</div>`;
+    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:20px;">No pipeline records found.</div>`;
     return;
   }
 
-  let filtered = globalPipelineData.filter(p => {
-    if (!searchVal) return true;
-    return JSON.stringify(p).toLowerCase().includes(searchVal);
-  });
+  let filtered = globalPipelineData.filter(p => !searchVal || JSON.stringify(p).toLowerCase().includes(searchVal));
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:20px;">No pipeline records match your search.</div>`;
+    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:20px;">No pipeline matches found.</div>`;
     return;
   }
 
   let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
   filtered.forEach(p => {
-    const buyerName = parseVal(p, ['buyer', 'Buyer', 'buyerName', 'name', 'client'], 'Pipeline Match');
-    const phone = parseVal(p, ['phone', 'tel', 'mobile', 'cell', 'Phone'], '');
-    const commodity = parseVal(p, ['commodity', 'Commodity', 'product', 'item'], '');
-    const notes = parseVal(p, ['notes', 'note', 'description', 'desc', 'reason', 'comment'], '');
-    const dateStr = parseVal(p, ['date', 'Date', 'parentKey', 'createdAt'], '---');
-    const status = parseVal(p, ['status', 'Status', 'state'], '');
+    const buyerName = parseVal(p, ['buyer', 'Buyer', 'name'], 'Pipeline Match');
+    const phone = parseVal(p, ['phone', 'tel', 'Phone'], '');
+    const commodity = parseVal(p, ['commodity', 'Commodity', 'product'], '');
 
     html += `
       <div style="padding:14px; background:#fff; border-radius:12px; border-left:5px solid #1a4479; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
           <div style="font-weight:800; font-size:15px; color:#1e293b">${buyerName}</div>
           ${phone ? `<a href="tel:${phone}" style="font-size:12px; color:#1a4479; font-weight:700; text-decoration:none; background:#e0f2fe; padding:4px 8px; border-radius:6px;">📞 Call</a>` : ''}
         </div>
-        ${commodity ? `<div style="font-size:13px; font-weight:600; color:#334155; margin-top:2px;">📦 ${commodity}</div>` : ''}
-        ${notes && notes !== '---' ? `<div style="font-size:12px; color:#64748b; margin-top:6px; background:#f8fafc; padding:6px 8px; border-radius:6px;">💬 ${notes}</div>` : ''}
-        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#94a3b8; margin-top:8px; border-top:1px solid #f1f5f9; padding-top:6px;">
-          <span>📅 Date/Ref: ${dateStr}</span>
-          ${status ? `<span style="font-weight:700; color:#0284c7; text-transform:uppercase;">${status}</span>` : ''}
-        </div>
+        ${commodity ? `<div style="font-size:13px; font-weight:600; color:#334155; margin-top:4px;">📦 ${commodity}</div>` : ''}
       </div>
     `;
   });
