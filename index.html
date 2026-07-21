@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#1e4d2b"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
 
-<!-- ===== CONFIGURATION ===== -->
 <script>
 const CONFIG = {
   FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
@@ -19,7 +18,6 @@ const USERS = {
 const SK = 'st_sess';
 </script>
 
-<!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -29,10 +27,7 @@ try {
     databaseURL: CONFIG.FIREBASE_DATABASE_URL,
     projectId: "jdw-crm"
   });
-  console.log('✅ Firebase initialized');
-} catch (e) { 
-  console.error('Firebase error:', e); 
-}
+} catch (e) { console.error('Firebase error:', e); }
 </script>
 
 <title>SubTrop CRM</title>
@@ -41,41 +36,37 @@ try {
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
   body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 30px; }
   
-  /* Header */
   .hdr { background: #1e4d2b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
-  .hdr-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+  .hdr-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; }
   .hdr-brand span { color: #86efac; font-weight: 500; font-size: 14px; }
-  .hdr-right { display: flex; align-items: center; gap: 12px; }
-  .logout-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+  .hdr-right { display: flex; align-items: center; gap: 10px; }
+  .hdr-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; }
 
-  /* Main Container */
   .container { max-width: 900px; margin: 0 auto; padding: 16px; }
 
-  /* KPIs */
   .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .kpi-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .kpi-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-  .kpi-val { font-size: 24px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+  .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }
 
-  /* Pipeline Action */
   .pipeline-btn { width: 100%; padding: 16px; background: #1a4479; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; text-align: left; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
 
-  /* Grid Columns */
   .cols-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
   .col-sec { display: flex; flex-direction: column; gap: 10px; }
-  .sec-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 2px; }
+  .sec-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
   
   .nav-btn { width: 100%; padding: 14px 16px; background: #2c3e50; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-
-  /* Bottom Full Width Button */
   .analytics-btn { width: 100%; padding: 14px 16px; background: #334155; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 
-  /* Sub-page Controls */
-  .back-btn { background: #e2e8f0; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
+  .nav-bar-sub { display: flex; gap: 8px; margin-bottom: 12px; }
+  .nav-bar-sub button { background: #e2e8f0; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; color: #334155; }
+  .nav-bar-sub button.home-btn { background: #1e4d2b; color: white; }
+
   .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
   .list-container { display: flex; flex-direction: column; gap: 8px; }
 
-  /* Pages & Login */
+  .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
   .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
   .login-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
@@ -86,7 +77,6 @@ try {
 </head>
 <body>
 
-<!-- LOGIN SCREEN -->
 <div id="login-screen">
   <h2 style="margin-bottom: 16px;">SubTrop CRM</h2>
   <form class="login-box" onsubmit="event.preventDefault(); doLogin();">
@@ -102,7 +92,6 @@ try {
   </form>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none;">
   <div class="hdr">
     <div class="hdr-brand">
@@ -110,15 +99,14 @@ try {
     </div>
     <div class="hdr-right">
       <span id="hdr-user-display" style="font-size: 13px; font-weight: 600;"></span>
-      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+      <button class="hdr-btn" onclick="goHome()">🏠 Home</button>
+      <button class="hdr-btn" onclick="doLogout()">Sign Out</button>
     </div>
   </div>
 
   <div class="container">
     <!-- DASHBOARD VIEW -->
     <div class="page active" id="page-dashboard">
-      
-      <!-- TOP KPIs -->
       <div class="kpi-grid">
         <div class="kpi-card" style="border-top: 4px solid #b91c1c;">
           <div class="kpi-lbl">FLOOR STOCK</div>
@@ -130,14 +118,11 @@ try {
         </div>
       </div>
 
-      <!-- PIPELINE -->
       <button class="pipeline-btn" onclick="goToPage('pipeline')">
         ⚡ PIPELINE (Match + Call Buyers)
       </button>
 
-      <!-- TWO COLUMN LAYOUT -->
       <div class="cols-grid">
-        <!-- LEFT COLUMN: OPERATIONS & SALES -->
         <div class="col-sec">
           <div class="sec-title">OPERATIONS & SALES</div>
           <button class="nav-btn" onclick="goToPage('buyers')">👥 Buyers</button>
@@ -145,7 +130,6 @@ try {
           <button class="nav-btn" onclick="goToPage('scanslip')">📷 Scan Slip</button>
         </div>
 
-        <!-- RIGHT COLUMN: INVENTORY & LOGISTICS -->
         <div class="col-sec">
           <div class="sec-title">INVENTORY & LOGISTICS</div>
           <button class="nav-btn" onclick="goToPage('stock')">📦 Stock</button>
@@ -155,65 +139,81 @@ try {
         </div>
       </div>
 
-      <!-- BOTTOM FULL-WIDTH LINK -->
       <button class="analytics-btn" onclick="goToPage('analytics')">
         📈 Reports & Analytics
       </button>
-
     </div>
 
     <!-- SUB-PAGES -->
     <div class="page" id="page-buyers">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers..." oninput="renderBuyers()"/>
       <div class="list-container" id="list-buyers">Loading...</div>
     </div>
 
     <div class="page" id="page-orders">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <div class="list-container" id="list-orders">Loading...</div>
     </div>
 
     <div class="page" id="page-scanslip">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
         <h3>📷 Scan Delivery Slip</h3>
-        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to extract inventory data.</p>
-        <input type="file" accept="image/*" capture="environment" style="margin-top:10px;"/>
+        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip.</p>
+        <input type="file" accept="image/*" capture="environment"/>
       </div>
     </div>
 
     <div class="page" id="page-stock">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock..." oninput="renderStock()"/>
       <div class="list-container" id="list-stock">Loading...</div>
     </div>
 
     <div class="page" id="page-floor">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance..." oninput="renderFloor()"/>
       <div class="list-container" id="list-floor">Loading...</div>
     </div>
 
     <div class="page" id="page-coldstore">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="renderColdstore()"/>
       <div class="list-container" id="list-coldstore">Loading...</div>
     </div>
 
     <div class="page" id="page-commodities">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <div class="list-container" id="list-commodities">Loading...</div>
     </div>
 
     <div class="page" id="page-pipeline">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches..." oninput="renderPipeline()"/>
       <div class="list-container" id="list-pipeline">Loading...</div>
     </div>
 
     <div class="page" id="page-analytics">
-      <button class="back-btn" onclick="goHome()">← Back</button>
+      <div class="nav-bar-sub">
+        <button class="home-btn" onclick="goHome()">🏠 Home</button>
+      </div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
         <h3>📈 Reports & Analytics</h3>
         <p style="color:#64748b; font-size:13px; margin-top:8px;">Live performance metrics and daily turnover breakdowns.</p>
@@ -248,7 +248,6 @@ function initApp(name) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('hdr-user-display').textContent = `(${name})`;
-  
   startFirebaseListener();
   goToPage('dashboard');
 }
@@ -268,41 +267,19 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-// Utility: Recursively parse Firebase nodes into flat item arrays
-function parseNodeToArray(node) {
-  let list = [];
-  if (!node || typeof node !== 'object') return list;
-
-  function recurse(curr, parentKey = '') {
-    if (Array.isArray(curr)) {
-      curr.forEach((item, idx) => {
-        if (item && typeof item === 'object') recurse(item, parentKey);
-        else if (item !== null && item !== undefined) list.push({ parentKey, value: item });
-      });
-    } else if (typeof curr === 'object') {
-      const keys = Object.keys(curr);
-      const hasDirectData = keys.some(k => typeof curr[k] !== 'object' || curr[k] === null);
-      if (hasDirectData) {
-        list.push({ parentKey, ...curr });
+function flattenNode(raw) {
+  if (!raw) return [];
+  let arr = [];
+  if (Array.isArray(raw)) {
+    raw.forEach(item => { if (item) arr.push(item); });
+  } else if (typeof raw === 'object') {
+    Object.keys(raw).forEach(k => {
+      if (raw[k] && typeof raw[k] === 'object') {
+        arr.push({ _id: k, ...raw[k] });
       }
-      keys.forEach(k => {
-        if (curr[k] && typeof curr[k] === 'object') {
-          recurse(curr[k], parentKey ? `${parentKey} > ${k}` : k);
-        }
-      });
-    }
+    });
   }
-
-  recurse(node);
-  return list;
-}
-
-function parseVal(obj, keysArray, defaultVal = '---') {
-  if (!obj || typeof obj !== 'object') return defaultVal;
-  for (let k of keysArray) {
-    if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
-  }
-  return defaultVal;
+  return arr;
 }
 
 function startFirebaseListener() {
@@ -312,33 +289,33 @@ function startFirebaseListener() {
   db.ref('/').on('value', (snapshot) => {
     const raw = snapshot.val() || {};
 
-    store.stock = parseNodeToArray(raw.stock);
-    store.floor = parseNodeToArray(raw.floor);
-    store.coldstore = parseNodeToArray(raw.coldstore || raw.coldStore);
-    store.orders = parseNodeToArray(raw.orders || raw.cart);
-    store.pipeline = parseNodeToArray(raw.pipelineCalls || raw.pipeline);
+    store.coldstore = flattenNode(raw.coldstore || raw.coldStore);
+    store.floor = flattenNode(raw.floor);
+    store.stock = flattenNode(raw.stock).concat(store.coldstore).concat(store.floor);
+    store.orders = flattenNode(raw.orders || raw.cart);
+    store.pipeline = flattenNode(raw.pipelineCalls || raw.pipeline);
 
-    // Parse Buyers & Phones
+    // Buyers & Phone Mappings
     store.buyers = [];
     const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
-    const buyerStatsNode = raw.buyers || raw.buyerStats || raw.buyerTurnover;
-    let rawBuyers = parseNodeToArray(buyerStatsNode);
-
-    if (rawBuyers.length === 0 && phoneMap && typeof phoneMap === 'object') {
-      Object.keys(phoneMap).forEach(bName => {
-        const val = phoneMap[bName];
-        let pNum = 'No Contact';
-        if (typeof val === 'string' || typeof val === 'number') pNum = String(val);
-        else if (val && typeof val === 'object') pNum = parseVal(val, ['phone', 'tel', 'cell'], 'No Contact');
-        store.buyers.push({ name: bName, phone: pNum });
+    const buyersNode = raw.buyers || raw.buyerStats || raw.buyerTurnover;
+    
+    if (buyersNode) {
+      Object.keys(buyersNode).forEach(k => {
+        const item = buyersNode[k];
+        const bName = item.name || item.buyer || k;
+        const bPhone = item.phone || phoneMap[bName] || 'No Contact';
+        const turnover = item.turnover || item.total || 0;
+        store.buyers.push({ name: bName, phone: bPhone, turnover, ...item });
       });
-    } else {
-      rawBuyers.forEach(b => {
-        const name = parseVal(b, ['name', 'buyer', 'Buyer', 'client'], b.parentKey || 'Buyer');
-        const phone = parseVal(b, ['phone', 'tel', 'Phone', 'cell'], phoneMap[name] || 'No Contact');
-        store.buyers.push({ name, phone, ...b });
+    } else if (phoneMap) {
+      Object.keys(phoneMap).forEach(bName => {
+        store.buyers.push({ name: bName, phone: phoneMap[bName], turnover: 0 });
       });
     }
+
+    // Sort Buyers Highest Turnover First
+    store.buyers.sort((a, b) => (b.turnover || 0) - (a.turnover || 0));
 
     updateDashboardKPIs();
     renderBuyers();
@@ -354,14 +331,13 @@ function startFirebaseListener() {
 function updateDashboardKPIs() {
   let floorUnits = 0;
   store.floor.forEach(item => {
-    const q = parseInt(parseVal(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units', 'balance'], 0), 10);
+    const q = parseInt(item.qty || item.quantity || item.units || item.balance || 0, 10);
     floorUnits += (isNaN(q) ? 0 : q);
   });
 
   const floorEl = document.getElementById('kpi-floor');
   if (floorEl) floorEl.textContent = `${floorUnits.toLocaleString('en-ZA')} units`;
 
-  // Clearance rate estimate calculation (sold vs total)
   const clearanceEl = document.getElementById('kpi-clearance');
   if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '35%' : '0%';
 }
@@ -371,11 +347,7 @@ function renderBuyers() {
   if (!container) return;
   const q = (document.getElementById('search-buyers')?.value || '').toLowerCase();
 
-  let filtered = store.buyers.filter(b => {
-    const name = parseVal(b, ['name', 'buyer'], '').toLowerCase();
-    const phone = parseVal(b, ['phone'], '');
-    return !q || name.includes(q) || phone.includes(q);
-  });
+  let filtered = store.buyers.filter(b => (b.name || '').toLowerCase().includes(q) || String(b.phone || '').includes(q));
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No buyers found</div>`;
@@ -383,8 +355,11 @@ function renderBuyers() {
   }
 
   container.innerHTML = filtered.map(b => `
-    <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #2563eb;">
-      <div style="font-weight:700;">${parseVal(b, ['name', 'buyer'], 'Buyer')}</div>
+    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center; border-left:4px solid #2563eb;">
+      <div>
+        <div style="font-weight:700;">${b.name}</div>
+        ${b.turnover ? `<div style="font-size:12px; color:#16a34a; font-weight:700;">R ${Number(b.turnover).toLocaleString('en-ZA')}</div>` : ''}
+      </div>
       ${b.phone && b.phone !== 'No Contact' ? `<a href="tel:${b.phone}" style="font-weight:700; color:#2563eb; text-decoration:none;">📞 ${b.phone}</a>` : '<span style="color:#94a3b8; font-size:12px;">No Contact</span>'}
     </div>
   `).join('');
@@ -395,16 +370,17 @@ function renderStock() {
   if (!container) return;
   const q = (document.getElementById('search-stock')?.value || '').toLowerCase();
 
-  let filtered = store.stock.filter(s => !q || JSON.stringify(s).toLowerCase().includes(q));
+  let filtered = store.stock.filter(s => JSON.stringify(s).toLowerCase().includes(q));
+
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
     return;
   }
 
   container.innerHTML = filtered.map(s => `
-    <div style="background:#fff; padding:12px; border-radius:10px; border-left:4px solid #1e4d2b;">
-      <div style="font-weight:700;">${parseVal(s, ['commodity', 'product', 'desc'], 'Stock Item')}</div>
-      <div style="font-size:12px; color:#64748b; margin-top:4px;">Qty: <strong>${parseVal(s, ['qty', 'quantity', 'count'], '0')}</strong></div>
+    <div class="card-item" style="border-left:4px solid #1e4d2b;">
+      <div style="font-weight:700;">${s.commodity || s.product || s.desc || 'Stock Item'} ${s.producer ? '· ' + s.producer : ''}</div>
+      <div style="font-size:12px; color:#64748b; margin-top:4px;">Quantity / Units: <strong>${s.qty || s.quantity || s.units || s.count || '0'}</strong></div>
     </div>
   `).join('');
 }
@@ -414,19 +390,20 @@ function renderFloor() {
   if (!container) return;
   const q = (document.getElementById('search-floor')?.value || '').toLowerCase();
 
-  let filtered = store.floor.filter(f => !q || JSON.stringify(f).toLowerCase().includes(q));
+  let filtered = store.floor.filter(f => JSON.stringify(f).toLowerCase().includes(q));
+
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
     return;
   }
 
   container.innerHTML = filtered.map(f => `
-    <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; border-left:4px solid #b91c1c;">
+    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center; border-left:4px solid #b91c1c;">
       <div>
-        <div style="font-weight:700;">${parseVal(f, ['producer', 'grower', 'commodity'], 'Floor Item')}</div>
-        <div style="font-size:12px; color:#64748b;">${parseVal(f, ['commodity', 'product'], '')}</div>
+        <div style="font-weight:700;">${f.producer || f.grower || f.commodity || 'Floor Stock'}</div>
+        <div style="font-size:12px; color:#64748b;">${f.commodity || f.product || ''}</div>
       </div>
-      <div style="font-weight:800; color:#1e4d2b;">${parseVal(f, ['qty', 'quantity', 'balance'], '0')} units</div>
+      <div style="font-weight:800; color:#b91c1c;">${f.qty || f.quantity || f.units || f.balance || '0'} units</div>
     </div>
   `).join('');
 }
@@ -436,16 +413,17 @@ function renderColdstore() {
   if (!container) return;
   const q = (document.getElementById('search-coldstore')?.value || '').toLowerCase();
 
-  let filtered = store.coldstore.filter(c => !q || JSON.stringify(c).toLowerCase().includes(q));
+  let filtered = store.coldstore.filter(c => JSON.stringify(c).toLowerCase().includes(q));
+
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No coldstore records found</div>`;
     return;
   }
 
   container.innerHTML = filtered.map(c => `
-    <div style="background:#fff; padding:12px; border-radius:10px; border-left:4px solid #0284c7;">
-      <div style="font-weight:700;">${parseVal(c, ['commodity', 'product'], 'Coldstore Batch')}</div>
-      <div style="font-size:12px; color:#64748b; margin-top:4px;">Batch: #${parseVal(c, ['depositNo', 'id', 'batch'], '---')}</div>
+    <div class="card-item" style="border-left:4px solid #0284c7;">
+      <div style="font-weight:700;">${c.commodity || c.product || 'Coldstore Batch'} ${c.producer ? '· ' + c.producer : ''}</div>
+      <div style="font-size:12px; color:#64748b; margin-top:4px;">Deposit/Batch: #${c.depositNo || c.id || c.batch || '---'} | Qty: <strong>${c.qty || c.quantity || c.count || '0'}</strong></div>
     </div>
   `).join('');
 }
@@ -459,9 +437,9 @@ function renderOrders() {
   }
 
   container.innerHTML = store.orders.map(o => `
-    <div style="background:#fff; padding:12px; border-radius:10px; border-left:4px solid #334155;">
-      <div style="font-weight:700;">${parseVal(o, ['buyer', 'name'], 'Order Record')}</div>
-      <div style="font-size:12px; color:#64748b; margin-top:2px;">${parseVal(o, ['details', 'commodity'], 'Order Details')}</div>
+    <div class="card-item" style="border-left:4px solid #334155;">
+      <div style="font-weight:700;">${o.buyer || o.client || o.name || 'Order Item'}</div>
+      <div style="font-size:12px; color:#64748b; margin-top:2px;">${o.details || o.commodity || 'Active Order'}</div>
     </div>
   `).join('');
 }
@@ -471,44 +449,41 @@ function renderPipeline() {
   if (!container) return;
   const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
 
-  let filtered = store.pipeline.filter(p => !q || JSON.stringify(p).toLowerCase().includes(q));
+  let filtered = store.pipeline.filter(p => JSON.stringify(p).toLowerCase().includes(q));
+
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No active pipeline matches</div>`;
     return;
   }
 
-  container.innerHTML = filtered.map(p => {
-    const phone = parseVal(p, ['phone', 'tel'], '');
-    return `
-      <div style="background:#fff; padding:14px; border-radius:10px; border-left:4px solid #1a4479;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="font-weight:800;">${parseVal(p, ['buyer', 'name'], 'Pipeline Lead')}</div>
-          ${phone ? `<a href="tel:${phone}" style="font-size:12px; color:#1a4479; background:#e0f2fe; padding:4px 8px; border-radius:6px; text-decoration:none; font-weight:700;">📞 Call</a>` : ''}
-        </div>
-        <div style="font-size:12px; color:#334155; margin-top:4px;">📦 ${parseVal(p, ['commodity', 'product'], 'General Match')}</div>
+  container.innerHTML = filtered.map(p => `
+    <div class="card-item" style="border-left:4px solid #1a4479;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:800;">${p.buyer || p.name || 'Pipeline Lead'}</div>
+        ${p.phone ? `<a href="tel:${p.phone}" style="font-size:12px; color:#1a4479; background:#e0f2fe; padding:4px 8px; border-radius:6px; text-decoration:none; font-weight:700;">📞 Call</a>` : ''}
       </div>
-    `;
-  }).join('');
+      <div style="font-size:12px; color:#334155; margin-top:4px;">📦 ${p.commodity || p.product || 'Matched Product'}</div>
+    </div>
+  `).join('');
 }
 
 function renderCommodities() {
   const container = document.getElementById('list-commodities');
   if (!container) return;
-  
-  // Extract unique commodities across stock and floor
-  let list = new Set();
-  store.stock.concat(store.floor).forEach(i => {
-    const comm = parseVal(i, ['commodity', 'Commodity', 'product'], '');
-    if (comm && comm !== '---') list.add(comm);
+
+  let set = new Set();
+  store.stock.forEach(i => {
+    if (i.commodity) set.add(i.commodity);
+    if (i.product) set.add(i.product);
   });
 
-  if (list.size === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No active commodities listed</div>`;
+  if (set.size === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No commodities found</div>`;
     return;
   }
 
-  container.innerHTML = Array.from(list).map(c => `
-    <div style="background:#fff; padding:12px; border-radius:10px; font-weight:700; border-left:4px solid #16a34a;">
+  container.innerHTML = Array.from(set).map(c => `
+    <div class="card-item" style="font-weight:700; border-left:4px solid #16a34a;">
       🌿 ${c}
     </div>
   `).join('');
