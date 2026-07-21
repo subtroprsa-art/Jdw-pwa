@@ -254,6 +254,13 @@ function unrollNode(node) {
   let list = [];
   if (!node || typeof node !== 'object') return list;
   
+  const recordKeys = [
+    'buyer', 'Buyer', 'name', 'phone', 'commodity', 'Commodity', 'product', 'Product',
+    'producer', 'Producer', 'grower', 'Grower', 'qty', 'Qty', 'quantity', 'Quantity',
+    'count', 'Count', 'boxes', 'Boxes', 'pallets', 'Pallets', 'bags', 'Bags',
+    'depositNo', 'Deposit', 'deposit', 'salesman', 'Salesman', 'agent', 'Agent'
+  ];
+
   function recurse(currObj, parentKeyName = '') {
     if (Array.isArray(currObj)) {
       currObj.forEach((sub, idx) => {
@@ -265,7 +272,7 @@ function unrollNode(node) {
       });
     } else if (typeof currObj === 'object') {
       const keys = Object.keys(currObj);
-      const isLeafRecord = keys.some(k => ['buyer', 'Buyer', 'name', 'phone', 'commodity', 'producer', 'Qty', 'qty', 'status', 'title', 'notes', 'turnover', 'Turnover'].includes(k));
+      const isLeafRecord = keys.some(k => recordKeys.includes(k));
       
       if (isLeafRecord) {
         list.push({ id: parentKeyName, parentKey: parentKeyName, ...currObj });
@@ -273,8 +280,6 @@ function unrollNode(node) {
         keys.forEach(k => {
           if (currObj[k] && typeof currObj[k] === 'object') {
             recurse(currObj[k], parentKeyName ? `${parentKeyName} > ${k}` : k);
-          } else if (currObj[k] !== undefined) {
-            list.push({ id: k, parentKey: parentKeyName, ...currObj });
           }
         });
       }
@@ -303,7 +308,19 @@ function startDatabaseListeners() {
     const source = snapshot.val();
     if (!source) return;
 
-    globalStockData = unrollNode(source.coldstore || source.stock);
+    // Combine all potential coldstore/stock roots
+    const stockNodes = [
+      source.coldstore,
+      source.stock,
+      source.inventory,
+      source.coldStore
+    ].filter(Boolean);
+
+    globalStockData = [];
+    stockNodes.forEach(node => {
+      globalStockData = globalStockData.concat(unrollNode(node));
+    });
+
     globalFloorData = unrollNode(source.floor);
     globalOrdersData = unrollNode(source.orders || source.cart);
     globalPipelineData = unrollNode(source.pipelineCalls || source.pipeline);
@@ -373,7 +390,7 @@ function startDatabaseListeners() {
 function updateDashboardKPIs() {
   let totalUnits = 0;
   globalStockData.concat(globalFloorData).forEach(item => {
-    const q = parseInt(parseVal(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units', 'Count', 'count', 'balance', 'Balance'], 0), 10);
+    const q = parseInt(parseVal(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units', 'Count', 'count', 'balance', 'Balance', 'boxes', 'Boxes'], 0), 10);
     totalUnits += (isNaN(q) ? 0 : q);
   });
   const floorElement = document.getElementById('kpi-floor');
@@ -405,7 +422,7 @@ function renderStockView() {
   let filtered = globalStockData.filter(item => {
     if (!matchSalesman(item, currentStockSalesman)) return false;
     if (searchVal) {
-      const comm = String(parseVal(item, ['commodity', 'Commodity', 'product', 'producer', 'Producer', 'grower'], '')).toLowerCase();
+      const comm = String(parseVal(item, ['commodity', 'Commodity', 'product', 'Product', 'producer', 'Producer', 'grower', 'Grower'], '')).toLowerCase();
       if (!comm.includes(searchVal)) return false;
     }
     return true;
@@ -418,9 +435,9 @@ function renderStockView() {
 
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const comm = parseVal(item, ['commodity', 'Commodity', 'product', 'Product'], 'Produce');
-    const producer = parseVal(item, ['producer', 'Producer', 'grower', 'Grower', 'organization', 'target'], '');
-    const cnt = parseVal(item, ['count', 'Count', 'size', 'Size'], 'N/A');
+    const comm = parseVal(item, ['commodity', 'Commodity', 'product', 'Product'], 'Stock Item');
+    const producer = parseVal(item, ['producer', 'Producer', 'grower', 'Grower', 'target'], '');
+    const cnt = parseVal(item, ['count', 'Count', 'size', 'Size', 'qty', 'Qty', 'quantity', 'Quantity', 'boxes', 'Boxes'], 'N/A');
     const dep = parseVal(item, ['depositNo', 'Deposit', 'batch', 'id'], '---');
     const dt = parseVal(item, ['date', 'Date', 'depositedAt'], '');
     const agent = parseVal(item, ['salesman', 'Agent', 'agent', 'Salesman', 'marketer', 'parentKey'], '');
@@ -432,7 +449,7 @@ function renderStockView() {
           <span style="font-size:11px; background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:600; color:#475569;">#${dep}</span>
         </div>
         <div style="font-size:12px; color:#64748b; margin-top:4px;">
-          Count/Size: <strong>${cnt}</strong> ${agent ? '· Agent/Owner: <strong>' + agent + '</strong>' : ''} ${dt ? '· Registered: ' + dt : ''}
+          Qty/Count: <strong>${cnt}</strong> ${agent ? '· Ref: <strong>' + agent + '</strong>' : ''} ${dt ? '· Date: ' + dt : ''}
         </div>
       </div>
     `;
@@ -490,7 +507,6 @@ function renderBuyersView() {
 
   let filtered = globalBuyersData.filter(b => !searchVal || b.name.toLowerCase().includes(searchVal) || (b.phone && b.phone.includes(searchVal)));
 
-  // If not searching, restrict view to Top 20 buyers by default
   if (!searchVal) {
     filtered = filtered.slice(0, 20);
   }
