@@ -4,504 +4,206 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <meta name="theme-color" content="#1e4d2b"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="SubTrop CRM"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
 
-<!-- ===== CONFIGURATION ===== -->
+<!-- ===== CONFIGURATION & FIREBASE ===== -->
 <script>
 const CONFIG = {
   FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
-  FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs',
-  SYNC_URL: 'https://jdw-sync.onrender.com'
+  FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs'
 };
-window.CONFIG = CONFIG;
-
 const USERS = {
   'riaan.joubert': { display: 'Riaan Joubert', pw: 'rsasubtrop2026' },
   'christoff.dewet': { display: 'Christoff de Wet', pw: 'rsasubtrop2026' }
 };
 const SK = 'st_sess';
 </script>
-  
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  
-<!-- ===== FIREBASE SDK ===== -->
+
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
 try {
-  const firebaseConfig = { 
+  firebase.initializeApp({
     apiKey: "AIzaSyBo9c1yISFcGJFPEEjqAVMuVS14MojBAOU",
     databaseURL: CONFIG.FIREBASE_DATABASE_URL,
     projectId: "jdw-crm"
-  };
-  firebase.initializeApp(firebaseConfig);
-  console.log('✅ Firebase Initialized');
-} catch (e) {
-  console.error('Firebase Error:', e.message);
-}
+  });
+} catch (e) { console.error('Firebase error:', e); }
 </script>
 
-<link rel="manifest" href="manifest.json"/>
 <title>SubTrop CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/styles.css"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
+  body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 30px; }
+  
+  /* Header */
+  .hdr { background: #1e4d2b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .hdr-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+  .hdr-brand span { color: #86efac; font-weight: 500; font-size: 14px; }
+  .hdr-right { display: flex; align-items: center; gap: 12px; }
+  .logout-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+  /* Main Container */
+  .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+  /* KPIs */
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .kpi-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .kpi-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
+  .kpi-val { font-size: 24px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+
+  /* Pipeline Action */
+  .pipeline-btn { width: 100%; padding: 16px; background: #1a4479; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; text-align: left; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
+
+  /* Grid Columns */
+  .cols-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .col-sec { display: flex; flex-direction: column; gap: 10px; }
+  .sec-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; margin-bottom: 2px; }
+  
+  .nav-btn { width: 100%; padding: 14px 16px; background: #2c3e50; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+
+  /* Bottom Full Width Button */
+  .analytics-btn { width: 100%; padding: 14px 16px; background: #334155; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+
+  /* Pages & Login */
+  #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
+  .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
+  .login-input { width: 100%; padding: 10px; border: 1fr solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
+  .login-submit { background: #1e4d2b; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .page { display: none; }
+  .page.active { display: block; }
+</style>
 </head>
 <body>
 
-<!-- ===== LOGIN SCREEN ===== -->
+<!-- LOGIN -->
 <div id="login-screen">
-  <div class="login-logo">S</div>
-  <div class="login-title">SubTrop <span>CRM</span></div>
-  <div class="login-sub">Market Agents CRM</div>
+  <h2 style="margin-bottom: 16px;">SubTrop CRM</h2>
   <form class="login-box" onsubmit="event.preventDefault(); doLogin();">
-    <div class="login-field"><label class="login-label">Username</label><input class="login-input" type="text" id="login-user" placeholder="e.g. riaan.joubert" autocomplete="username"/></div>
-    <div class="login-field"><label class="login-label">Password</label><div class="login-pw-wrap"><input class="login-input" type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password"/><button class="login-eye" onclick="togglePw()" type="button" id="eye-btn">👁</button></div></div>
-    <button class="login-btn" type="submit">Sign In</button>
-    <div class="login-error" id="login-error" style="display:none;">Incorrect credentials.</div>
+    <div>
+      <label style="font-size: 12px; font-weight: 700;">Username</label>
+      <input type="text" id="login-user" class="login-input" placeholder="riaan.joubert"/>
+    </div>
+    <div>
+      <label style="font-size: 12px; font-weight: 700;">Password</label>
+      <input type="password" id="login-pass" class="login-input"/>
+    </div>
+    <button type="submit" class="login-submit">Sign In</button>
   </form>
 </div>
 
-<!-- ===== MAIN APP ===== -->
+<!-- APP -->
 <div id="app" style="display:none;">
-<div class="hdr">
-  <div class="hdr-brand">
-    <button id="home-btn" onclick="goHome()" style="display:none;background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:6px 10px;color:#fff;font-size:20px;cursor:pointer;margin-right:6px">🏠</button>
-    <div class="hdr-logo">S</div>
-    <div><div class="hdr-title">SubTrop <span>CRM</span></div><div class="hdr-sub" id="hdr-page-name">Home</div></div>
-  </div>
-  <div class="hdr-right"><div class="hdr-user" id="hdr-username"></div><div class="hdr-date" id="live-date"></div><button class="logout-btn" onclick="doLogout()">Sign Out</button></div>
-</div>
-<main>
-
-<!-- ===== PAGE: DASHBOARD ===== -->
-<div class="page active" id="page-dashboard">
-  <div class="kpi-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-    <div class="kpi" style="background: #fff; border-radius: 14px; padding: 16px; border-top: 4px solid #cc3333; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-      <div class="kpi-lbl" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Total Inventory</div>
-      <div class="kpi-val" id="kpi-floor" style="font-size: 28px; font-weight: 800; color: #1e293b; margin-top: 4px;">0</div>
-      <div class="kpi-sub" style="font-size: 11px; color: #94a3b8;">units in stock</div>
+  <div class="hdr">
+    <div class="hdr-brand">
+      SubTrop CRM <span id="hdr-page-name">[Home]</span>
     </div>
-    <div class="kpi" style="background: #fff; border-radius: 14px; padding: 16px; border-top: 4px solid #3a7a4a; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-      <div class="kpi-lbl" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Active Buyers</div>
-      <div class="kpi-val" id="kpi-buyers" style="font-size: 28px; font-weight: 800; color: #1e293b; margin-top: 4px;">0</div>
-      <div class="kpi-sub" style="font-size: 11px; color: #94a3b8;">registered contacts</div>
+    <div class="hdr-right">
+      <span id="hdr-user-display" style="font-size: 13px; font-weight: 600;"></span>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
     </div>
   </div>
 
-  <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
-    <button onclick="goToPage('pipeline')" style="padding:18px 16px; border:none; border-radius:14px; background:#1a4479; color:#fff; font-family:inherit; font-weight:800; font-size:16px; text-align:left; display:flex; align-items:center; gap:14px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-      <span style="font-size:24px">🔗</span>
-      <div><div>Pipeline</div><div style="font-size:11px; font-weight:400; opacity:.8">Match + Call Buyers</div></div>
-    </button>
-
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start;">
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px;">💰 Sales & Inflow</div>
-        <button onclick="goToPage('buyers')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">👥</span>Buyers</button>
-        <button onclick="goToPage('orders')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📋</span>Orders</button>
+  <div class="container">
+    <!-- DASHBOARD VIEW -->
+    <div class="page active" id="page-dashboard">
+      
+      <!-- TOP KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card" style="border-top: 4px solid #b91c1c;">
+          <div class="kpi-lbl">FLOOR STOCK</div>
+          <div class="kpi-val" id="kpi-floor">0 units</div>
+        </div>
+        <div class="kpi-card" style="border-top: 4px solid #15803d;">
+          <div class="kpi-lbl">CLEARANCE RATE</div>
+          <div class="kpi-val" id="kpi-clearance">0%</div>
+        </div>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:#64748b; letter-spacing:0.5px;">⚙️ Operations & Inventory</div>
-        <button onclick="goToPage('stock')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📦</span>Coldstore Stock</button>
-        <button onclick="goToPage('floor')" style="padding:16px; border:none; border-radius:14px; background:#2c3e50; color:#fff; font-weight:700; text-align:left; display:flex; align-items:center; gap:10px;"><span style="font-size:20px">📊</span>Floor Balance</button>
+
+      <!-- PIPELINE -->
+      <button class="pipeline-btn" onclick="goToPage('pipeline')">
+        ⚡ PIPELINE (Match + Call Buyers)
+      </button>
+
+      <!-- TWO COLUMN LAYOUT -->
+      <div class="cols-grid">
+        <!-- LEFT COLUMN: OPERATIONS & SALES -->
+        <div class="col-sec">
+          <div class="sec-title">OPERATIONS & SALES</div>
+          <button class="nav-btn" onclick="goToPage('buyers')">👥 Buyers</button>
+          <button class="nav-btn" onclick="goToPage('orders')">📋 Orders</button>
+          <button class="nav-btn" onclick="goToPage('scanslip')">📷 Scan Slip</button>
+        </div>
+
+        <!-- RIGHT COLUMN: INVENTORY & LOGISTICS -->
+        <div class="col-sec">
+          <div class="sec-title">INVENTORY & LOGISTICS</div>
+          <button class="nav-btn" onclick="goToPage('stock')">📦 Stock</button>
+          <button class="nav-btn" onclick="goToPage('floor')">📊 Floor Balance</button>
+          <button class="nav-btn" onclick="goToPage('coldstore')">❄️ Coldstore</button>
+          <button class="nav-btn" onclick="goToPage('commodities')">🌿 Commodities</button>
+        </div>
       </div>
+
+      <!-- BOTTOM FULL-WIDTH LINK -->
+      <button class="analytics-btn" onclick="goToPage('analytics')">
+        📈 Reports & Analytics
+      </button>
+
     </div>
+
+    <!-- SUB-PAGES PLACEHOLDERS -->
+    <div class="page" id="page-buyers"><button onclick="goHome()">← Back</button><h3>Buyers</h3></div>
+    <div class="page" id="page-orders"><button onclick="goHome()">← Back</button><h3>Orders</h3></div>
+    <div class="page" id="page-scanslip"><button onclick="goHome()">← Back</button><h3>Scan Slip</h3></div>
+    <div class="page" id="page-stock"><button onclick="goHome()">← Back</button><h3>Stock</h3></div>
+    <div class="page" id="page-floor"><button onclick="goHome()">← Back</button><h3>Floor Balance</h3></div>
+    <div class="page" id="page-coldstore"><button onclick="goHome()">← Back</button><h3>Coldstore</h3></div>
+    <div class="page" id="page-commodities"><button onclick="goHome()">← Back</button><h3>Commodities</h3></div>
+    <div class="page" id="page-pipeline"><button onclick="goHome()">← Back</button><h3>Pipeline</h3></div>
+    <div class="page" id="page-analytics"><button onclick="goHome()">← Back</button><h3>Reports & Analytics</h3></div>
   </div>
 </div>
 
-<!-- ===== PAGE: PIPELINE ===== -->
-<div class="page" id="page-pipeline">
-  <div class="ctrl-row"><input type="text" id="pipeline-search" placeholder="🔍 Search pipeline matches…" oninput="renderPipelineView()"/></div>
-  <div id="pipeline-list" style="padding:10px 0;">Awaiting pipeline data streams...</div>
-</div>
-
-<!-- ===== PAGE: FLOOR BALANCE ===== -->
-<div class="page" id="page-floor">
-  <div class="stock-tabs" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px;">
-    <button class="stock-tab active" id="floor-tab-ALL" onclick="switchFloorTab('ALL',this)">All Floor Stock</button>
-    <button class="stock-tab" id="floor-tab-RJ" onclick="switchFloorTab('RJ',this)">Riaan (RJ)</button>
-    <button class="stock-tab" id="floor-tab-CW" onclick="switchFloorTab('CW',this)">Christoff (CW)</button>
-    <button class="stock-tab" id="floor-tab-POT" onclick="switchFloorTab('POT',this)">Potgieter (POT)</button>
-  </div>
-  <div class="ctrl-row"><input type="text" id="floor-search" placeholder="🔍 Search floor stock…" oninput="renderFloorView()"/></div>
-  <div id="floor-list"></div>
-</div>
-
-<!-- ===== PAGE: BUYERS ===== -->
-<div class="page" id="page-buyers">
-  <div class="ctrl-row"><input type="text" id="buyer-search" placeholder="🔍 Search buyer profile…" oninput="renderBuyersView()"/></div>
-  <div id="buyer-list"></div>
-</div>
-
-<!-- ===== PAGE: STOCK ===== -->
-<div class="page" id="page-stock">
-  <div class="stock-tabs" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:8px;">
-    <button class="stock-tab active" id="tab-ALL" onclick="switchStockTab('ALL',this)">All Coldstore</button>
-    <button class="stock-tab" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button>
-    <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button>
-    <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter (POT)</button>
-  </div>
-  <div class="ctrl-row">
-    <input type="text" id="stock-search" placeholder="🔍 Search coldstore stock…" oninput="renderStockView()"/>
-  </div>
-  <div id="stock-list"></div>
-</div>
-
-<!-- ===== PAGE: ORDERS ===== -->
-<div class="page" id="page-orders">
-  <div style="background:#fff;padding:16px;border-radius:14px;">
-    <div style="font-weight:700;margin-bottom:12px">Active Orders Registry</div>
-    <div id="orders-list">Awaiting incoming sync data...</div>
-  </div>
-</div>
-</main>
-</div>
-
-<!-- ===== APP SCRIPT ===== -->
 <script>
-let globalStockData = [];
-let globalFloorData = [];
-let globalBuyersData = [];
-let globalOrdersData = [];
-let globalPipelineData = [];
-let currentStockSalesman = 'ALL';
-let currentFloorSalesman = 'ALL';
-
-function togglePw() {
-  const passInput = document.getElementById('login-pass');
-  const eyeBtn = document.getElementById('eye-btn');
-  passInput.type = (passInput.type === 'password') ? 'text' : 'password';
-  eyeBtn.textContent = (passInput.type === 'text') ? '🙈' : '👁';
-}
-
 function doLogin() {
-  const user = document.getElementById('login-user').value.trim().toLowerCase();
-  const pass = document.getElementById('login-pass');
-  const errorDiv = document.getElementById('login-error');
-  
-  if (USERS[user] && USERS[user].pw === pass.value) {
-    if (errorDiv) errorDiv.style.display = 'none';
-    localStorage.setItem(SK, JSON.stringify({ username: user, name: USERS[user].display, expiry: Date.now() + 86400000 }));
-    initApp(USERS[user].display);
+  const u = document.getElementById('login-user').value.toLowerCase().trim();
+  const p = document.getElementById('login-pass').value;
+  if (USERS[u] && USERS[u].pw === p) {
+    localStorage.setItem(SK, USERS[u].display);
+    initApp(USERS[u].display);
   } else {
-    if (errorDiv) errorDiv.style.display = 'block';
+    alert('Invalid credentials');
   }
 }
 
-function initApp(displayName) {
+function initApp(name) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-username').textContent = displayName;
-  document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
-  
-  startDatabaseListeners();
+  document.getElementById('hdr-user-display').textContent = `(${name})`;
   goToPage('dashboard');
 }
 
 function goToPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const targetPage = document.getElementById('page-' + pageId);
-  if (targetPage) targetPage.classList.add('active');
-  
-  const hdrName = document.getElementById('hdr-page-name');
-  const homeBtn = document.getElementById('home-btn');
-  if (pageId === 'dashboard') {
-    if (hdrName) hdrName.textContent = 'Home';
-    if (homeBtn) homeBtn.style.display = 'none';
-  } else {
-    if (hdrName) hdrName.textContent = pageId.charAt(0).toUpperCase() + pageId.slice(1);
-    if (homeBtn) homeBtn.style.display = 'inline-block';
-  }
+  const target = document.getElementById('page-' + pageId);
+  if (target) target.classList.add('active');
+  document.getElementById('hdr-page-name').textContent = pageId === 'dashboard' ? '[Home]' : `[${pageId}]`;
 }
 
 function goHome() { goToPage('dashboard'); }
+
 function doLogout() {
   localStorage.removeItem(SK);
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-function parseVal(obj, keysArray, defaultVal = '---') {
-  if (!obj || typeof obj !== 'object') return defaultVal;
-  for (let k of keysArray) {
-    if (obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
-  }
-  return defaultVal;
-}
-
-function matchSalesman(item, targetCode) {
-  if (targetCode === 'ALL') return true;
-  const allText = JSON.stringify(item).toUpperCase();
-  
-  if (targetCode === 'RJ') return ['RJ', 'RIAAN', 'JOUBERT'].some(t => allText.includes(t));
-  if (targetCode === 'CW') return ['CW', 'CDW', 'CHRISTOFF', 'DE WET', 'DEWET'].some(t => allText.includes(t));
-  if (targetCode === 'POT') return ['POT', 'POTGIETER', 'POTG'].some(t => allText.includes(t));
-  return true;
-}
-
-// Flat recursive reader that safely converts Firebase nodes into array lists
-function parseNodeToArray(node) {
-  let list = [];
-  if (!node || typeof node !== 'object') return list;
-
-  function recurse(curr, parentKey = '') {
-    if (Array.isArray(curr)) {
-      curr.forEach((item, idx) => {
-        if (item && typeof item === 'object') recurse(item, parentKey);
-        else if (item) list.push({ parentKey, value: item });
-      });
-    } else if (typeof curr === 'object') {
-      const keys = Object.keys(curr);
-      // If object holds direct properties, consider it an item entry
-      const hasDirectData = keys.some(k => typeof curr[k] !== 'object' || curr[k] === null);
-      if (hasDirectData) {
-        list.push({ parentKey, ...curr });
-      }
-      keys.forEach(k => {
-        if (curr[k] && typeof curr[k] === 'object') {
-          recurse(curr[k], parentKey ? `${parentKey} > ${k}` : k);
-        }
-      });
-    }
-  }
-
-  recurse(node);
-  return list;
-}
-
-function startDatabaseListeners() {
-  if (typeof firebase === 'undefined') return;
-  const db = firebase.database();
-
-  db.ref('/').on('value', (snapshot) => {
-    const source = snapshot.val();
-    if (!source) return;
-
-    // Read stock directly from coldstore node
-    globalStockData = parseNodeToArray(source.coldstore || source.stock);
-    globalFloorData = parseNodeToArray(source.floor);
-    globalOrdersData = parseNodeToArray(source.orders || source.cart);
-    globalPipelineData = parseNodeToArray(source.pipelineCalls || source.pipeline);
-
-    // Read buyers
-    globalBuyersData = parseNodeToArray(source.buyers || source.buyerStats);
-    
-    updateDashboardKPIs();
-    renderStockView();
-    renderFloorView();
-    renderBuyersView();
-    renderOrdersView();
-    renderPipelineView();
-  });
-}
-
-function updateDashboardKPIs() {
-  let totalUnits = 0;
-  globalStockData.concat(globalFloorData).forEach(item => {
-    const q = parseInt(parseVal(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units', 'Count', 'count', 'balance', 'Boxes'], 0), 10);
-    totalUnits += (isNaN(q) ? 0 : q);
-  });
-  const floorElement = document.getElementById('kpi-floor');
-  if (floorElement) floorElement.textContent = totalUnits.toLocaleString('en-ZA');
-
-  const buyerElement = document.getElementById('kpi-buyers');
-  if (buyerElement) buyerElement.textContent = globalBuyersData.length.toLocaleString('en-ZA');
-}
-
-function switchStockTab(salesman, btn) {
-  currentStockSalesman = salesman;
-  document.querySelectorAll('#page-stock .stock-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderStockView();
-}
-
-function switchFloorTab(salesman, btn) {
-  currentFloorSalesman = salesman;
-  document.querySelectorAll('#page-floor .stock-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderFloorView();
-}
-
-function renderStockView() {
-  const container = document.getElementById('stock-list');
-  if (!container) return;
-  const searchVal = document.getElementById('stock-search').value.toLowerCase();
-
-  let filtered = globalStockData.filter(item => {
-    if (!matchSalesman(item, currentStockSalesman)) return false;
-    if (searchVal) {
-      const comm = String(parseVal(item, ['commodity', 'Commodity', 'product', 'Product', 'producer', 'Producer'], '')).toLowerCase();
-      if (!comm.includes(searchVal)) return false;
-    }
-    return true;
-  });
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No coldstore records found.</div>`;
-    return;
-  }
-
-  let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
-  filtered.forEach(item => {
-    const comm = parseVal(item, ['commodity', 'Commodity', 'product', 'Product'], 'Stock Item');
-    const producer = parseVal(item, ['producer', 'Producer', 'grower', 'Grower'], '');
-    const cnt = parseVal(item, ['count', 'Count', 'qty', 'Qty', 'quantity', 'Quantity', 'boxes'], 'N/A');
-    const dep = parseVal(item, ['depositNo', 'Deposit', 'batch', 'id'], '---');
-    const dt = parseVal(item, ['date', 'Date'], '');
-
-    html += `
-      <div style="background:#fff; padding:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid #1e4d2b">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div style="font-weight:700; font-size:15px; color:#1e293b">${comm} ${producer ? '· ' + producer : ''}</div>
-          <span style="font-size:11px; background:#e2e8f0; padding:2px 6px; border-radius:4px; font-weight:600; color:#475569;">#${dep}</span>
-        </div>
-        <div style="font-size:12px; color:#64748b; margin-top:4px;">
-          Qty/Count: <strong>${cnt}</strong> ${dt ? '· Date: ' + dt : ''}
-        </div>
-      </div>
-    `;
-  });
-  container.innerHTML = html + '</div>';
-}
-
-function renderFloorView() {
-  const container = document.getElementById('floor-list');
-  if (!container) return;
-  const searchVal = document.getElementById('floor-search').value.toLowerCase();
-
-  let filtered = globalFloorData.filter(item => {
-    if (!matchSalesman(item, currentFloorSalesman)) return false;
-    if (searchVal) {
-      const prod = String(parseVal(item, ['producer', 'Producer', 'grower', 'commodity'], '')).toLowerCase();
-      if (!prod.includes(searchVal)) return false;
-    }
-    return true;
-  });
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No floor balance records found.</div>`;
-    return;
-  }
-
-  let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
-  filtered.forEach(item => {
-    const prod = parseVal(item, ['producer', 'Producer', 'grower'], 'Floor Batch Item');
-    const comm = parseVal(item, ['commodity', 'Commodity', 'product'], '---');
-    const q = parseVal(item, ['qty', 'quantity', 'Qty', 'balance'], 0);
-
-    html += `
-      <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.04); border-left:4px solid #cc3333">
-        <div>
-          <div style="font-weight:700; font-size:14px; color:#1e293b">${prod}</div>
-          <div style="font-size:12px; color:#64748b">${comm}</div>
-        </div>
-        <div style="font-size:16px; font-weight:800; color:#1e4d2b">${q} units</div>
-      </div>
-    `;
-  });
-  container.innerHTML = html + '</div>';
-}
-
-function renderBuyersView() {
-  const container = document.getElementById('buyer-list');
-  if (!container) return;
-  const searchVal = document.getElementById('buyer-search').value.toLowerCase();
-
-  let filtered = globalBuyersData.filter(b => {
-    const name = parseVal(b, ['name', 'buyer', 'Buyer'], '').toLowerCase();
-    const phone = parseVal(b, ['phone', 'tel'], '');
-    return !searchVal || name.includes(searchVal) || phone.includes(searchVal);
-  });
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No buyer records found.</div>`;
-    return;
-  }
-
-  let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
-  filtered.forEach(b => {
-    const name = parseVal(b, ['name', 'buyer', 'Buyer'], 'Buyer');
-    const phone = parseVal(b, ['phone', 'tel', 'Phone'], 'No Contact');
-
-    html += `
-      <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.04); border-left:4px solid #2563eb;">
-        <div style="font-weight:700; font-size:14px; color:#1e293b">${name}</div>
-        ${phone !== 'No Contact' ? `<a href="tel:${phone}" style="font-size:12px; color:#2563eb; font-weight:700; text-decoration:none;">📞 ${phone}</a>` : '<span style="font-size:12px; color:#94a3b8;">No Contact</span>'}
-      </div>
-    `;
-  });
-  container.innerHTML = html + '</div>';
-}
-
-function renderOrdersView() {
-  const container = document.getElementById('orders-list');
-  if (!container) return;
-  if (globalOrdersData.length === 0) {
-    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:10px;">No active orders found.</div>`;
-    return;
-  }
-  let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
-  globalOrdersData.forEach(o => {
-    const name = parseVal(o, ['buyer', 'Buyer', 'name'], 'Order Record');
-    const details = parseVal(o, ['details', 'commodity', 'product'], 'Active Order Item');
-    html += `<div style="padding:12px; background:#fff; border-radius:10px; font-size:13px; border-left:4px solid #2c3e50;"><strong>${name}</strong><div style="color:#64748b; font-size:12px; margin-top:2px;">${details}</div></div>`;
-  });
-  container.innerHTML = html + '</div>';
-}
-
-function renderPipelineView() {
-  const container = document.getElementById('pipeline-list');
-  if (!container) return;
-  const searchVal = document.getElementById('pipeline-search').value.toLowerCase();
-
-  if (globalPipelineData.length === 0) {
-    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:20px;">No pipeline records found.</div>`;
-    return;
-  }
-
-  let filtered = globalPipelineData.filter(p => !searchVal || JSON.stringify(p).toLowerCase().includes(searchVal));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:20px;">No pipeline matches found.</div>`;
-    return;
-  }
-
-  let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
-  filtered.forEach(p => {
-    const buyerName = parseVal(p, ['buyer', 'Buyer', 'name'], 'Pipeline Match');
-    const phone = parseVal(p, ['phone', 'tel', 'Phone'], '');
-    const commodity = parseVal(p, ['commodity', 'Commodity', 'product'], '');
-
-    html += `
-      <div style="padding:14px; background:#fff; border-radius:12px; border-left:5px solid #1a4479; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div style="font-weight:800; font-size:15px; color:#1e293b">${buyerName}</div>
-          ${phone ? `<a href="tel:${phone}" style="font-size:12px; color:#1a4479; font-weight:700; text-decoration:none; background:#e0f2fe; padding:4px 8px; border-radius:6px;">📞 Call</a>` : ''}
-        </div>
-        ${commodity ? `<div style="font-size:13px; font-weight:600; color:#334155; margin-top:4px;">📦 ${commodity}</div>` : ''}
-      </div>
-    `;
-  });
-  container.innerHTML = html + '</div>';
-}
-
 window.addEventListener('DOMContentLoaded', () => {
-  const sessionStr = localStorage.getItem(SK);
-  if (sessionStr) {
-    const session = JSON.parse(sessionStr);
-    if (Date.now() < session.expiry) {
-      initApp(session.name);
-      return;
-    }
-  }
-  document.getElementById('login-screen').style.display = 'flex';
+  const user = localStorage.getItem(SK);
+  if (user) initApp(user);
 });
 </script>
-
 </body>
 </html>
