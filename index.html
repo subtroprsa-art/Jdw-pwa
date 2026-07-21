@@ -81,7 +81,7 @@ try {
 <div class="page active" id="page-dashboard">
   <div class="kpi-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
     <div class="kpi" style="background: #fff; border-radius: 14px; padding: 16px; border-top: 4px solid #cc3333; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-      <div class="kpi-lbl" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Floor Stock</div>
+      <div class="kpi-lbl" style="font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 700;">Total Stock</div>
       <div class="kpi-val" id="kpi-floor" style="font-size: 28px; font-weight: 800; color: #1e293b; margin-top: 4px;">0</div>
       <div class="kpi-sub" style="font-size: 11px; color: #94a3b8;">units active</div>
     </div>
@@ -115,15 +115,16 @@ try {
 
 <!-- ===== PAGE: PIPELINE ===== -->
 <div class="page" id="page-pipeline">
+  <div class="ctrl-row" style="font-size: 12px; color: #64748b; margin-bottom: 8px;">Showing all matching pipeline channels</div>
   <div id="pipeline-list" style="padding:10px;">Awaiting pipeline data streams...</div>
 </div>
 
 <!-- ===== PAGE: FLOOR BALANCE ===== -->
 <div class="page" id="page-floor">
   <div class="stock-tabs">
-    <button class="stock-tab active" id="floor-tab-RJ" onclick="switchFloorTab('RJ',this)">Riaan (RJ)</button>
-    <button class="stock-tab" id="floor-tab-CW" onclick="switchFloorTab('CW',this)">Christoff (CW)</button>
-    <button class="stock-tab" id="floor-tab-POT" onclick="switchFloorTab('POT',this)">Potgieter</button>
+    <button class="stock-tab active" id="floor-tab-ALL" onclick="switchFloorTab('ALL',this)">All Floor Stock</button>
+    <button class="stock-tab" id="floor-tab-RJ" onclick="switchFloorTab('RJ',this)">Riaan</button>
+    <button class="stock-tab" id="floor-tab-CW" onclick="switchFloorTab('CW',this)">Christoff</button>
   </div>
   <div class="ctrl-row"><input type="text" id="floor-search" placeholder="🔍 Search floor stock…" oninput="filterFloor()"/></div>
   <div id="floor-list"></div>
@@ -138,9 +139,9 @@ try {
 <!-- ===== PAGE: STOCK ===== -->
 <div class="page" id="page-stock">
   <div class="stock-tabs">
-    <button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan (RJ)</button>
-    <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff (CW)</button>
-    <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT',this)">Potgieter</button>
+    <button class="stock-tab active" id="tab-ALL" onclick="switchStockTab('ALL',this)">All Stock Rows</button>
+    <button class="stock-tab" id="tab-RJ" onclick="switchStockTab('RJ',this)">Riaan</button>
+    <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW',this)">Christoff</button>
   </div>
   <div class="ctrl-row">
     <input type="text" id="stock-search" placeholder="🔍 Search active stock…" oninput="filterStock()"/>
@@ -165,8 +166,8 @@ let globalFloorData = [];
 let globalBuyerPhones = [];
 let globalOrdersData = [];
 let globalPipelineData = [];
-let currentStockSalesman = 'RJ';
-let currentFloorSalesman = 'RJ';
+let currentStockSalesman = 'ALL';
+let currentFloorSalesman = 'ALL';
 
 function togglePw() {
   const passInput = document.getElementById('login-pass');
@@ -222,6 +223,14 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
+// Fallback Omni-Parser Helper to protect against property case adjustments
+function parseValue(obj, keysArray, defaultVal = '---') {
+  for (let k of keysArray) {
+    if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+  }
+  return defaultVal;
+}
+
 function startDatabaseListeners() {
   if (typeof firebase === 'undefined') return;
   const db = firebase.database();
@@ -237,44 +246,57 @@ function startDatabaseListeners() {
       return;
     }
     
-    // 1. Ingest Stock
+    // 1. Ingest Stock safely handling arrays or push keys
     globalStockData = [];
-    if (source.stock) {
-      Object.keys(source.stock).forEach(k => { if(source.stock[k]) globalStockData.push({ id: k, ...source.stock[k] })});
+    const stockNode = source.stock || source.Stock || source.jdw?.stock;
+    if (stockNode) {
+      Object.keys(stockNode).forEach(k => { 
+        if(stockNode[k]) globalStockData.push({ id: k, ...stockNode[k] });
+      });
     }
     
     // 2. Ingest Floor Balance
     globalFloorData = [];
-    if (source.floor) {
-      Object.keys(source.floor).forEach(k => { if(source.floor[k]) globalFloorData.push({ id: k, ...source.floor[k] })});
+    const floorNode = source.floor || source.Floor || source.jdw?.floor;
+    if (floorNode) {
+      Object.keys(floorNode).forEach(k => { 
+        if(floorNode[k]) globalFloorData.push({ id: k, ...floorNode[k] });
+      });
     }
     
     // 3. Ingest Buyer Contacts
     globalBuyerPhones = [];
-    if (source.buyerPhones) {
-      Object.keys(source.buyerPhones).forEach(k => { 
-        if(source.buyerPhones[k]) globalBuyerPhones.push({ 
-          id: k, 
-          name: source.buyerPhones[k].name || source.buyerPhones[k].buyer || k, 
-          phone: source.buyerPhones[k].phone || source.buyerPhones[k].telephone || 'No Phone Number' 
-        });
+    const buyerNode = source.buyerPhones || source.buyers || source.Buyers || source.jdw?.buyerPhones;
+    if (buyerNode) {
+      Object.keys(buyerNode).forEach(k => { 
+        if(buyerNode[k]) {
+          const item = buyerNode[k];
+          const nameVal = parseValue(item, ['name', 'buyer', 'Buyer', 'client', 'Client', 'Name'], k);
+          const phoneVal = parseValue(item, ['phone', 'telephone', 'Phone', 'Tel', 'cell', 'Cell'], 'No Contact');
+          globalBuyerPhones.push({ id: k, name: nameVal, phone: phoneVal, raw: item });
+        }
       });
     }
 
     // 4. Ingest Orders
     globalOrdersData = [];
-    if (source.orders) {
-      Object.keys(source.orders).forEach(k => { if(source.orders[k]) globalOrdersData.push({ id: k, ...source.orders[k] })});
+    const ordersNode = source.orders || source.Orders || source.ordersRegistry || source.jdw?.orders;
+    if (ordersNode) {
+      Object.keys(ordersNode).forEach(k => { 
+        if(ordersNode[k]) globalOrdersData.push({ id: k, ...ordersNode[k] });
+      });
     }
 
-    // 5. Ingest Pipeline Data (Handles both possible node keys)
+    // 5. Ingest Pipeline Data
     globalPipelineData = [];
-    const pipeNode = source.pipelineCalls || source.pipeline;
+    const pipeNode = source.pipelineCalls || source.pipeline || source.Pipeline || source.jdw?.pipelineCalls;
     if (pipeNode) {
-      Object.keys(pipeNode).forEach(k => { if(pipeNode[k]) globalPipelineData.push({ id: k, ...pipeNode[k] })});
+      Object.keys(pipeNode).forEach(k => { 
+        if(pipeNode[k]) globalPipelineData.push({ id: k, ...pipeNode[k] });
+      });
     }
 
-    // Re-render UI
+    // Re-render UI frame loops
     updateDashboardKPIs();
     renderStockView();
     renderFloorView();
@@ -289,7 +311,7 @@ function startDatabaseListeners() {
 function updateDashboardKPIs() {
   let totalUnits = 0;
   globalStockData.forEach(item => {
-    const quantity = parseInt(item.qty || item.quantity || item.Qty || item.Quantity || 0, 10);
+    const quantity = parseInt(parseValue(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units', 'Units', 'Count'], 0), 10);
     totalUnits += quantity;
   });
   const floorElement = document.getElementById('kpi-floor');
@@ -316,31 +338,32 @@ function renderStockView() {
   const searchVal = document.getElementById('stock-search').value.toLowerCase();
   
   let filtered = globalStockData.filter(item => {
-    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || '').toUpperCase();
-    if (currentStockSalesman === 'RJ' && itemSalesman !== '' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
-    if (currentStockSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
-    if (currentStockSalesman === 'POT' && !['POT', 'POTGIETER'].includes(itemSalesman)) return false;
+    if (currentStockSalesman !== 'ALL') {
+      const itemSalesman = String(parseValue(item, ['salesman', 'Agent', 'agent', 'Salesman', 'user'], '')).toUpperCase();
+      if (currentStockSalesman === 'RJ' && !['RJ', 'RIAAN'].some(term => itemSalesman.includes(term))) return false;
+      if (currentStockSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].some(term => itemSalesman.includes(term))) return false;
+    }
     
     if (searchVal) {
-      const prod = (item.producer || item.Producer || item.grower || item.Grower || '').toLowerCase();
-      const comm = (item.commodity || item.Commodity || item.product || item.Product || '').toLowerCase();
+      const prod = String(parseValue(item, ['producer', 'Producer', 'grower', 'Grower', 'client', 'farm'], '')).toLowerCase();
+      const comm = String(parseValue(item, ['commodity', 'Commodity', 'product', 'Product', 'variety'], '')).toLowerCase();
       if (!prod.includes(searchVal) && !comm.includes(searchVal)) return false;
     }
     return true;
   });
   
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No records available in this profile tab.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No stock matching criteria found.</div>`;
     return;
   }
   
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown Entry';
-    const comm = item.commodity || item.Commodity || item.product || item.Product || '---';
-    const varty = item.variety || item.Variety || '---';
-    const sz = item.size || item.Size || 'N/A';
-    const q = item.qty || item.quantity || item.Qty || item.Quantity || 0;
+    const prod = parseValue(item, ['producer', 'Producer', 'grower', 'Grower', 'supplier', 'farm'], 'Unknown Row');
+    const comm = parseValue(item, ['commodity', 'Commodity', 'product', 'Product'], '---');
+    const varty = parseValue(item, ['variety', 'Variety', 'type'], '---');
+    const sz = parseValue(item, ['size', 'Size', 'count'], 'N/A');
+    const q = parseValue(item, ['qty', 'quantity', 'Qty', 'Quantity', 'units'], 0);
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid #1e4d2b">
         <div style="font-weight:700; font-size:14px; color:#1e293b">${prod}</div>
@@ -360,28 +383,29 @@ function renderFloorView() {
   const searchVal = document.getElementById('floor-search').value.toLowerCase();
   
   let filtered = globalFloorData.filter(item => {
-    const itemSalesman = (item.salesman || item.Agent || item.agent || item.Salesman || '').toUpperCase();
-    if (currentFloorSalesman === 'RJ' && itemSalesman !== '' && !['RJ', 'RIAAN'].includes(itemSalesman)) return false;
-    if (currentFloorSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].includes(itemSalesman)) return false;
-    if (currentFloorSalesman === 'POT' && !['POT', 'POTGIETER'].includes(itemSalesman)) return false;
+    if (currentFloorSalesman !== 'ALL') {
+      const itemSalesman = String(parseValue(item, ['salesman', 'Agent', 'agent', 'Salesman'], '')).toUpperCase();
+      if (currentFloorSalesman === 'RJ' && !['RJ', 'RIAAN'].some(term => itemSalesman.includes(term))) return false;
+      if (currentFloorSalesman === 'CW' && !['CW', 'CDW', 'CHRISTOFF'].some(term => itemSalesman.includes(term))) return false;
+    }
     
     if (searchVal) {
-      const prod = (item.producer || item.Producer || item.grower || item.Grower || '').toLowerCase();
+      const prod = String(parseValue(item, ['producer', 'Producer', 'grower', 'Grower'], '')).toLowerCase();
       if (!prod.includes(searchVal)) return false;
     }
     return true;
   });
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No active floor balance items found.</div>`;
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#94a3b8">No floor balance records found.</div>`;
     return;
   }
 
   let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
   filtered.forEach(item => {
-    const prod = item.producer || item.Producer || item.grower || item.Grower || 'Unknown Row';
-    const comm = item.commodity || item.Commodity || item.product || item.Product || '---';
-    const q = item.qty || item.quantity || item.Qty || item.Quantity || 0;
+    const prod = parseValue(item, ['producer', 'Producer', 'grower', 'Grower'], 'Unknown Entry');
+    const comm = parseValue(item, ['commodity', 'Commodity', 'product', 'Product'], '---');
+    const q = parseValue(item, ['qty', 'quantity', 'Qty', 'Quantity'], 0);
     html += `
       <div style="background:#fff; padding:12px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 1px 2px rgba(0,0,0,0.04)">
         <div><div style="font-weight:600; font-size:13px">${prod}</div><div style="font-size:11px; color:#64748b">${comm}</div></div>
@@ -428,8 +452,8 @@ function renderOrdersView() {
   }
   let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
   globalOrdersData.forEach(o => {
-    const buyerName = o.buyer || o.Buyer || 'Unknown Buyer';
-    const details = o.details || o.commodity || '';
+    const buyerName = parseValue(o, ['buyer', 'Buyer', 'name', 'client', 'Client'], 'Unknown Order Target');
+    const details = parseValue(o, ['details', 'commodity', 'product', 'desc'], '---');
     html += `<div style="padding:12px; background:#fff; border-radius:10px; font-size:13px; border-left:4px solid #2c3e50; box-shadow:0 1px 2px rgba(0,0,0,0.04);"><strong>${buyerName}</strong> <span style="color:#64748b; font-size:11px;">(${o.id})</span><div>${details}</div></div>`;
   });
   container.innerHTML = html + '</div>';
@@ -439,12 +463,12 @@ function renderPipelineView() {
   const container = document.getElementById('pipeline-list');
   if (!container) return;
   if (globalPipelineData.length === 0) {
-    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:10px;">No items listed in current match channels.</div>`;
+    container.innerHTML = `<div style="color:#94a3b8; text-align:center; padding:10px;">No active matches found.</div>`;
     return;
   }
   let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
   globalPipelineData.forEach(p => {
-    const title = p.title || p.description || p.buyer || `Pipeline Node: ${p.id}`;
+    const title = parseValue(p, ['title', 'description', 'buyer', 'Buyer', 'name'], `Entry: ${p.id}`);
     html += `<div style="padding:12px; background:#fff; border-radius:10px; font-size:13px; border-left:4px solid #1a4479; box-shadow:0 1px 2px rgba(0,0,0,0.04);"><strong>${title}</strong></div>`;
   });
   container.innerHTML = html + '</div>';
