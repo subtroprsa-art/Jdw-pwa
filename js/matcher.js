@@ -62,48 +62,56 @@ function runDeterministicMatch(stock, buyers, todayDow) {
     const buysToday = !!(buyer.buyingDays && buyer.buyingDays[todayDow]);
 
     for (const pref of buyer.prefs) {
-      const targetComm = COMM_MAP[pref.comm] || pref.comm;
-      const targetVariety = pref.variety || '*';
-      const targetPack = pref.pack || '';
+      // Normalize values to upper case for robust matching
+      const rawComm = pref.comm || '';
+      const targetComm = (COMM_MAP[rawComm] || rawComm).toUpperCase();
+      const targetVariety = (pref.variety || '*').toUpperCase();
+      const targetPack = (pref.pack || '').toUpperCase();
 
-      // Step 1: Find ALL stock with matching commodity
-      let candidates = stock.filter(s => s.commodity === targetComm && s.flr > 0);
+      // Step 1: Find ALL active floor stock with matching commodity
+      let candidates = stock.filter(s => 
+        s.commodity && s.commodity.toUpperCase() === targetComm && (s.flr || 0) > 0
+      );
 
       if (!candidates.length) continue;
 
-      // Score each candidate
+      // Score each candidate line item
       let best = null;
       let bestScore = -1;
 
       for (const s of candidates) {
-        let score = 40; // Base score for matching commodity
+        const stockVariety = (s.variety || '*').toUpperCase();
+        const stockPack = (s.pack || '').toUpperCase();
+
+        let score = 40; // Base score for commodity match
         
-        // Bonus: variety matches
-        if (targetVariety !== '*' && s.variety === targetVariety) {
+        // Bonus: Variety matching logic
+        if (targetVariety !== '*' && stockVariety === targetVariety) {
           score += 25;
-        } else if (targetVariety === '*' || s.variety === '*') {
+        } else if (targetVariety === '*' || stockVariety === '*') {
           score += 10; // Partial variety match
         }
         
-        // Bonus: pack matches
-        if (targetPack && s.pack === targetPack) {
+        // Bonus: Pack format matching logic
+        if (targetPack && stockPack === targetPack) {
           score += 25;
         } else if (!targetPack) {
-          score += 5; // No pack preference
+          score += 5; // No pack preference constraint
         }
         
-        // Bonus: more stock available
+        // Volume Bonus (Max 15 points)
         score += Math.min(15, Math.round((s.flr || 0) / 50));
         
-        // Bonus: buyer buys today
+        // Buyer Day Schedule Bonus
         if (buysToday) score += 10;
         
-        // Bonus: high spending buyer
+        // Buyer Spend Weight (Max 10 points)
         score += Math.min(10, Math.round((buyer.spend || 0) / 10000));
         
-        // Penalty: stock in coldstore
+        // Penalty: Coldstore accessibility friction
         if (s.inColdstore) score -= 5;
         
+        // Clamp overall score between 1 and 100
         score = Math.max(1, Math.min(100, score));
 
         if (score > bestScore) {
@@ -116,21 +124,26 @@ function runDeterministicMatch(stock, buyers, todayDow) {
 
       const priority = bestScore >= 65 ? 'HIGH' : bestScore >= 45 ? 'MEDIUM' : 'LOW';
       
-      // Build a clean stock line description
-      const varietyDisplay = best.variety && best.variety !== '*' ? (VARIETY_NAMES[best.variety] || best.variety) : '';
-      const packDisplay = PACK_NAMES[best.pack] || best.pack || '';
+      // Build display strings safely
+      const bestVarKey = (best.variety || '').toUpperCase();
+      const bestPackKey = (best.pack || '').toUpperCase();
+
+      const varietyDisplay = best.variety && best.variety !== '*' 
+        ? (VARIETY_NAMES[bestVarKey] || best.variety) 
+        : '';
+      const packDisplay = PACK_NAMES[bestPackKey] || best.pack || '';
       const commDisplay = pref.comm || best.commodity;
       
       let stockLine = commDisplay;
       if (varietyDisplay) stockLine += ' ' + varietyDisplay;
       if (packDisplay) stockLine += ' (' + packDisplay + ')';
-      stockLine += ' | ' + best.flr + ' units | ' + best.producer;
+      stockLine += ' | ' + best.flr + ' units | ' + (best.producer || 'Unknown');
 
-      // Build the reason
+      // Build reason narrative
       const reasonParts = [];
       let matchDesc = commDisplay;
-      const varietyMatch = targetVariety !== '*' && best.variety === targetVariety;
-      const packMatch = targetPack && best.pack === targetPack;
+      const varietyMatch = targetVariety !== '*' && bestVarKey === targetVariety;
+      const packMatch = targetPack && bestPackKey === targetPack;
       
       if (varietyMatch) matchDesc += ' ' + varietyDisplay;
       else if (varietyDisplay) matchDesc += ' ' + varietyDisplay + ' (close)';
@@ -138,9 +151,9 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       if (packMatch) matchDesc += ' (' + packDisplay + ')';
       else if (packDisplay) matchDesc += ' (' + packDisplay + ' - close)';
       
-      reasonParts.push(`Matches ${matchDesc}`);
+      reasonParts.push(`Matches ${matchDesc}.`);
       if (buysToday) reasonParts.push(`${buyer.name} typically buys today.`);
-      reasonParts.push(`${best.flr} units available from ${best.producer}.`);
+      reasonParts.push(`${best.flr} units available from ${best.producer || 'Unknown'}.`);
 
       results.push({
         buyer: buyer.name,
@@ -150,25 +163,27 @@ function runDeterministicMatch(stock, buyers, todayDow) {
         pack: best.pack,
         stockLine: stockLine,
         reason: reasonParts.join(' '),
-        tip: best.inColdstore ? 'Stock is in coldstore - arrange removal first.' : `Contact ${buyer.name} about ${commDisplay} available.`,
+        tip: best.inColdstore 
+          ? 'Stock is in coldstore - arrange removal first.' 
+          : `Contact ${buyer.name} about ${commDisplay} available.`,
         buysToday: buysToday,
         priority: priority,
         inColdstore: !!best.inColdstore,
-        producer: best.producer,
+        producer: best.producer || 'Unknown',
         flr: best.flr
       });
     }
   }
 
-  // Sort by score descending
+  // Sort candidates by score in descending order
   results.sort((a, b) => b.score - a.score);
   
-  // Deduplicate: keep only the best match per buyer
-  const seen = {};
+  // Deduplicate: retain only the highest-scoring match per buyer + commodity combination
+  const seen = new Set();
   const deduped = results.filter(r => {
-    const key = r.buyer + '|' + r.commodity;
-    if (seen[key]) return false;
-    seen[key] = true;
+    const key = `${r.buyer}|${r.commodity}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 
