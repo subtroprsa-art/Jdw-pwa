@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#1e4d2b"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
 
-<!-- ===== CONFIGURATION ===== -->
 <script>
 const CONFIG = {
   FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
@@ -25,7 +24,6 @@ const SALESMEN = [
 const SK = 'st_sess';
 </script>
 
-<!-- ===== FIREBASE SDK ===== -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script>
@@ -44,28 +42,23 @@ try {
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
   body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 30px; }
   
-  /* Header */
   .hdr { background: #1e4d2b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
   .hdr-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; }
   .hdr-brand span { color: #86efac; font-weight: 500; font-size: 14px; }
   .hdr-right { display: flex; align-items: center; gap: 8px; }
   .hdr-btn { background: rgba(255,255,255,0.18); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; }
 
-  /* Main Container */
   .container { max-width: 900px; margin: 0 auto; padding: 16px; }
 
-  /* Salesman Filter Bar */
   .salesman-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px; }
   .sm-chip { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer; whitespace: nowrap; }
   .sm-chip.active { background: #1e4d2b; color: white; border-color: #1e4d2b; }
 
-  /* KPIs */
   .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .kpi-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .kpi-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
   .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }
 
-  /* Actions & Grid */
   .pipeline-btn { width: 100%; padding: 16px; background: #1a4479; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; text-align: left; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
   .cols-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
   .col-sec { display: flex; flex-direction: column; gap: 10px; }
@@ -74,7 +67,6 @@ try {
   .nav-btn { width: 100%; padding: 14px 16px; background: #2c3e50; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
   .analytics-btn { width: 100%; padding: 14px 16px; background: #334155; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 
-  /* Sub-page Controls */
   .nav-bar-sub { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
   .nav-bar-sub button { background: #1e4d2b; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 
@@ -83,8 +75,9 @@ try {
 
   .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #334155; margin-left: 6px; }
+  
+  .meta-tag { display: inline-block; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; margin-top: 4px; }
 
-  /* Auth Screen */
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
   .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
   .login-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
@@ -95,7 +88,6 @@ try {
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-screen">
   <h2 style="margin-bottom: 16px;">SubTrop CRM</h2>
   <form class="login-box" onsubmit="event.preventDefault(); doLogin();">
@@ -111,7 +103,6 @@ try {
   </form>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none;">
   <div class="hdr">
     <div class="hdr-brand">
@@ -125,11 +116,8 @@ try {
   </div>
 
   <div class="container">
-    
-    <!-- SALESMAN SELECTOR BAR -->
     <div class="salesman-bar" id="salesman-selector"></div>
 
-    <!-- DASHBOARD VIEW -->
     <div class="page active" id="page-dashboard">
       <div class="kpi-grid">
         <div class="kpi-card" style="border-top: 4px solid #b91c1c;">
@@ -170,24 +158,18 @@ try {
 
     <!-- SUB-PAGES -->
     <div class="page" id="page-buyers">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers or phone numbers..." oninput="renderBuyers()"/>
       <div class="list-container" id="list-buyers">Loading buyers...</div>
     </div>
 
     <div class="page" id="page-orders">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div class="list-container" id="list-orders">Loading orders...</div>
     </div>
 
     <div class="page" id="page-scanslip">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
         <h3>📷 Scan Delivery Slip</h3>
         <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory.</p>
@@ -196,48 +178,36 @@ try {
     </div>
 
     <div class="page" id="page-stock">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
-      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by salesman, grower, or commodity..." oninput="renderStock()"/>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
+      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by GRN, sequence, grower, or commodity..." oninput="renderStock()"/>
       <div class="list-container" id="list-stock">Loading stock...</div>
     </div>
 
     <div class="page" id="page-floor">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
-      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by salesman, grower, or commodity..." oninput="renderFloor()"/>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
+      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by GRN, sequence, grower, or date..." oninput="renderFloor()"/>
       <div class="list-container" id="list-floor">Loading floor balance...</div>
     </div>
 
     <div class="page" id="page-coldstore">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="renderColdstore()"/>
       <div class="list-container" id="list-coldstore">Loading coldstore...</div>
     </div>
 
     <div class="page" id="page-commodities">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div class="list-container" id="list-commodities">Loading commodities...</div>
     </div>
 
     <div class="page" id="page-pipeline">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches..." oninput="renderPipeline()"/>
       <div class="list-container" id="list-pipeline">Loading pipeline...</div>
     </div>
 
     <div class="page" id="page-analytics">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
-      </div>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
         <h3>📈 Reports & Analytics</h3>
         <p style="color:#64748b; font-size:13px; margin-top:8px;">Live performance metrics and daily turnover breakdowns.</p>
@@ -313,26 +283,30 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-// Deep recursive object traversal to extract records with salesman assignment detection
 function extractRecords(node, defaultSalesman = '') {
   let records = [];
   if (!node || typeof node !== 'object') return records;
 
-  function traverse(obj, pathSalesman = '') {
+  function traverse(obj, pathSalesman = '', parentKeys = {}) {
     if (Array.isArray(obj)) {
-      obj.forEach(item => traverse(item, pathSalesman));
+      obj.forEach(item => traverse(item, pathSalesman, parentKeys));
       return;
     }
     if (typeof obj === 'object' && obj !== null) {
-      // Check if current node represents a salesman code
       let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.salesperson || pathSalesman;
       
       const keys = Object.keys(obj);
       const isDataLeaf = keys.some(k => typeof obj[k] !== 'object' || obj[k] === null);
 
-      if (isDataLeaf && (obj.qty || obj.quantity || obj.balance || obj.units || obj.commodity || obj.producer || obj.buyer)) {
+      if (isDataLeaf && (obj.qty !== undefined || obj.quantity !== undefined || obj.balance !== undefined || obj.units !== undefined || obj.producer || obj.producerName || obj.grower || obj.commodity)) {
         records.push({
           salesmanCode: String(sm).toUpperCase(),
+          grn: obj.grn || obj.grnNo || obj.consignment || obj.docNo || parentKeys.grn || '—',
+          seq: obj.seq || obj.sequence || obj.seqNo || obj.lot || parentKeys.seq || '—',
+          date: obj.date || obj.receivedDate || obj.timestamp || parentKeys.date || '—',
+          producer: obj.producer || obj.producerName || obj.grower || obj.farmer || 'Unknown Producer',
+          commodity: obj.commodity || obj.product || obj.variety || obj.item || '',
+          qty: obj.qty || obj.quantity || obj.units || obj.balance || obj.count || 0,
           ...obj
         });
       }
@@ -341,7 +315,11 @@ function extractRecords(node, defaultSalesman = '') {
         let childSm = sm;
         if (['RJ', 'CW', 'POT'].includes(k.toUpperCase())) childSm = k.toUpperCase();
         if (typeof obj[k] === 'object' && obj[k] !== null) {
-          traverse(obj[k], childSm);
+          traverse(obj[k], childSm, {
+            grn: obj.grn || parentKeys.grn,
+            seq: obj.seq || parentKeys.seq,
+            date: obj.date || parentKeys.date
+          });
         }
       });
     }
@@ -372,7 +350,6 @@ function startFirebaseListener() {
     store.orders = extractRecords(raw.orders || raw.cart);
     store.pipeline = extractRecords(raw.pipelineCalls || raw.pipeline);
 
-    // Buyers & Phone Mappings
     store.buyers = [];
     const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
     const buyersNode = raw.buyers || raw.buyerStats || raw.buyerTurnover;
@@ -408,7 +385,7 @@ function updateDashboardKPIs() {
   const activeFloor = filterBySalesman(store.floor);
   let floorUnits = 0;
   activeFloor.forEach(item => {
-    const q = parseInt(item.qty || item.quantity || item.units || item.balance || 0, 10);
+    const q = parseInt(item.qty || 0, 10);
     floorUnits += (isNaN(q) ? 0 : q);
   });
 
@@ -417,6 +394,108 @@ function updateDashboardKPIs() {
 
   const clearanceEl = document.getElementById('kpi-clearance');
   if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '35%' : '0%';
+}
+
+function renderFloor() {
+  const container = document.getElementById('list-floor');
+  if (!container) return;
+  const q = (document.getElementById('search-floor')?.value || '').toLowerCase();
+
+  let activeFloor = filterBySalesman(store.floor);
+  let filtered = activeFloor.filter(f => JSON.stringify(f).toLowerCase().includes(q));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(f => `
+    <div class="card-item" style="border-left:4px solid #b91c1c;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-weight:800; font-size:15px; color:#0f172a;">${f.producer}</div>
+          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${f.commodity || 'General Product'}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:800; font-size:16px; color:#b91c1c;">${f.qty} units</div>
+          ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <span class="meta-tag">📄 GRN: <strong>${f.grn}</strong></span>
+        <span class="meta-tag">🔢 SEQ: <strong>${f.seq}</strong></span>
+        <span class="meta-tag">📅 ${f.date}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderStock() {
+  const container = document.getElementById('list-stock');
+  if (!container) return;
+  const q = (document.getElementById('search-stock')?.value || '').toLowerCase();
+
+  let activeStock = filterBySalesman(store.stock);
+  let filtered = activeStock.filter(s => JSON.stringify(s).toLowerCase().includes(q));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(s => `
+    <div class="card-item" style="border-left:4px solid #1e4d2b;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-weight:800; font-size:15px; color:#0f172a;">${s.producer}</div>
+          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${s.commodity || 'Stock Item'}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.qty} units</div>
+          ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <span class="meta-tag">📄 GRN: <strong>${s.grn}</strong></span>
+        <span class="meta-tag">🔢 SEQ: <strong>${s.seq}</strong></span>
+        <span class="meta-tag">📅 ${s.date}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderColdstore() {
+  const container = document.getElementById('list-coldstore');
+  if (!container) return;
+  const q = (document.getElementById('search-coldstore')?.value || '').toLowerCase();
+
+  let activeCold = filterBySalesman(store.coldstore);
+  let filtered = activeCold.filter(c => JSON.stringify(c).toLowerCase().includes(q));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No coldstore records found</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => `
+    <div class="card-item" style="border-left:4px solid #0284c7;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-weight:800;">${c.producer}</div>
+          <div style="font-size:12px; color:#0284c7; font-weight:700;">🌿 ${c.commodity || 'Coldstore Batch'}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:800; color:#0284c7;">${c.qty} units</div>
+          ${c.salesmanCode ? `<span class="badge">${c.salesmanCode}</span>` : ''}
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <span class="meta-tag">📄 GRN: <strong>${c.grn}</strong></span>
+        <span class="meta-tag">🔢 SEQ: <strong>${c.seq}</strong></span>
+        <span class="meta-tag">📅 ${c.date}</span>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderBuyers() {
@@ -438,81 +517,6 @@ function renderBuyers() {
         ${b.turnover ? `<div style="font-size:12px; color:#16a34a; font-weight:700;">R ${Number(b.turnover).toLocaleString('en-ZA')}</div>` : ''}
       </div>
       ${b.phone && b.phone !== 'No Contact' ? `<a href="tel:${b.phone}" style="font-weight:700; color:#2563eb; text-decoration:none;">📞 ${b.phone}</a>` : '<span style="color:#94a3b8; font-size:12px;">No Contact</span>'}
-    </div>
-  `).join('');
-}
-
-function renderStock() {
-  const container = document.getElementById('list-stock');
-  if (!container) return;
-  const q = (document.getElementById('search-stock')?.value || '').toLowerCase();
-
-  let activeStock = filterBySalesman(store.stock);
-  let filtered = activeStock.filter(s => JSON.stringify(s).toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(s => `
-    <div class="card-item" style="border-left:4px solid #1e4d2b;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-weight:700;">${s.commodity || s.product || s.desc || 'Stock Item'} ${s.producer ? '· ' + s.producer : ''}</div>
-        ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
-      </div>
-      <div style="font-size:12px; color:#64748b; margin-top:4px;">Quantity / Units: <strong>${s.qty || s.quantity || s.units || s.count || '0'}</strong></div>
-    </div>
-  `).join('');
-}
-
-function renderFloor() {
-  const container = document.getElementById('list-floor');
-  if (!container) return;
-  const q = (document.getElementById('search-floor')?.value || '').toLowerCase();
-
-  let activeFloor = filterBySalesman(store.floor);
-  let filtered = activeFloor.filter(f => JSON.stringify(f).toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(f => `
-    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center; border-left:4px solid #b91c1c;">
-      <div>
-        <div style="font-weight:700;">
-          ${f.producer || f.grower || f.commodity || 'Floor Stock'}
-          ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
-        </div>
-        <div style="font-size:12px; color:#64748b;">${f.commodity || f.product || ''}</div>
-      </div>
-      <div style="font-weight:800; color:#b91c1c;">${f.qty || f.quantity || f.units || f.balance || '0'} units</div>
-    </div>
-  `).join('');
-}
-
-function renderColdstore() {
-  const container = document.getElementById('list-coldstore');
-  if (!container) return;
-  const q = (document.getElementById('search-coldstore')?.value || '').toLowerCase();
-
-  let activeCold = filterBySalesman(store.coldstore);
-  let filtered = activeCold.filter(c => JSON.stringify(c).toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No coldstore records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(c => `
-    <div class="card-item" style="border-left:4px solid #0284c7;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-weight:700;">${c.commodity || c.product || 'Coldstore Batch'} ${c.producer ? '· ' + c.producer : ''}</div>
-        ${c.salesmanCode ? `<span class="badge">${c.salesmanCode}</span>` : ''}
-      </div>
-      <div style="font-size:12px; color:#64748b; margin-top:4px;">Deposit/Batch: #${c.depositNo || c.id || c.batch || '---'} | Qty: <strong>${c.qty || c.quantity || c.count || '0'}</strong></div>
     </div>
   `).join('');
 }
