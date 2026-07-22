@@ -479,34 +479,69 @@ function extractRecords(node, defaultSalesman = '') {
       obj.forEach(item => traverse(item, pathSalesman, parentKeys));
       return;
     }
+    
     if (typeof obj === 'object' && obj !== null) {
+      // Inherit or detect salesman code
       let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.salesperson || pathSalesman;
       
       const keys = Object.keys(obj);
-      const isDataLeaf = keys.some(k => typeof obj[k] !== 'object' || obj[k] === null);
+      
+      // Determine if this object represents an actual individual line item/sequence
+      const hasSpecificLineData = (
+        obj.seq !== undefined || obj.sequence !== undefined || obj.seqNo !== undefined || 
+        obj.lot !== undefined || obj.line !== undefined || obj.pack !== undefined || 
+        obj.variety !== undefined || obj.size !== undefined
+      );
 
-      if (isDataLeaf && (obj.qty !== undefined || obj.quantity !== undefined || obj.balance !== undefined || obj.units !== undefined || obj.producer || obj.producerName || obj.grower || obj.commodity)) {
+      // Extract quantity field across all potential naming conventions
+      const rawQty = obj.qty ?? obj.quantity ?? obj.units ?? obj.balance ?? obj.bal ?? obj.flr ?? obj.count ?? obj.total;
+
+      // Only push if it's a valid leaf node line item, OR if it explicitly carries quantity data
+      if (hasSpecificLineData || (rawQty !== undefined && typeof rawQty !== 'object')) {
+        
+        // Clean quantity parsing
+        let numericQty = 0;
+        if (typeof rawQty === 'number') {
+          numericQty = rawQty;
+        } else if (typeof rawQty === 'string') {
+          const parsed = parseInt(rawQty.replace(/[^0-9]/g, ''), 10);
+          numericQty = isNaN(parsed) ? 1 : parsed; // Fallback to 1 if wildcard '*'
+        } else {
+          numericQty = 1;
+        }
+
         records.push({
-          salesmanCode: String(sm).toUpperCase(),
+          salesmanCode: String(sm || '').toUpperCase(),
           grn: obj.grn || obj.grnNo || obj.consignment || obj.docNo || parentKeys.grn || '—',
-          seq: obj.seq || obj.sequence || obj.seqNo || obj.lot || parentKeys.seq || '—',
+          seq: obj.seq || obj.sequence || obj.seqNo || obj.lot || obj.line || parentKeys.seq || '—',
           date: obj.date || obj.receivedDate || obj.timestamp || parentKeys.date || '—',
-          producer: obj.producer || obj.producerName || obj.grower || obj.farmer || 'Unknown Producer',
-          commodity: obj.commodity || obj.product || obj.variety || obj.item || '',
-          qty: obj.qty || obj.quantity || obj.units || obj.balance || obj.count || 0,
+          producer: obj.producer || obj.producerName || obj.grower || obj.farmer || parentKeys.producer || 'Unknown Producer',
+          commodity: obj.commodity || obj.product || obj.variety || obj.item || parentKeys.commodity || '',
+          pack: obj.pack || obj.packaging || parentKeys.pack || '',
+          variety: obj.variety || parentKeys.variety || '',
+          qty: numericQty,
+          rawQtyDisplay: rawQty === '*' ? '* (In Stock)' : `${numericQty} units`,
           ...obj
         });
       }
 
+      // Propagate parent metadata down to nested sequence children
+      const currentParentContext = {
+        grn: obj.grn || obj.grnNo || parentKeys.grn,
+        seq: obj.seq || parentKeys.seq,
+        date: obj.date || parentKeys.date,
+        producer: obj.producer || parentKeys.producer,
+        commodity: obj.commodity || parentKeys.commodity,
+        pack: obj.pack || parentKeys.pack,
+        variety: obj.variety || parentKeys.variety
+      };
+
+      // Recurse into child nodes
       keys.forEach(k => {
         let childSm = sm;
         if (['RJ', 'CW', 'POT'].includes(k.toUpperCase())) childSm = k.toUpperCase();
         if (typeof obj[k] === 'object' && obj[k] !== null) {
-          traverse(obj[k], childSm, {
-            grn: obj.grn || parentKeys.grn,
-            seq: obj.seq || parentKeys.seq,
-            date: obj.date || parentKeys.date
-          });
+          traverse(obj[k], childSm, currentParentContext);
         }
       });
     }
@@ -709,7 +744,6 @@ function renderFloor() {
     </div>
   `).join('');
 }
-
 function renderStock() {
   const container = document.getElementById('list-stock');
   if (!container) return;
@@ -728,10 +762,12 @@ function renderStock() {
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
           <div style="font-weight:800; font-size:15px; color:#0f172a;">${s.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${s.commodity || 'Stock Item'}</div>
+          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">
+            🌿 ${s.commodity || 'Stock Item'} ${s.variety ? `• ${s.variety}` : ''} ${s.pack ? `(${s.pack})` : ''}
+          </div>
         </div>
         <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.qty} units</div>
+          <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.rawQtyDisplay}</div>
           ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
         </div>
       </div>
