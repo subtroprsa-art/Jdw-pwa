@@ -479,69 +479,53 @@ function extractRecords(node, defaultSalesman = '') {
       obj.forEach(item => traverse(item, pathSalesman, parentKeys));
       return;
     }
-    
+
     if (typeof obj === 'object' && obj !== null) {
-      // Inherit or detect salesman code
-      let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.salesperson || pathSalesman;
-      
-      const keys = Object.keys(obj);
-      
-      // Determine if this object represents an actual individual line item/sequence
-      const hasSpecificLineData = (
-        obj.seq !== undefined || obj.sequence !== undefined || obj.seqNo !== undefined || 
-        obj.lot !== undefined || obj.line !== undefined || obj.pack !== undefined || 
-        obj.variety !== undefined || obj.size !== undefined
-      );
+      let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.salesperson || obj.user || obj._user || pathSalesman;
 
-      // Extract quantity field across all potential naming conventions
-      const rawQty = obj.qty ?? obj.quantity ?? obj.units ?? obj.balance ?? obj.bal ?? obj.flr ?? obj.count ?? obj.total;
+      // Extract raw quantity mapped directly from Python outputs:
+      // Stock PDF -> qty_rec / qty_sort
+      // Floor PDF -> balance
+      // Buyer Slip PDF -> qty
+      const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.qty_sort ?? obj.units ?? obj.flr;
 
-      // Only push if it's a valid leaf node line item, OR if it explicitly carries quantity data
-      if (hasSpecificLineData || (rawQty !== undefined && typeof rawQty !== 'object')) {
-        
-        // Clean quantity parsing
+      const commodity = obj.commodity || obj.product || obj.variety || obj.item;
+      const producer = obj.producer || obj.producerName || obj.grower || obj.farmer;
+
+      // Ensure we have a valid data row from the Python parser outputs
+      if (rawQty !== undefined || commodity || producer || obj.grn) {
         let numericQty = 0;
+        
         if (typeof rawQty === 'number') {
           numericQty = rawQty;
         } else if (typeof rawQty === 'string') {
           const parsed = parseInt(rawQty.replace(/[^0-9]/g, ''), 10);
-          numericQty = isNaN(parsed) ? 1 : parsed; // Fallback to 1 if wildcard '*'
-        } else {
-          numericQty = 1;
+          numericQty = isNaN(parsed) ? 0 : parsed;
         }
 
         records.push({
           salesmanCode: String(sm || '').toUpperCase(),
-          grn: obj.grn || obj.grnNo || obj.consignment || obj.docNo || parentKeys.grn || '—',
-          seq: obj.seq || obj.sequence || obj.seqNo || obj.lot || obj.line || parentKeys.seq || '—',
-          date: obj.date || obj.receivedDate || obj.timestamp || parentKeys.date || '—',
-          producer: obj.producer || obj.producerName || obj.grower || obj.farmer || parentKeys.producer || 'Unknown Producer',
-          commodity: obj.commodity || obj.product || obj.variety || obj.item || parentKeys.commodity || '',
-          pack: obj.pack || obj.packaging || parentKeys.pack || '',
-          variety: obj.variety || parentKeys.variety || '',
+          grn: obj.grn || obj.grnNo || obj.docNo || '—',
+          seq: obj.seq || '—', // Displays Floor sequence number or '—' if Stock report
+          date: obj.date || obj.received || obj.floorDate || '—',
+          producer: producer || 'Unknown Producer',
+          commodity: commodity || 'UNK',
+          pack: obj.pack || '',
+          variety: obj.variety || '*',
+          grade: obj.grade || obj.cls || '1',
+          size: obj.size || '*',
           qty: numericQty,
-          rawQtyDisplay: rawQty === '*' ? '* (In Stock)' : `${numericQty} units`,
+          rawQtyDisplay: `${numericQty} units`,
           ...obj
         });
       }
 
-      // Propagate parent metadata down to nested sequence children
-      const currentParentContext = {
-        grn: obj.grn || obj.grnNo || parentKeys.grn,
-        seq: obj.seq || parentKeys.seq,
-        date: obj.date || parentKeys.date,
-        producer: obj.producer || parentKeys.producer,
-        commodity: obj.commodity || parentKeys.commodity,
-        pack: obj.pack || parentKeys.pack,
-        variety: obj.variety || parentKeys.variety
-      };
-
-      // Recurse into child nodes
-      keys.forEach(k => {
+      // Recurse down sub-nodes if Firebase stores nested trees
+      Object.keys(obj).forEach(k => {
         let childSm = sm;
         if (['RJ', 'CW', 'POT'].includes(k.toUpperCase())) childSm = k.toUpperCase();
         if (typeof obj[k] === 'object' && obj[k] !== null) {
-          traverse(obj[k], childSm, currentParentContext);
+          traverse(obj[k], childSm, parentKeys);
         }
       });
     }
