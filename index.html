@@ -1,868 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<meta name="theme-color" content="#1e4d2b"/>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SubTrop CRM</title>
+  <style>
+    :root {
+      --primary: #1e4d2b;
+      --primary-light: #e8f5e9;
+      --floor-color: #b91c1c;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+    }
 
-<script>
-const CONFIG = {
-  FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
-  FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs'
-};
-const USERS = {
-  'riaan.joubert': { display: 'Riaan Joubert', code: 'RJ', pw: 'rsasubtrop2026' },
-  'christoff.dewet': { display: 'Christoff de Wet', code: 'CW', pw: 'rsasubtrop2026' }
-};
-const SALESMEN = [
-  { code: 'ALL', name: 'All Salesmen' },
-  { code: 'RJ', name: 'Riaan Joubert (RJ)' },
-  { code: 'CW', name: 'Christoff de Wet (CW)' },
-  { code: 'POT', name: 'Potgieter (POT)' }
-];
-const SK = 'st_sess';
-</script>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 16px; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; }
+    header h1 { font-size: 20px; font-weight: 800; }
+    header span { opacity: 0.8; font-size: 14px; }
 
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-<script>
-try {
-  firebase.initializeApp({
-    apiKey: "AIzaSyBo9c1yISFcGJFPEEjqAVMuVS14MojBAOU",
-    databaseURL: CONFIG.FIREBASE_DATABASE_URL,
-    projectId: "jdw-crm"
-  });
-} catch (e) { console.error('Firebase initialization error:', e); }
-</script>
+    .nav-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .btn { padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: white; cursor: pointer; font-weight: 600; font-size: 13px; }
+    .btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-<title>SubTrop CRM</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
-  body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 30px; }
-  
-  .hdr { background: #1e4d2b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
-  .hdr-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; }
-  .hdr-brand span { color: #86efac; font-weight: 500; font-size: 14px; }
-  .hdr-right { display: flex; align-items: center; gap: 8px; }
-  .hdr-btn { background: rgba(255,255,255,0.18); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; }
+    .search-box { width: 100%; padding: 12px 16px; border: 1px solid #000; border-radius: 8px; font-size: 16px; margin-bottom: 16px; outline: none; }
+    
+    .tab-container { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .tab { padding: 8px 16px; cursor: pointer; font-weight: 700; border-radius: 6px; }
+    .tab.active { background: var(--primary-light); color: var(--primary); }
 
-  .container { max-width: 900px; margin: 0 auto; padding: 16px; }
-
-  .salesman-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px; }
-  .sm-chip { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer; white-space: nowrap; }
-  .sm-chip.active { background: #1e4d2b; color: white; border-color: #1e4d2b; }
-
-  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .kpi-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  .kpi-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-  .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }
-
-  .pipeline-btn { width: 100%; padding: 16px; background: #1a4479; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; text-align: left; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
-  .cols-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  .col-sec { display: flex; flex-direction: column; gap: 10px; }
-  .sec-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-  
-  .nav-btn { width: 100%; padding: 14px 16px; background: #2c3e50; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-  .analytics-btn { width: 100%; padding: 14px 16px; background: #334155; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-
-  .nav-bar-sub { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .nav-bar-sub button { background: #1e4d2b; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-
-  .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
-  .list-container { display: flex; flex-direction: column; gap: 8px; }
-
-  .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #334155; margin-left: 6px; }
-  .meta-tag { display: inline-block; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; margin-top: 4px; }
-
-  #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
-  .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
-  .login-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
-  .login-submit { background: #1e4d2b; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
-  .page { display: none; }
-  .page.active { display: block; }
-</style>
+    .card-list { display: flex; flex-direction: column; gap: 12px; }
+    .card-item { background: var(--card-bg); padding: 14px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    
+    .badge { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; color: #475569; }
+    .meta-tag { display: inline-block; background: #f8fafc; border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 6px; margin-top: 4px; color: var(--text-muted); }
+  </style>
 </head>
 <body>
 
-<div id="login-screen">
-  <h2 style="margin-bottom: 16px;">SubTrop CRM</h2>
-  <form class="login-box" onsubmit="event.preventDefault(); doLogin();">
-    <div>
-      <label style="font-size: 12px; font-weight: 700;">Username</label>
-      <input type="text" id="login-user" class="login-input" placeholder="riaan.joubert"/>
-    </div>
-    <div>
-      <label style="font-size: 12px; font-weight: 700;">Password</label>
-      <input type="password" id="login-pass" class="login-input"/>
-    </div>
-    <button type="submit" class="login-submit">Sign In</button>
-  </form>
-</div>
+  <header>
+    <h1>SubTrop CRM <span style="font-weight:400; font-size:14px;">[stock & floor]</span></h1>
+    <div>(Riaan Joubert)</div>
+  </header>
 
-<div id="app" style="display:none;">
-  <div class="hdr">
-    <div class="hdr-brand">
-      SubTrop CRM <span id="hdr-page-name">[Home]</span>
-    </div>
-    <div class="hdr-right">
-      <span id="hdr-user-display" style="font-size: 13px; font-weight: 600;"></span>
-      <button class="hdr-btn" onclick="goHome()">🏠 Home</button>
-      <button class="hdr-btn" onclick="doLogout()">Sign Out</button>
-    </div>
+  <div class="nav-bar">
+    <button class="btn active" onclick="setSalesman('ALL')">All Salesmen</button>
+    <button class="btn" onclick="setSalesman('RJ')">Riaan Joubert (RJ)</button>
+    <button class="btn" onclick="setSalesman('CW')">Christoff de Wet (CW)</button>
+    <button class="btn" onclick="setSalesman('POT')">Potgieter (POT)</button>
   </div>
 
-  <div class="container">
-    <div class="salesman-bar" id="salesman-selector"></div>
-
-    <div class="page active" id="page-dashboard">
-      <div class="kpi-grid">
-        <div class="kpi-card" style="border-top: 4px solid #b91c1c;">
-          <div class="kpi-lbl">FLOOR STOCK</div>
-          <div class="kpi-val" id="kpi-floor">0 units</div>
-        </div>
-        <div class="kpi-card" style="border-top: 4px solid #15803d;">
-          <div class="kpi-lbl">CLEARANCE RATE</div>
-          <div class="kpi-val" id="kpi-clearance">0%</div>
-        </div>
-      </div>
-
-      <button class="pipeline-btn" onclick="goToPage('pipeline')">
-        ⚡ PIPELINE (Match + Call Buyers)
-      </button>
-
-      <div class="cols-grid">
-        <div class="col-sec">
-          <div class="sec-title">OPERATIONS & SALES</div>
-          <button class="nav-btn" onclick="goToPage('buyers')">👥 Buyers</button>
-          <button class="nav-btn" onclick="goToPage('orders')">📋 Orders</button>
-          <button class="nav-btn" onclick="goToPage('scanslip')">📷 Scan Slip</button>
-        </div>
-
-        <div class="col-sec">
-          <div class="sec-title">INVENTORY & LOGISTICS</div>
-          <button class="nav-btn" onclick="goToPage('stock')">📦 Stock</button>
-          <button class="nav-btn" onclick="goToPage('floor')">📊 Floor Balance</button>
-          <button class="nav-btn" onclick="goToPage('coldstore')">❄️ Coldstore</button>
-          <button class="nav-btn" onclick="goToPage('commodities')">🌿 Commodities</button>
-        </div>
-      </div>
-
-      <button class="analytics-btn" onclick="goToPage('analytics')">
-        📈 Reports & Analytics
-      </button>
-    </div>
-
-    <!-- SUB-PAGES -->
-    <div class="page" id="page-buyers">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers or phone numbers..." oninput="renderBuyers()"/>
-      <div class="list-container" id="list-buyers">Loading buyers...</div>
-    </div>
-
-    <div class="page" id="page-orders">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-orders">Loading orders...</div>
-    </div>
-
-    <div class="page" id="page-scanslip">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div style="background:#fff; padding:20px; border-radius:12px;">
-        <h3>📷 Scan Delivery Slip</h3>
-        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory.</p>
-        <input type="file" accept="image/*" capture="environment"/>
-      </div>
-    </div>
-
-    <div class="page" id="page-stock">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by GRN, sequence, grower, or commodity..." oninput="renderStock()"/>
-      <div class="list-container" id="list-stock">Loading stock...</div>
-    </div>
-
-    <div class="page" id="page-floor">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by GRN, sequence, grower, or date..." oninput="renderFloor()"/>
-      <div class="list-container" id="list-floor">Loading floor balance...</div>
-    </div>
-
-    <div class="page" id="page-coldstore">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="renderColdstore()"/>
-      <div class="list-container" id="list-coldstore">Loading coldstore...</div>
-    </div>
-
-    <div class="page" id="page-commodities">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-commodities">Loading commodities...</div>
-    </div>
-
-    <div class="page" id="page-pipeline">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches by buyer or commodity..." oninput="renderPipeline()"/>
-      <div class="list-container" id="list-pipeline">Loading pipeline matches...</div>
-    </div>
-
-    <div class="page" id="page-analytics">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div style="background:#fff; padding:20px; border-radius:12px;">
-        <h3>📈 Reports & Analytics</h3>
-        <p style="color:#64748b; font-size:13px; margin-top:8px;">Live performance metrics and daily turnover breakdowns.</p>
-      </div>
-    </div>
-
+  <div class="tab-container">
+    <div class="tab active" id="tab-stock-btn" onclick="switchTab('stock')">🏠 Stock</div>
+    <div class="tab" id="tab-floor-btn" onclick="switchTab('floor')">📦 Floor Balance</div>
   </div>
-</div>
+
+  <!-- SEARCH INPUT -->
+  <input type="text" id="search-input" class="search-box" placeholder="🔍 Search by producer, GRN, variety, size (e.g. af 14)..." onkeyup="handleSearch()" />
+
+  <!-- LIST CONTAINERS -->
+  <div id="list-stock" class="card-list"></div>
+  <div id="list-floor" class="card-list" style="display: none;"></div>
 
 <script>
-// ===== FLEXIBLE DETERMINISTIC MATCHING ENGINE ENGINE =====
-const COMM_MAP = {
-  'Avocados': 'AVOS',
-  'Lemons': 'LEMS',
-  'Figs': 'FIGS',
-  'Kiwifruit': 'KIWI',
-  'Oranges': 'ORGS',
-  'Guavas': 'GVS',
-  'Clementines': 'CLTM',
-  'Naartjies': 'NAAR',
-  'Strawberries': 'BERS',
-  'Berries': 'BERS',
-  'Dragon Fruit': 'DRAG',
-  'Mangoes': 'MANG',
-  'Grapefruit': 'GFT',
-  'Satsumas': 'SATS',
-  'Papino': 'PAPO'
-};
+  // App Global Store
+  let currentSalesman = 'ALL';
+  let currentTab = 'stock';
+  let store = {
+    stock: [],
+    floor: []
+  };
 
-const VARIETY_NAMES = {
-  'AF': 'Fuerte',
-  'AH': 'Hass',
-  'AK': 'Pinkerton',
-  'MA': 'Maluma',
-  'MAH': 'Maluma',
-  'MD': 'Mendez',
-  'NV': 'Navel',
-  'CN': 'Cara Cara',
-  'AX': 'Mixed',
-  'LR': 'Leanri',
-  'HM': 'Honey Murcott',
-  'M1': 'Mandarin',
-  'NAR': 'Nardocott',
-  '*': 'Any'
-};
-
-const PACK_NAMES = {
-  'TR040': '4KG Tray',
-  'TR060': '6KG Tray',
-  'BG150': '15KG Bag',
-  'BG160': '16KG Bag',
-  'CTT150': '15KG Carton',
-  'PTB005': '500G Punnet',
-  'PTB025': '250G Punnet',
-  'PTB002': '160G Punnet',
-  'DL076': 'DL076 Carton',
-  'PC030': '3KG Pocket',
-  'PC060': '6KG Pocket',
-  'CO100': '10KG Carton',
-  'CO150': '15KG Carton',
-  'SP170': '17KG Sack',
-  'EC020': '20KG Box'
-};
-
-function runDeterministicMatch(stock, buyers, todayDow) {
-  const results = [];
-
-  for (const buyer of buyers) {
-    if (!buyer.prefs || !buyer.prefs.length) continue;
-    const buysToday = !!(buyer.buyingDays && buyer.buyingDays[todayDow]);
-
-    for (const pref of buyer.prefs) {
-      const rawComm = pref.comm || '';
-      const targetComm = (COMM_MAP[rawComm] || rawComm).toUpperCase();
-      const targetVariety = (pref.variety || '*').toUpperCase();
-      const targetPack = (pref.pack || '').toUpperCase();
-
-      let candidates = stock.filter(s => 
-        s.commodity && s.commodity.toUpperCase() === targetComm && (s.flr || 0) > 0
-      );
-
-      if (!candidates.length) continue;
-
-      let best = null;
-      let bestScore = -1;
-
-      for (const s of candidates) {
-        const stockVariety = (s.variety || '*').toUpperCase();
-        const stockPack = (s.pack || '').toUpperCase();
-
-        let score = 40; // Base score for commodity match
-        
-        if (targetVariety !== '*' && stockVariety === targetVariety) {
-          score += 25;
-        } else if (targetVariety === '*' || stockVariety === '*') {
-          score += 10;
-        }
-        
-        if (targetPack && stockPack === targetPack) {
-          score += 25;
-        } else if (!targetPack) {
-          score += 5;
-        }
-        
-        score += Math.min(15, Math.round((s.flr || 0) / 50));
-        if (buysToday) score += 10;
-        score += Math.min(10, Math.round((buyer.spend || buyer.turnover || 0) / 10000));
-        if (s.inColdstore) score -= 5;
-        
-        score = Math.max(1, Math.min(100, score));
-
-        if (score > bestScore) {
-          bestScore = score;
-          best = s;
-        }
-      }
-
-      if (!best) continue;
-
-      const priority = bestScore >= 65 ? 'HIGH' : bestScore >= 45 ? 'MEDIUM' : 'LOW';
-      
-      const bestVarKey = (best.variety || '').toUpperCase();
-      const bestPackKey = (best.pack || '').toUpperCase();
-
-      const varietyDisplay = best.variety && best.variety !== '*' 
-        ? (VARIETY_NAMES[bestVarKey] || best.variety) 
-        : '';
-      const packDisplay = PACK_NAMES[bestPackKey] || best.pack || '';
-      const commDisplay = pref.comm || best.commodity;
-      
-      let stockLine = commDisplay;
-      if (varietyDisplay) stockLine += ' ' + varietyDisplay;
-      if (packDisplay) stockLine += ' (' + packDisplay + ')';
-      stockLine += ' | ' + best.flr + ' units | ' + (best.producer || 'Unknown');
-
-      const reasonParts = [];
-      let matchDesc = commDisplay;
-      const varietyMatch = targetVariety !== '*' && bestVarKey === targetVariety;
-      const packMatch = targetPack && bestPackKey === targetPack;
-      
-      if (varietyMatch) matchDesc += ' ' + varietyDisplay;
-      else if (varietyDisplay) matchDesc += ' ' + varietyDisplay + ' (close)';
-      
-      if (packMatch) matchDesc += ' (' + packDisplay + ')';
-      else if (packDisplay) matchDesc += ' (' + packDisplay + ' - close)';
-      
-      reasonParts.push(`Matches ${matchDesc}.`);
-      if (buysToday) reasonParts.push(`${buyer.name} typically buys today.`);
-      reasonParts.push(`${best.flr} units available from ${best.producer || 'Unknown'}.`);
-
-      results.push({
-        buyer: buyer.name,
-        phone: buyer.phone || '',
-        score: bestScore,
-        commodity: best.commodity,
-        variety: best.variety,
-        pack: best.pack,
-        stockLine: stockLine,
-        reason: reasonParts.join(' '),
-        tip: best.inColdstore 
-          ? 'Stock is in coldstore - arrange removal first.' 
-          : `Contact ${buyer.name} about ${commDisplay} available.`,
-        buysToday: buysToday,
-        priority: priority,
-        inColdstore: !!best.inColdstore,
-        producer: best.producer || 'Unknown',
-        flr: best.flr
-      });
-    }
+  // Safe Quantity Parsing Helper
+  function parseQuantity(val) {
+    if (val === '*' || val === undefined || val === null) return 0;
+    if (typeof val === 'number') return val;
+    const parsed = parseInt(String(val).replace(/[^0-9]/g, ''), 10);
+    return isNaN(parsed) ? 0 : parsed;
   }
 
-  results.sort((a, b) => b.score - a.score);
-  
-  const seen = new Set();
-  const deduped = results.filter(r => {
-    const key = `${r.buyer}|${r.commodity}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  // Extract Records from Python Parser Output or Firebase Tree
+  function extractRecords(node, defaultSalesman = '') {
+    let records = [];
+    if (!node) return records;
 
-  return deduped.slice(0, 20);
-}
+    const list = Array.isArray(node) ? node : [node];
 
-// ===== CRM APP STATE & FUNCTIONS =====
-let currentSalesman = 'ALL';
-let store = {
-  stock: [],
-  floor: [],
-  coldstore: [],
-  buyers: [],
-  orders: [],
-  rawHistory: {}
-};
-
-function cleanUserDisplay(val) {
-  if (!val) return '';
-  if (typeof val === 'string' && val.trim().startsWith('{')) {
-    try {
-      const parsed = JSON.parse(val);
-      return parsed.name || parsed.username || val;
-    } catch(e){}
-  }
-  return val;
-}
-
-function doLogin() {
-  const u = document.getElementById('login-user').value.toLowerCase().trim();
-  const p = document.getElementById('login-pass').value;
-  if (USERS[u] && USERS[u].pw === p) {
-    localStorage.setItem(SK, USERS[u].display);
-    if (USERS[u].code) currentSalesman = USERS[u].code;
-    initApp(USERS[u].display);
-  } else {
-    alert('Invalid credentials');
-  }
-}
-
-function initApp(name) {
-  const cleanName = cleanUserDisplay(name);
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-user-display').textContent = `(${cleanName})`;
-  renderSalesmanSelector();
-  startFirebaseListener();
-  goToPage('dashboard');
-}
-
-function renderSalesmanSelector() {
-  const container = document.getElementById('salesman-selector');
-  container.innerHTML = SALESMEN.map(s => `
-    <button class="sm-chip ${currentSalesman === s.code ? 'active' : ''}" onclick="setSalesman('${s.code}')">
-      ${s.name}
-    </button>
-  `).join('');
-}
-
-function setSalesman(code) {
-  currentSalesman = code;
-  renderSalesmanSelector();
-  updateDashboardKPIs();
-  renderStock();
-  renderFloor();
-  renderColdstore();
-  renderBuyers();
-  renderPipeline();
-}
-
-function goToPage(pageId) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const target = document.getElementById('page-' + pageId);
-  if (target) target.classList.add('active');
-  document.getElementById('hdr-page-name').textContent = pageId === 'dashboard' ? '[Home]' : `[${pageId}]`;
-}
-
-function goHome() { goToPage('dashboard'); }
-
-function doLogout() {
-  localStorage.removeItem(SK);
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-}
-
-function extractRecords(node, defaultSalesman = '') {
-  let records = [];
-  if (!node || typeof node !== 'object') return records;
-
-  function traverse(obj, pathSalesman = '', parentKeys = {}) {
-    if (Array.isArray(obj)) {
-      obj.forEach(item => traverse(item, pathSalesman, parentKeys));
-      return;
-    }
-
-    if (typeof obj === 'object' && obj !== null) {
-      let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.salesperson || obj.user || obj._user || pathSalesman;
-
-      // Extract raw quantity mapped directly from Python outputs:
-      // Stock PDF -> qty_rec / qty_sort
-      // Floor PDF -> balance
-      // Buyer Slip PDF -> qty
-      const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.qty_sort ?? obj.units ?? obj.flr;
-
-      const commodity = obj.commodity || obj.product || obj.variety || obj.item;
-      const producer = obj.producer || obj.producerName || obj.grower || obj.farmer;
-
-      // Ensure we have a valid data row from the Python parser outputs
-      if (rawQty !== undefined || commodity || producer || obj.grn) {
-        let numericQty = 0;
+    list.forEach(obj => {
+      if (typeof obj === 'object' && obj !== null) {
+        let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.user || obj._user || defaultSalesman;
         
-        if (typeof rawQty === 'number') {
-          numericQty = rawQty;
-        } else if (typeof rawQty === 'string') {
-          const parsed = parseInt(rawQty.replace(/[^0-9]/g, ''), 10);
-          numericQty = isNaN(parsed) ? 0 : parsed;
-        }
+        // Maps Python keys: Stock -> qty_rec, Floor -> balance, Slip -> qty
+        const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.qty_sort ?? obj.units ?? obj.flr;
+        const numericQty = parseQuantity(rawQty);
 
         records.push({
           salesmanCode: String(sm || '').toUpperCase(),
           grn: obj.grn || obj.grnNo || obj.docNo || '—',
-          seq: obj.seq || '—', // Displays Floor sequence number or '—' if Stock report
+          seq: obj.seq || '—',
           date: obj.date || obj.received || obj.floorDate || '—',
-          producer: producer || 'Unknown Producer',
-          commodity: commodity || 'UNK',
+          producer: obj.producer || obj.producerName || obj.grower || 'Unknown Producer',
+          commodity: obj.commodity || 'UNK',
           pack: obj.pack || '',
           variety: obj.variety || '*',
           grade: obj.grade || obj.cls || '1',
           size: obj.size || '*',
+          count: obj.count || '*',
+          loc: obj.loc || '',
           qty: numericQty,
-          rawQtyDisplay: `${numericQty} units`,
-          ...obj
+          rawQtyDisplay: `${numericQty} units`
         });
       }
-
-      // Recurse down sub-nodes if Firebase stores nested trees
-      Object.keys(obj).forEach(k => {
-        let childSm = sm;
-        if (['RJ', 'CW', 'POT'].includes(k.toUpperCase())) childSm = k.toUpperCase();
-        if (typeof obj[k] === 'object' && obj[k] !== null) {
-          traverse(obj[k], childSm, parentKeys);
-        }
-      });
-    }
-  }
-
-  traverse(node, defaultSalesman);
-  return records;
-}
-
-function filterBySalesman(list) {
-  if (currentSalesman === 'ALL') return list;
-  return list.filter(item => {
-    const sm = (item.salesmanCode || item.salesman || item.rep || item.trader || '').toUpperCase();
-    return sm.includes(currentSalesman) || sm === '';
-  });
-}
-
-function startFirebaseListener() {
-  if (typeof firebase === 'undefined') return;
-  const db = firebase.database();
-
-  db.ref('/').on('value', (snapshot) => {
-    const raw = snapshot.val() || {};
-    store.rawHistory = raw;
-
-    // 1. Extract Inventory
-    store.floor = extractRecords(raw.floor);
-    store.stock = extractRecords(raw.stock);
-    store.coldstore = extractRecords(raw.coldstore || raw.coldStore);
-    store.orders = extractRecords(raw.orders || raw.cart);
-
-    // 2. Extract Preferences and Phone Mapping from Firebase Root Nodes
-    const rawPrefs = raw.preferences || raw.buyerPreferences || {};
-    const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
-    const buyersNode = raw.buyers || raw.buyerStats || {};
-
-    const buyersMap = {};
-
-    // Process top-level 'preferences' node
-    Object.keys(rawPrefs).forEach(buyerKey => {
-      const p = rawPrefs[buyerKey];
-      // Normalize pref into array format
-      const prefList = Array.isArray(p) ? p : (p.prefs || p.preferences || [p]);
-      buyersMap[buyerKey] = {
-        name: buyerKey,
-        phone: phoneMap[buyerKey] || 'No Contact',
-        prefs: prefList,
-        turnover: 0
-      };
     });
 
-    // Process top-level 'buyerPhones' if buyer wasn't in preferences
-    Object.keys(phoneMap).forEach(bName => {
-      if (!buyersMap[bName]) {
-        buyersMap[bName] = {
-          name: bName,
-          phone: phoneMap[bName],
-          prefs: [],
-          turnover: 0
-        };
-      }
-    });
-
-    // Process 'buyers' node if present
-    if (typeof buyersNode === 'object') {
-      Object.keys(buyersNode).forEach(k => {
-        const item = buyersNode[k] || {};
-        const bName = item.name || item.buyer || k;
-        if (buyersMap[bName]) {
-          buyersMap[bName].turnover = item.turnover || item.total || buyersMap[bName].turnover;
-          if (item.prefs) buyersMap[bName].prefs = item.prefs;
-        } else {
-          buyersMap[bName] = {
-            name: bName,
-            phone: item.phone || phoneMap[bName] || 'No Contact',
-            prefs: item.prefs || [],
-            turnover: item.turnover || item.total || 0
-          };
-        }
-      });
-    }
-
-    store.buyers = Object.values(buyersMap);
-    store.buyers.sort((a, b) => (b.turnover || 0) - (a.turnover || 0));
-
-    // 3. Refresh UI
-    updateDashboardKPIs();
-    renderBuyers();
-    renderStock();
-    renderFloor();
-    renderColdstore();
-    renderOrders();
-    renderPipeline();
-    renderCommodities();
-  });
-}
-
-function updateDashboardKPIs() {
-  const activeFloor = filterBySalesman(store.floor);
-  let floorUnits = 0;
-  activeFloor.forEach(item => {
-    const q = parseInt(item.qty || 0, 10);
-    floorUnits += (isNaN(q) ? 0 : q);
-  });
-
-  const floorEl = document.getElementById('kpi-floor');
-  if (floorEl) floorEl.textContent = `${floorUnits.toLocaleString('en-ZA')} units`;
-
-  const clearanceEl = document.getElementById('kpi-clearance');
-  if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '35%' : '0%';
-}
-
-function renderPipeline() {
-  const container = document.getElementById('list-pipeline');
-  if (!container) return;
-  const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
-
-  const todayDow = new Date().getDay();
-
-  // Combine stock and floor records, normalizing floor unit counts and coldstore status
-  const activeStock = filterBySalesman(store.stock.concat(store.floor)).map(item => ({
-    ...item,
-    flr: parseInt(item.qty || item.flr || 0, 10),
-    inColdstore: !!(item.inColdstore || item.coldstore)
-  }));
-
-  // Execute deterministic matcher
-  const matches = runDeterministicMatch(activeStock, store.buyers, todayDow);
-
-  let filtered = matches.filter(p => 
-    p.buyer.toLowerCase().includes(q) || 
-    p.commodity.toLowerCase().includes(q) ||
-    p.reason.toLowerCase().includes(q)
-  );
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No matching buyers for available inventory</div>`;
-    return;
+    return records;
   }
 
-  container.innerHTML = filtered.map(p => {
-    const badgeColor = p.priority === 'HIGH' ? '#15803d' : p.priority === 'MEDIUM' ? '#d97706' : '#64748b';
-    return `
-      <div class="card-item" style="border-left:4px solid ${badgeColor};">
+  // Helper to Display Commodity, Variety, Pack, Size, Count, and Grade
+  function formatCommodityDetails(r) {
+    const parts = [];
+    if (r.commodity) parts.push(r.commodity);
+    if (r.variety && r.variety !== '*') parts.push(r.variety);
+    if (r.pack) parts.push(`(${r.pack})`);
+    
+    // Size, Count, and Grade
+    if (r.size && r.size !== '*') parts.push(`• Sz ${r.size}`);
+    if (r.count && r.count !== '*') parts.push(`• Count ${r.count}`);
+    if (r.grade && r.grade !== '1' && r.grade !== '*') parts.push(`• Cl ${r.grade}`);
+
+    return parts.join(' ');
+  }
+
+  // Multi-Keyword Search (e.g. "af 14")
+  function filterRecordsBySearch(records, query) {
+    if (!query || !query.trim()) return records;
+    const terms = query.toLowerCase().trim().split(/\s+/);
+
+    return records.filter(r => {
+      const searchableText = [
+        r.producer, r.grn, r.seq, r.commodity, 
+        r.variety, r.pack, r.size, r.count, 
+        r.grade, r.loc, r.salesmanCode
+      ].join(' ').toLowerCase();
+
+      return terms.every(term => searchableText.includes(term));
+    });
+  }
+
+  // Filter List By Salesman
+  function filterBySalesman(records) {
+    if (currentSalesman === 'ALL') return records;
+    return records.filter(r => r.salesmanCode === currentSalesman);
+  }
+
+  // Render Stock Tab
+  function renderStock() {
+    const container = document.getElementById('list-stock');
+    if (!container) return;
+    const q = document.getElementById('search-input')?.value || '';
+
+    let activeStock = filterBySalesman(store.stock);
+    let filtered = filterRecordsBySearch(activeStock, q);
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(s => `
+      <div class="card-item" style="border-left:4px solid #1e4d2b;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
-            <div style="font-weight:800; font-size:15px; color:#0f172a;">${p.buyer}</div>
-            <div style="font-size:12px; color:#64748b; margin-top:2px;">${p.reason}</div>
+            <div style="font-weight:800; font-size:15px; color:#0f172a;">${s.producer}</div>
+            <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">
+              🌿 ${formatCommodityDetails(s)}
+            </div>
           </div>
           <div style="text-align:right;">
-            <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:800;">
-              ${p.score} PTS (${p.priority})
-            </span>
+            <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.rawQtyDisplay}</div>
+            ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
           </div>
         </div>
-
-        <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; font-size:12px; color:#334155; display:flex; justify-content:space-between; align-items:center;">
-          <div><strong>📦 Stock:</strong> ${p.stockLine}</div>
-          ${p.phone && p.phone !== 'No Contact' ? `<a href="tel:${p.phone}" style="font-size:12px; color:#ffffff; background:#1a4479; padding:6px 12px; border-radius:6px; text-decoration:none; font-weight:700; white-space:nowrap; margin-left:8px;">📞 Call</a>` : ''}
-        </div>
-
-        <div style="margin-top:8px; font-size:11px; color:#0369a1; font-weight:700;">
-          💡 ${p.tip}
+        <div style="margin-top:8px;">
+          <span class="meta-tag">📄 GRN: <strong>${s.grn}</strong></span>
+          <span class="meta-tag">🔢 SEQ: <strong>${s.seq}</strong></span>
+          <span class="meta-tag">📅 ${s.date}</span>
         </div>
       </div>
-    `;
-  }).join('');
-}
-
-function renderFloor() {
-  const container = document.getElementById('list-floor');
-  if (!container) return;
-  const q = (document.getElementById('search-floor')?.value || '').toLowerCase();
-
-  let activeFloor = filterBySalesman(store.floor);
-  let filtered = activeFloor.filter(f => JSON.stringify(f).toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
-    return;
+    `).join('');
   }
 
-  container.innerHTML = filtered.map(f => `
-    <div class="card-item" style="border-left:4px solid #b91c1c;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${f.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${f.commodity || 'General Product'}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#b91c1c;">${f.qty} units</div>
-          ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
-        </div>
-      </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${f.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${f.seq}</strong></span>
-        <span class="meta-tag">📅 ${f.date}</span>
-      </div>
-    </div>
-  `).join('');
-}
-function renderStock() {
-  const container = document.getElementById('list-stock');
-  if (!container) return;
-  const q = (document.getElementById('search-stock')?.value || '').toLowerCase();
+  // Render Floor Balance Tab
+  function renderFloor() {
+    const container = document.getElementById('list-floor');
+    if (!container) return;
+    const q = document.getElementById('search-input')?.value || '';
 
-  let activeStock = filterBySalesman(store.stock);
-  let filtered = activeStock.filter(s => JSON.stringify(s).toLowerCase().includes(q));
+    let activeFloor = filterBySalesman(store.floor);
+    let filtered = filterRecordsBySearch(activeFloor, q);
 
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
-    return;
-  }
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
+      return;
+    }
 
-  container.innerHTML = filtered.map(s => `
-    <div class="card-item" style="border-left:4px solid #1e4d2b;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${s.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">
-            🌿 ${s.commodity || 'Stock Item'} ${s.variety ? `• ${s.variety}` : ''} ${s.pack ? `(${s.pack})` : ''}
+    container.innerHTML = filtered.map(f => `
+      <div class="card-item" style="border-left:4px solid #b91c1c;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <div style="font-weight:800; font-size:15px; color:#0f172a;">${f.producer}</div>
+            <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">
+              🌿 ${formatCommodityDetails(f)}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:800; font-size:16px; color:#b91c1c;">${f.rawQtyDisplay}</div>
+            ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
           </div>
         </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.rawQtyDisplay}</div>
-          ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
+        <div style="margin-top:8px;">
+          <span class="meta-tag">📄 GRN: <strong>${f.grn}</strong></span>
+          <span class="meta-tag">🔢 SEQ: <strong>${f.seq}</strong></span>
+          <span class="meta-tag">📅 ${f.date}</span>
+          ${f.loc ? `<span class="meta-tag">📍 LOC: <strong>${f.loc}</strong></span>` : ''}
         </div>
       </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${s.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${s.seq}</strong></span>
-        <span class="meta-tag">📅 ${s.date}</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderColdstore() {
-  const container = document.getElementById('list-coldstore');
-  if (!container) return;
-  const q = (document.getElementById('search-coldstore')?.value || '').toLowerCase();
-
-  let activeCold = filterBySalesman(store.coldstore);
-  let filtered = activeCold.filter(c => JSON.stringify(c).toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No coldstore records found</div>`;
-    return;
+    `).join('');
   }
 
-  container.innerHTML = filtered.map(c => `
-    <div class="card-item" style="border-left:4px solid #0284c7;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800;">${c.producer}</div>
-          <div style="font-size:12px; color:#0284c7; font-weight:700;">🌿 ${c.commodity || 'Coldstore Batch'}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; color:#0284c7;">${c.qty} units</div>
-          ${c.salesmanCode ? `<span class="badge">${c.salesmanCode}</span>` : ''}
-        </div>
-      </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${c.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${c.seq}</strong></span>
-        <span class="meta-tag">📅 ${c.date}</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderBuyers() {
-  const container = document.getElementById('list-buyers');
-  if (!container) return;
-  const q = (document.getElementById('search-buyers')?.value || '').toLowerCase();
-
-  let filtered = store.buyers.filter(b => (b.name || '').toLowerCase().includes(q) || String(b.phone || '').includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No buyers found</div>`;
-    return;
+  // Navigation & Search Controls
+  function handleSearch() {
+    if (currentTab === 'stock') renderStock();
+    else renderFloor();
   }
 
-  container.innerHTML = filtered.map(b => `
-    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center; border-left:4px solid #2563eb;">
-      <div>
-        <div style="font-weight:700;">${b.name}</div>
-        ${b.turnover ? `<div style="font-size:12px; color:#16a34a; font-weight:700;">R ${Number(b.turnover).toLocaleString('en-ZA')}</div>` : ''}
-      </div>
-      ${b.phone && b.phone !== 'No Contact' ? `<a href="tel:${b.phone}" style="font-weight:700; color:#2563eb; text-decoration:none;">📞 ${b.phone}</a>` : '<span style="color:#94a3b8; font-size:12px;">No Contact</span>'}
-    </div>
-  `).join('');
-}
-
-function renderOrders() {
-  const container = document.getElementById('list-orders');
-  if (!container) return;
-  if (store.orders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No active orders</div>`;
-    return;
+  function setSalesman(code) {
+    currentSalesman = code;
+    document.querySelectorAll('.nav-bar .btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    handleSearch();
   }
 
-  container.innerHTML = store.orders.map(o => `
-    <div class="card-item" style="border-left:4px solid #334155;">
-      <div style="font-weight:700;">${o.buyer || o.client || o.name || 'Order Item'}</div>
-      <div style="font-size:12px; color:#64748b; margin-top:2px;">${o.details || o.commodity || 'Active Order'}</div>
-    </div>
-  `).join('');
-}
-
-function renderCommodities() {
-  const container = document.getElementById('list-commodities');
-  if (!container) return;
-
-  let set = new Set();
-  store.stock.concat(store.floor).forEach(i => {
-    if (i.commodity) set.add(i.commodity);
-    if (i.product) set.add(i.product);
-  });
-
-  if (set.size === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No commodities found</div>`;
-    return;
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-stock-btn').classList.toggle('active', tab === 'stock');
+    document.getElementById('tab-floor-btn').classList.toggle('active', tab === 'floor');
+    document.getElementById('list-stock').style.display = tab === 'stock' ? 'flex' : 'none';
+    document.getElementById('list-floor').style.display = tab === 'floor' ? 'flex' : 'none';
+    handleSearch();
   }
 
-  container.innerHTML = Array.from(set).map(c => `
-    <div class="card-item" style="font-weight:700; border-left:4px solid #16a34a;">
-      🌿 ${c}
-    </div>
-  `).join('');
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  const user = localStorage.getItem(SK);
-  if (user) initApp(user);
-});
+  // Initializer / Sample Loader
+  window.onload = function() {
+    // Populate store from parsed data sources
+    renderStock();
+    renderFloor();
+  };
 </script>
 </body>
 </html>
