@@ -532,31 +532,67 @@ function startFirebaseListener() {
     const raw = snapshot.val() || {};
     store.rawHistory = raw;
 
+    // 1. Extract Inventory
     store.floor = extractRecords(raw.floor);
     store.stock = extractRecords(raw.stock);
     store.coldstore = extractRecords(raw.coldstore || raw.coldStore);
     store.orders = extractRecords(raw.orders || raw.cart);
 
-    store.buyers = [];
+    // 2. Extract Preferences and Phone Mapping from Firebase Root Nodes
+    const rawPrefs = raw.preferences || raw.buyerPreferences || {};
     const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
-    const buyersNode = raw.buyers || raw.buyerStats || raw.buyerTurnover;
-    
-    if (buyersNode && typeof buyersNode === 'object') {
+    const buyersNode = raw.buyers || raw.buyerStats || {};
+
+    const buyersMap = {};
+
+    // Process top-level 'preferences' node
+    Object.keys(rawPrefs).forEach(buyerKey => {
+      const p = rawPrefs[buyerKey];
+      // Normalize pref into array format
+      const prefList = Array.isArray(p) ? p : (p.prefs || p.preferences || [p]);
+      buyersMap[buyerKey] = {
+        name: buyerKey,
+        phone: phoneMap[buyerKey] || 'No Contact',
+        prefs: prefList,
+        turnover: 0
+      };
+    });
+
+    // Process top-level 'buyerPhones' if buyer wasn't in preferences
+    Object.keys(phoneMap).forEach(bName => {
+      if (!buyersMap[bName]) {
+        buyersMap[bName] = {
+          name: bName,
+          phone: phoneMap[bName],
+          prefs: [],
+          turnover: 0
+        };
+      }
+    });
+
+    // Process 'buyers' node if present
+    if (typeof buyersNode === 'object') {
       Object.keys(buyersNode).forEach(k => {
         const item = buyersNode[k] || {};
         const bName = item.name || item.buyer || k;
-        const bPhone = item.phone || phoneMap[bName] || 'No Contact';
-        const turnover = item.turnover || item.total || 0;
-        store.buyers.push({ name: bName, phone: bPhone, turnover, ...item });
-      });
-    } else if (phoneMap) {
-      Object.keys(phoneMap).forEach(bName => {
-        store.buyers.push({ name: bName, phone: phoneMap[bName], turnover: 0 });
+        if (buyersMap[bName]) {
+          buyersMap[bName].turnover = item.turnover || item.total || buyersMap[bName].turnover;
+          if (item.prefs) buyersMap[bName].prefs = item.prefs;
+        } else {
+          buyersMap[bName] = {
+            name: bName,
+            phone: item.phone || phoneMap[bName] || 'No Contact',
+            prefs: item.prefs || [],
+            turnover: item.turnover || item.total || 0
+          };
+        }
       });
     }
 
+    store.buyers = Object.values(buyersMap);
     store.buyers.sort((a, b) => (b.turnover || 0) - (a.turnover || 0));
 
+    // 3. Refresh UI
     updateDashboardKPIs();
     renderBuyers();
     renderStock();
