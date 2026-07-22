@@ -51,7 +51,7 @@ try {
   .container { max-width: 900px; margin: 0 auto; padding: 16px; }
 
   .salesman-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px; }
-  .sm-chip { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer; whitespace: nowrap; }
+  .sm-chip { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer; white-space: nowrap; }
   .sm-chip.active { background: #1e4d2b; color: white; border-color: #1e4d2b; }
 
   .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
@@ -75,7 +75,6 @@ try {
 
   .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
   .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #334155; margin-left: 6px; }
-  
   .meta-tag { display: inline-block; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; margin-top: 4px; }
 
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
@@ -202,8 +201,8 @@ try {
 
     <div class="page" id="page-pipeline">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches..." oninput="renderPipeline()"/>
-      <div class="list-container" id="list-pipeline">Loading pipeline...</div>
+      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches by buyer or commodity..." oninput="renderPipeline()"/>
+      <div class="list-container" id="list-pipeline">Loading pipeline matches...</div>
     </div>
 
     <div class="page" id="page-analytics">
@@ -225,8 +224,19 @@ let store = {
   coldstore: [],
   buyers: [],
   orders: [],
-  pipeline: []
+  rawHistory: {}
 };
+
+function cleanUserDisplay(val) {
+  if (!val) return '';
+  if (typeof val === 'string' && val.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(val);
+      return parsed.name || parsed.username || val;
+    } catch(e){}
+  }
+  return val;
+}
 
 function doLogin() {
   const u = document.getElementById('login-user').value.toLowerCase().trim();
@@ -241,9 +251,10 @@ function doLogin() {
 }
 
 function initApp(name) {
+  const cleanName = cleanUserDisplay(name);
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-user-display').textContent = `(${name})`;
+  document.getElementById('hdr-user-display').textContent = `(${cleanName})`;
   renderSalesmanSelector();
   startFirebaseListener();
   goToPage('dashboard');
@@ -266,6 +277,7 @@ function setSalesman(code) {
   renderFloor();
   renderColdstore();
   renderBuyers();
+  renderPipeline();
 }
 
 function goToPage(pageId) {
@@ -343,12 +355,12 @@ function startFirebaseListener() {
 
   db.ref('/').on('value', (snapshot) => {
     const raw = snapshot.val() || {};
+    store.rawHistory = raw;
 
     store.floor = extractRecords(raw.floor);
     store.stock = extractRecords(raw.stock);
     store.coldstore = extractRecords(raw.coldstore || raw.coldStore);
     store.orders = extractRecords(raw.orders || raw.cart);
-    store.pipeline = extractRecords(raw.pipelineCalls || raw.pipeline);
 
     store.buyers = [];
     const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
@@ -394,6 +406,98 @@ function updateDashboardKPIs() {
 
   const clearanceEl = document.getElementById('kpi-clearance');
   if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '35%' : '0%';
+}
+
+// Dynamic Pipeline Generator cross-referencing available stock against buyers
+function generatePipelineMatches() {
+  const activeInventory = filterBySalesman(store.stock.concat(store.floor));
+  
+  // Extract distinct available commodities currently on hand
+  const availableCommodities = {};
+  activeInventory.forEach(item => {
+    const comm = (item.commodity || item.product || '').trim();
+    if (comm) {
+      if (!availableCommodities[comm.toLowerCase()]) {
+        availableCommodities[comm.toLowerCase()] = { name: comm, qty: 0, items: [] };
+      }
+      availableCommodities[comm.toLowerCase()].qty += parseInt(item.qty || 0, 10);
+      availableCommodities[comm.toLowerCase()].items.push(item);
+    }
+  });
+
+  const matches = [];
+
+  // Match active stock with buyers who buy those commodities
+  store.buyers.forEach(buyer => {
+    const buyerHistory = JSON.stringify(buyer).toLowerCase();
+    
+    Object.keys(availableCommodities).forEach(commKey => {
+      const commData = availableCommodities[commKey];
+      
+      // Match condition: Buyer record contains the commodity name or buyer bought it historically
+      const isMatch = buyerHistory.includes(commKey) || (buyer.commodities && buyer.commodities.toLowerCase().includes(commKey));
+      
+      if (isMatch) {
+        matches.push({
+          buyerName: buyer.name,
+          phone: buyer.phone,
+          turnover: buyer.turnover,
+          commodity: commData.name,
+          availableQty: commData.qty,
+          matchedItems: commData.items
+        });
+      }
+    });
+  });
+
+  // If no specific historical commodity string matches, fallback to pairing top buyers with high-volume available stock
+  if (matches.length === 0 && store.buyers.length > 0) {
+    Object.keys(availableCommodities).forEach(commKey => {
+      const commData = availableCommodities[commKey];
+      store.buyers.slice(0, 5).forEach(buyer => {
+        matches.push({
+          buyerName: buyer.name,
+          phone: buyer.phone,
+          turnover: buyer.turnover,
+          commodity: commData.name,
+          availableQty: commData.qty,
+          matchedItems: commData.items
+        });
+      });
+    });
+  }
+
+  return matches;
+}
+
+function renderPipeline() {
+  const container = document.getElementById('list-pipeline');
+  if (!container) return;
+  const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
+
+  const matches = generatePipelineMatches();
+  let filtered = matches.filter(p => p.buyerName.toLowerCase().includes(q) || p.commodity.toLowerCase().includes(q));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No matching buyers for current available stock</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(p => `
+    <div class="card-item" style="border-left:4px solid #1a4479;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:800; font-size:15px; color:#0f172a;">${p.buyerName}</div>
+          <div style="font-size:12px; color:#16a34a; font-weight:700;">Historical Volume / Value: R ${Number(p.turnover || 0).toLocaleString('en-ZA')}</div>
+        </div>
+        ${p.phone && p.phone !== 'No Contact' ? `<a href="tel:${p.phone}" style="font-size:12px; color:#ffffff; background:#1a4479; padding:6px 12px; border-radius:6px; text-decoration:none; font-weight:700;">📞 Call Buyer</a>` : ''}
+      </div>
+      <div style="margin-top:8px; padding-top:8px; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700; color:#1e4d2b; font-size:13px;">🌿 Stock Match: ${p.commodity}</span>
+        <span style="font-weight:800; color:#b91c1c; font-size:13px;">${p.availableQty.toLocaleString('en-ZA')} units on hand</span>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderFloor() {
@@ -533,29 +637,6 @@ function renderOrders() {
     <div class="card-item" style="border-left:4px solid #334155;">
       <div style="font-weight:700;">${o.buyer || o.client || o.name || 'Order Item'}</div>
       <div style="font-size:12px; color:#64748b; margin-top:2px;">${o.details || o.commodity || 'Active Order'}</div>
-    </div>
-  `).join('');
-}
-
-function renderPipeline() {
-  const container = document.getElementById('list-pipeline');
-  if (!container) return;
-  const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
-
-  let filtered = store.pipeline.filter(p => JSON.stringify(p).toLowerCase().includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No active pipeline matches</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(p => `
-    <div class="card-item" style="border-left:4px solid #1a4479;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-weight:800;">${p.buyer || p.name || 'Pipeline Lead'}</div>
-        ${p.phone ? `<a href="tel:${p.phone}" style="font-size:12px; color:#1a4479; background:#e0f2fe; padding:4px 8px; border-radius:6px; text-decoration:none; font-weight:700;">📞 Call</a>` : ''}
-      </div>
-      <div style="font-size:12px; color:#334155; margin-top:4px;">📦 ${p.commodity || p.product || 'Matched Product'}</div>
     </div>
   `).join('');
 }
