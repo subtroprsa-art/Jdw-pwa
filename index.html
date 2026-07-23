@@ -509,6 +509,7 @@ function filterBySalesman(list) {
   });
 }
 
+// ===== FIREBASE LISTENER WITH ENHANCED PHONE MATCHING =====
 function startFirebaseListener() {
   if (typeof firebase === 'undefined') return;
   const db = firebase.database();
@@ -530,42 +531,92 @@ function startFirebaseListener() {
     store.orders = extractRecords(raw.orders || raw.cart || raw.slips || raw.salesHistory);
 
     const rawPrefs = raw.preferences || raw.buyerPreferences || {};
-    const rawPhones = raw.buyerPhones || {};
-    const buyersNode = raw.buyers || {};
+    const rawPhones = raw.buyerPhones || raw.phones || raw.contacts || {};
+    const buyersNode = raw.buyers || raw.buyerDetails || {};
 
-    // 1. Build Phone Map with cleaned keys
-    const phoneMap = {};
-    const phoneKeys = Object.keys(rawPhones);
+    // 1. Helper to sanitize names into searchable tokens
+    const cleanStr = (str) => {
+      if (!str) return '';
+      return String(str)
+        .toUpperCase()
+        .replace(/\(PTY\)|PTY|LTD|CO|INC|HOUSE OF FOOD|MARKET/gi, '') // Remove common filler words
+        .replace(/[^A-Z0-9\s]/g, '')                                // Remove special chars/punctuation
+        .replace(/\s+/g, ' ')                                       // Normalize spaces
+        .trim();
+    };
 
-    phoneKeys.forEach(key => {
-      const cleanKey = String(key).trim().toUpperCase();
-      phoneMap[cleanKey] = rawPhones[key];
+    // 2. Build explicit Directory from raw phones and other nodes
+    const phoneDirectory = [];
+
+    const addPhoneToDir = (rawName, phoneVal) => {
+      if (!rawName || !phoneVal) return;
+      let phoneStr = String(phoneVal).trim();
+      if (!phoneStr.startsWith('+') && phoneStr.startsWith('27')) {
+        phoneStr = '+' + phoneStr;
+      }
+
+      phoneDirectory.push({
+        originalName: String(rawName).trim(),
+        cleanName: cleanStr(rawName),
+        rawUpper: String(rawName).trim().toUpperCase(),
+        phone: phoneStr
+      });
+    };
+
+    // Index phone numbers from buyerPhones node
+    Object.keys(rawPhones).forEach(k => {
+      const p = typeof rawPhones[k] === 'object' ? (rawPhones[k].phone || rawPhones[k].number) : rawPhones[k];
+      addPhoneToDir(k, p);
     });
 
-    // 2. Smart Phone Lookup Function (Exact + Partial Match)
-    const getPhoneForBuyer = (name, fallback = '') => {
-      if (!name) return fallback || 'No Contact';
-      const cleanName = String(name).trim().toUpperCase();
+    // Index from buyers node
+    Object.keys(buyersNode).forEach(k => {
+      const b = buyersNode[k] || {};
+      addPhoneToDir(b.name || k, b.phone || b.cell || b.contact);
+    });
 
-      // Check 1: Exact match
-      if (phoneMap[cleanName]) return phoneMap[cleanName];
+    // Index from recent orders
+    (store.orders || []).forEach(o => {
+      if (o.buyer && o.phone) addPhoneToDir(o.buyer, o.phone);
+    });
 
-      // Check 2: Partial match (e.g. "FERREIRA FRESH" in "FERREIRA FRESH (PTY)")
-      const matchedKey = phoneKeys.find(pk => {
-        const cleanPK = pk.trim().toUpperCase();
-        return cleanPK.includes(cleanName) || cleanName.includes(cleanPK);
+    // 3. Multi-tier Matching Engine
+    const getPhoneForBuyer = (buyerName, fallback = '') => {
+      if (!buyerName) return fallback || 'No Contact';
+
+      const targetRaw = String(buyerName).trim().toUpperCase();
+      const targetClean = cleanStr(buyerName);
+
+      // Level 1: Exact Raw Key Match
+      let match = phoneDirectory.find(entry => entry.rawUpper === targetRaw);
+      if (match) return match.phone;
+
+      // Level 2: Exact Cleaned Name Match
+      match = phoneDirectory.find(entry => entry.cleanName === targetClean && targetClean.length > 0);
+      if (match) return match.phone;
+
+      // Level 3: Substring Inclusion Match
+      match = phoneDirectory.find(entry => {
+        if (!entry.cleanName || !targetClean) return false;
+        return entry.cleanName.includes(targetClean) || targetClean.includes(entry.cleanName);
       });
+      if (match) return match.phone;
 
-      if (matchedKey && phoneMap[matchedKey.trim().toUpperCase()]) {
-        return phoneMap[matchedKey.trim().toUpperCase()];
+      // Level 4: First Core Word Match (e.g. "FERREIRA" or "MJOLI")
+      const targetWords = targetClean.split(' ').filter(w => w.length >= 3);
+      if (targetWords.length > 0) {
+        match = phoneDirectory.find(entry => {
+          return targetWords.some(word => entry.cleanName.includes(word));
+        });
+        if (match) return match.phone;
       }
 
       return fallback || 'No Contact';
     };
 
+    // 4. Construct Final Buyers Map
     const buyersMap = {};
 
-    // Process Preferences
     Object.keys(rawPrefs).forEach(k => {
       const cleanKey = String(k).trim().toUpperCase();
       buyersMap[cleanKey] = { 
@@ -576,14 +627,13 @@ function startFirebaseListener() {
       };
     });
 
-    // Process Buyers Node
     Object.keys(buyersNode).forEach(k => {
       const b = buyersNode[k] || {};
       const bName = b.name || k;
       const cleanKey = String(bName).trim().toUpperCase();
 
-      const existingPhone = buyersMap[cleanKey]?.phone !== 'No Contact' ? buyersMap[cleanKey]?.phone : '';
-      const phone = getPhoneForBuyer(bName, b.phone || existingPhone);
+      const existingPhone = (buyersMap[cleanKey] && buyersMap[cleanKey].phone !== 'No Contact') ? buyersMap[cleanKey].phone : '';
+      const phone = getPhoneForBuyer(bName, b.phone || b.cell || existingPhone);
 
       if (buyersMap[cleanKey]) {
         buyersMap[cleanKey].turnover = b.turnover || b.revenue || buyersMap[cleanKey].turnover;
@@ -600,7 +650,7 @@ function startFirebaseListener() {
 
     store.buyers = Object.values(buyersMap);
 
-    // Refresh ALL Views (Each on its own line or explicitly semicolon-delimited)
+    // Refresh Views
     updateDashboardKPIs();
     renderBuyers();
     renderStock();
