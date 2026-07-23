@@ -509,7 +509,6 @@ function filterBySalesman(list) {
   });
 }
 
-<script>
 function startFirebaseListener() {
   if (typeof firebase === 'undefined') return;
   const db = firebase.database();
@@ -612,7 +611,6 @@ function startFirebaseListener() {
     renderCommodities();
   });
 }
-</script>
 
 function markBuyerAsContacted(buyerId) {
   const todayStr = new Date().toISOString().split('T')[0];
