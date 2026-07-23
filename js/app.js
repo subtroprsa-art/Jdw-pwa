@@ -1,4 +1,3 @@
-
 // CONFIG is loaded from HTML - don't redeclare it!
 const FB_DB = CONFIG.FIREBASE_DATABASE_URL;
 const FB_SECRET = CONFIG.FIREBASE_SECRET;
@@ -81,21 +80,26 @@ function goToPage(id) {
     document.getElementById('comm-summary-list').innerHTML = '<div class="empty">Loading…</div>';
     document.getElementById('comm-detail').style.display = 'none';
     document.getElementById('comm-summary-list').style.display = 'block';
-    fetch(FB_DB + '/stock.json?auth=' + FB_SECRET)
-      .then(r => r.json())
-      .then(d => {
-        const all = [];
-        for (const uk in d || {}) {
-          for (const ek in d[uk] || {}) {
-            all.push({ ...firebaseToItem(d[uk][ek]), user: d[uk][ek].user || uk });
+
+    if (window.allLiveStockData && window.allLiveStockData.length > 0) {
+      renderCommodities(buildCommoditySummary());
+    } else {
+      firebase.database().ref('stock').once('value')
+        .then(snapshot => {
+          const d = snapshot.val();
+          const all = [];
+          for (const uk in d || {}) {
+            for (const ek in d[uk] || {}) {
+              all.push({ ...firebaseToItem(d[uk][ek]), user: d[uk][ek].user || uk });
+            }
           }
-        }
-        allLiveStockData = all;
-        renderCommodities(buildCommoditySummary());
-      })
-      .catch(() => {
-        document.getElementById('comm-summary-list').innerHTML = '<div class="empty">Could not load data.</div>';
-      });
+          window.allLiveStockData = all;
+          renderCommodities(buildCommoditySummary());
+        })
+        .catch(() => {
+          document.getElementById('comm-summary-list').innerHTML = '<div class="empty">Could not load data.</div>';
+        });
+    }
   }
 }
 
