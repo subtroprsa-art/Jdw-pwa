@@ -578,10 +578,55 @@ function renderPipeline() {
   const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
 
   const todayDow = new Date().getDay();
-  const activeStock = filterBySalesman(store.stock.concat(store.floor));
-  const matches = runDeterministicMatch(activeStock, store.buyers, todayDow);
 
-  let filtered = matches.filter(p => p.buyer.toLowerCase().includes(q) || p.commodity.toLowerCase().includes(q) || p.reason.toLowerCase().includes(q));
+  // 1. Safely gather all stock sources from store or window
+  let rawStock = [];
+  if (typeof store !== 'undefined') {
+    const s = store.stock || [];
+    const f = store.floor || [];
+    rawStock = Array.isArray(s) ? s.concat(f) : Object.values(s).concat(Object.values(f));
+  } else if (window.allLiveStockData) {
+    rawStock = window.allLiveStockData;
+  }
+
+  // 2. Flatten stock if it's nested by salesman keys (RJ, CW, POT)
+  let flatStock = [];
+  if (Array.isArray(rawStock)) {
+    flatStock = rawStock;
+  } else if (typeof rawStock === 'object') {
+    Object.keys(rawStock).forEach(key => {
+      if (Array.isArray(rawStock[key])) {
+        flatStock = flatStock.concat(rawStock[key]);
+      } else if (typeof rawStock[key] === 'object') {
+        flatStock = flatStock.concat(Object.values(rawStock[key]));
+      }
+    });
+  }
+
+  // 3. Pass through filterBySalesman safely
+  let activeStock = flatStock;
+  if (typeof filterBySalesman === 'function') {
+    try {
+      activeStock = filterBySalesman(flatStock);
+    } catch (e) {
+      console.warn("filterBySalesman error, using flat stock instead:", e);
+    }
+  }
+
+  // 4. Safely get buyers list
+  const buyersList = (typeof store !== 'undefined' && store.buyers) ? store.buyers : (window.liveBuyerData || []);
+
+  // 5. Run matching
+  let matches = [];
+  if (typeof runDeterministicMatch === 'function' && activeStock.length > 0 && buyersList.length > 0) {
+    matches = runDeterministicMatch(activeStock, buyersList, todayDow);
+  }
+
+  let filtered = matches.filter(p => 
+    (p.buyer && p.buyer.toLowerCase().includes(q)) || 
+    (p.commodity && p.commodity.toLowerCase().includes(q)) || 
+    (p.reason && p.reason.toLowerCase().includes(q))
+  );
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No matching buyers for available inventory</div>`;
@@ -595,17 +640,17 @@ function renderPipeline() {
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
             <div style="font-weight:800; font-size:15px; color:#0f172a;">${p.buyer}</div>
-            <div style="font-size:12px; color:#64748b; margin-top:2px;">${p.reason}</div>
+            <div style="font-size:12px; color:#64748b; margin-top:2px;">${p.reason || ''}</div>
           </div>
           <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:800;">
-            ${p.score} PTS (${p.priority})
+            ${p.score || 0} PTS (${p.priority || 'LOW'})
           </span>
         </div>
         <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; font-size:12px; color:#334155; display:flex; justify-content:space-between; align-items:center;">
-          <div><strong>📦 Stock:</strong> ${p.stockLine}</div>
+          <div><strong>📦 Stock:</strong> ${p.stockLine || ''}</div>
           ${p.phone && p.phone !== 'No Contact' ? `<a href="tel:${p.phone}" style="font-size:12px; color:#ffffff; background:#1a4479; padding:6px 12px; border-radius:6px; text-decoration:none; font-weight:700; white-space:nowrap; margin-left:8px;">📞 Call</a>` : ''}
         </div>
-        <div style="margin-top:8px; font-size:11px; color:#0369a1; font-weight:700;">💡 ${p.tip}</div>
+        <div style="margin-top:8px; font-size:11px; color:#0369a1; font-weight:700;">💡 ${p.tip || ''}</div>
       </div>
     `;
   }).join('');
