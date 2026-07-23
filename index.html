@@ -138,7 +138,7 @@ try {
           <div class="sec-title">OPERATIONS & SALES</div>
           <button class="nav-btn" onclick="goToPage('buyers')">👥 Buyers</button>
           <button class="nav-btn" onclick="goToPage('orders')">📋 Orders & Slips</button>
-          <button class="nav-btn" onclick="goToPage('scanslip')">📷 Scan Slip</button>
+          <button class="nav-btn" onclick="goToPage('scanslip')">☁️ Google Drive Sync</button>
         </div>
 
         <div class="col-sec">
@@ -170,9 +170,8 @@ try {
     <div class="page" id="page-scanslip">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
-        <h3>📷 Scan Delivery Slip</h3>
-        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory and update buyer history.</p>
-        <input type="file" accept="image/*" capture="environment"/>
+        <h3>☁️ Google Drive Slip Sync</h3>
+        <p style="color:#64748b; font-size:13px; margin:10px 0;">Slips and orders are automatically parsed from the Google Drive text-based PDF folder and synced to Firebase.</p>
       </div>
     </div>
 
@@ -352,7 +351,6 @@ function runPipelineMatching(stock, buyers, slips) {
 
   const buyerMap = {};
 
-  // 1. Build a quick lookup dictionary from store.buyers
   const masterBuyerPhoneMap = {};
   (buyers || []).forEach(b => {
     if (b.name) {
@@ -361,7 +359,6 @@ function runPipelineMatching(stock, buyers, slips) {
     }
   });
 
-  // Helper to always retrieve the best available phone number
   const resolvePhone = (bName, fallbackPhone = '') => {
     if (!bName) return 'No Contact';
     const cleanK = String(bName).trim().toUpperCase();
@@ -372,7 +369,6 @@ function runPipelineMatching(stock, buyers, slips) {
     return 'No Contact';
   };
 
-  // 2. Aggregate Slips & Orders
   slips.forEach(slip => {
     const bName = slip.buyer;
     if (!bName) return;
@@ -399,7 +395,6 @@ function runPipelineMatching(stock, buyers, slips) {
     }
   });
 
-  // 3. Aggregate Buyer Preferences & Master List
   buyers.forEach(b => {
     const key = String(b.name).trim().toUpperCase();
     const resolvedPhone = resolvePhone(b.name, b.phone);
@@ -413,7 +408,7 @@ function runPipelineMatching(stock, buyers, slips) {
       };
     } else {
       if (!buyerMap[key].revenue && b.turnover) buyerMap[key].revenue = b.turnover;
-      buyerMap[key].phone = resolvedPhone; // Always force-update phone number
+      buyerMap[key].phone = resolvedPhone;
     }
 
     if (Array.isArray(b.prefs)) {
@@ -428,14 +423,12 @@ function runPipelineMatching(stock, buyers, slips) {
     }
   });
 
-  // 4. Sort Top 30 Buyers
   const sortedBuyers = Object.values(buyerMap)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 30);
 
   const pipelineMatches = [];
 
-  // 5. Match Stock to Buyer Preferences
   sortedBuyers.forEach(buyer => {
     const distinctLines = new Set();
 
@@ -470,6 +463,7 @@ function runPipelineMatching(stock, buyers, slips) {
 
   return pipelineMatches;
 }
+
 // ===== CRM APP STATE & LOGIC =====
 let currentSalesman = 'ALL';
 let store = { stock: [], floor: [], coldstore: [], buyers: [], orders: [] };
@@ -538,7 +532,6 @@ function filterBySalesman(list) {
   });
 }
 
-// ===== FIREBASE LISTENER WITH ENHANCED PHONE MATCHING =====
 function startFirebaseListener() {
   if (typeof firebase === 'undefined') return;
   const db = firebase.database();
@@ -562,31 +555,25 @@ function startFirebaseListener() {
     const rawPrefs = raw.preferences || raw.buyerPreferences || {};
     const rawPhones = raw.buyerPhones || {};
 
-    // 1. Build a direct, clean lookup map from your `buyerPhones` node
     window.phoneMap = {};
     Object.keys(rawPhones).forEach(key => {
       const val = rawPhones[key];
       if (val) {
-        // Strip everything down to uppercase alphanumeric for foolproof matching
         const cleanK = String(key).toUpperCase().replace(/[^A-Z0-9]/g, '');
         window.phoneMap[cleanK] = String(val).trim();
       }
     });
 
-    // Smart lookup function
     window.getBuyerPhone = (name) => {
       if (!name) return 'No Contact';
       const cleanTarget = String(name).toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-      // Direct exact match
       if (window.phoneMap[cleanTarget]) return window.phoneMap[cleanTarget];
 
-      // Substring match
       const keys = Object.keys(window.phoneMap);
       const matchedKey = keys.find(k => k.includes(cleanTarget) || cleanTarget.includes(k));
       if (matchedKey) return window.phoneMap[matchedKey];
 
-      // First word match (e.g. FERREIRA)
       const firstWord = cleanTarget.substring(0, 6);
       if (firstWord.length >= 4) {
         const wordKey = keys.find(k => k.includes(firstWord));
@@ -596,7 +583,6 @@ function startFirebaseListener() {
       return 'No Contact';
     };
 
-    // 2. Build store.buyers from preferences and orders
     const buyersMap = {};
 
     Object.keys(rawPrefs).forEach(k => {
@@ -609,7 +595,6 @@ function startFirebaseListener() {
       };
     });
 
-    // Add any buyers seen in orders
     (store.orders || []).forEach(o => {
       if (o.buyer) {
         const cleanKey = String(o.buyer).trim().toUpperCase();
@@ -626,7 +611,6 @@ function startFirebaseListener() {
 
     store.buyers = Object.values(buyersMap);
 
-    // Refresh UI
     updateDashboardKPIs();
     renderBuyers();
     renderStock();
@@ -638,7 +622,6 @@ function startFirebaseListener() {
   });
 }
 
-// ===== PIPELINE RENDERER =====
 function renderPipeline() {
   const container = document.getElementById('list-pipeline');
   if (!container) return;
@@ -664,11 +647,10 @@ function renderPipeline() {
 
   container.innerHTML = filtered.map((p) => {
     const isContacted = !!contactedMap[p.buyerId];
-    // Always resolve the latest phone number directly from phoneMap
     const phoneNum = window.getBuyerPhone ? window.getBuyerPhone(p.buyerName) : (p.phone || 'No Contact');
 
     return `
-      <div class="card-item" id="card-${p.buyerId}" style="padding:16px; margin-bottom:12px; border-radius:10px; border-left:4px solid #1a4479; ${isContacted ? 'opacity:0.5; background:#f1f5f9;' : 'background:#ffffff;'}">
+      <div class="card-item" id="card-${p.buyerId}" style="padding:16px; margin-bottom:12px; border-radius:10px; border-left:4px solid #1a4479; ${isContacted ? 'opacity:0.55; background:#f1f5f9; border-left:4px solid #94a3b8;' : 'background:#ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.05);'}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start;">
           <div class="buyer-name" style="font-weight:800; font-size:18px; text-transform:lowercase; color:#0f172a; margin-bottom:4px; ${isContacted ? 'text-decoration:line-through; color:#64748b;' : ''}">
             ${p.buyerName}:
@@ -694,6 +676,7 @@ function renderPipeline() {
     `;
   }).join('');
 }
+
 function markBuyerAsContacted(buyerId) {
   const todayStr = new Date().toISOString().split('T')[0];
   if (!window.contactedBuyers) window.contactedBuyers = {};
@@ -731,18 +714,15 @@ function triggerPhoneCall(buyerId, phone) {
 function triggerWhatsApp(buyerId, buyerName, phone) {
   const matchObj = (window.lastPipelineMatches || []).find(m => m.buyerId === buyerId);
   
-  // Format matched produce items into a clean list
   let produceList = '';
   if (matchObj && matchObj.matchedLines && matchObj.matchedLines.length > 0) {
     produceList = matchObj.matchedLines.map(line => `• ${line}`).join('\n');
   }
 
-  // Construct the generic message with the buyer's name
   let msg = `Good day ${buyerName}, we have fresh produce available for you today:\n\n${produceList}\n\nAre you interested?`;
 
   markBuyerAsContacted(buyerId);
 
-  // Clean and format phone number for WhatsApp URL
   let cleanPhone = String(phone).replace(/[^0-9]/g, '');
   if (cleanPhone.startsWith('0')) {
     cleanPhone = '27' + cleanPhone.slice(1);
@@ -754,6 +734,7 @@ function triggerWhatsApp(buyerId, buyerName, phone) {
 
   window.open(waUrl, '_blank');
 }
+
 function updateDashboardKPIs() {
   const activeFloor = filterBySalesman(store.floor);
   let floorUnits = 0;
@@ -766,96 +747,25 @@ function updateDashboardKPIs() {
   if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '38%' : '0%';
 }
 
-function renderPipeline() {
-  const container = document.getElementById('list-pipeline');
+function renderBuyers() {
+  const container = document.getElementById('list-buyers');
   if (!container) return;
-  const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
+  const q = (document.getElementById('search-buyers')?.value || '').toLowerCase();
 
-  let rawStock = (store.stock || []).concat(store.floor || []);
-  let activeStock = filterBySalesman(rawStock);
-
-  let matches = runPipelineMatching(activeStock, store.buyers || [], store.orders || []);
-  window.lastPipelineMatches = matches;
-
-  let filtered = matches.filter(p => 
-    p.buyerName.toLowerCase().includes(q) || 
-    p.matchedLines.some(line => line.toLowerCase().includes(q))
+  const filtered = (store.buyers || []).filter(b => 
+    String(b.name).toLowerCase().includes(q) || 
+    String(b.phone).toLowerCase().includes(q)
   );
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No top buyer matches found for active stock</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No buyers found</div>`;
     return;
   }
 
-  const contactedMap = window.contactedBuyers || {};
-
-  container.innerHTML = filtered.map((p, idx) => {
-    const isContacted = !!contactedMap[p.buyerId];
-    const cardStyle = isContacted 
-      ? "opacity:0.55; background:#f1f5f9; border-left:4px solid #94a3b8;" 
-      : "background:#ffffff; border-left:4px solid #1a4479; box-shadow:0 2px 8px rgba(0,0,0,0.05);";
-
-    const nameStyle = isContacted 
-      ? "text-decoration:line-through; color:#64748b;" 
-      : "color:#0f172a;";
-
-    return `
-      <div class="card-item" id="card-${p.buyerId}" style="padding:16px; margin-bottom:12px; border-radius:10px; transition:all 0.2s; ${cardStyle}">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <span style="font-size:11px; font-weight:800; color:#64748b;">#${idx + 1} TOP BUYER</span>
-            <div class="buyer-name" style="font-weight:800; font-size:17px; text-transform:lowercase; ${nameStyle}">${p.buyerName}:</div>
-          </div>
-          ${isContacted ? `<span style="background:#e2e8f0; color:#475569; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">CONTACTED TODAY</span>` : ''}
-        </div>
-
-        <div style="margin-top:10px; padding-left:4px;">
-          ${p.matchedLines.map(line => `
-            <div style="font-size:14px; font-weight:600; color:#334155; line-height:1.5;">
-              ${line} ,
-            </div>
-          `).join('')}
-        </div>
-
-        <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
-          <button onclick="triggerPhoneCall('${p.buyerId}', '${p.phone}')" style="flex:1; background:#1a4479; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
-            📞 Call
-          </button>
-          
-          <button onclick="triggerWhatsApp('${p.buyerId}', '${p.buyerName}', '${p.phone}')" style="flex:1; background:#25D366; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
-            💬 WhatsApp
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function renderFloor() {
-  const container = document.getElementById('list-floor');
-  if (!container) return;
-  const q = document.getElementById('search-floor')?.value || '';
-
-  let activeFloor = filterBySalesman(store.floor);
-  let filtered = filterRecordsBySearch(activeFloor, q);
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(f => `
-    <div class="card-item" style="border-left:4px solid #b91c1c;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${f.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${formatCommodityDetails(f)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#b91c1c;">${f.rawQtyDisplay}</div>
-          ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
-        </div>
-      </div>
+  container.innerHTML = filtered.map(b => `
+    <div class="card-item">
+      <div style="font-weight:700; font-size:15px; color:#0f172a;">${b.name}</div>
+      <div style="font-size:13px; color:#64748b; margin-top:2px;">Phone: ${b.phone || 'No Contact'}</div>
     </div>
   `).join('');
 }
@@ -863,55 +773,49 @@ function renderFloor() {
 function renderStock() {
   const container = document.getElementById('list-stock');
   if (!container) return;
-  const q = document.getElementById('search-stock')?.value || '';
+  const q = (document.getElementById('search-stock')?.value || '');
 
-  let activeStock = filterBySalesman(store.stock);
-  let filtered = filterRecordsBySearch(activeStock, q);
+  const active = filterBySalesman(store.stock);
+  const filtered = filterRecordsBySearch(active, q);
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No stock records found</div>`;
     return;
   }
 
-  container.innerHTML = filtered.map(s => `
-    <div class="card-item" style="border-left:4px solid #1e4d2b;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${s.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${formatCommodityDetails(s)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.rawQtyDisplay}</div>
-          ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
-        </div>
+  container.innerHTML = filtered.map(r => `
+    <div class="card-item">
+      <div style="display:flex; justify-content:space-between; font-weight:700;">
+        <span>${r.producer}</span>
+        <span>${r.rawQtyDisplay}</span>
       </div>
+      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
     </div>
   `).join('');
 }
 
-function renderBuyers() {
-  const container = document.getElementById('list-buyers');
+function renderFloor() {
+  const container = document.getElementById('list-floor');
   if (!container) return;
-  const q = (document.getElementById('search-buyers')?.value || '').toLowerCase();
+  const q = (document.getElementById('search-floor')?.value || '');
 
-  let filtered = store.buyers.filter(b => 
-    b.name.toLowerCase().includes(q) || (b.phone && b.phone.includes(q))
-  );
+  const active = filterBySalesman(store.floor);
+  const filtered = filterRecordsBySearch(active, q);
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No buyers found</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No floor balance records found</div>`;
     return;
   }
 
-  container.innerHTML = filtered.map(b => `
-    <div class="card-item" style="border-left:4px solid #1a4479;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${b.name}</div>
-          <div style="font-size:12px; color:#64748b; margin-top:2px;">📞 ${b.phone}</div>
-        </div>
-        ${b.phone && b.phone !== 'No Contact' ? `<a href="tel:${b.phone}" style="background:#1a4479; color:white; padding:6px 12px; border-radius:6px; text-decoration:none; font-weight:700; font-size:12px;">📞 Call</a>` : ''}
+  container.innerHTML = filtered.map(r => `
+    <div class="card-item">
+      <div style="display:flex; justify-content:space-between; font-weight:700;">
+        <span>${r.producer}</span>
+        <span>${r.rawQtyDisplay}</span>
       </div>
+      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
     </div>
   `).join('');
 }
@@ -919,27 +823,23 @@ function renderBuyers() {
 function renderColdstore() {
   const container = document.getElementById('list-coldstore');
   if (!container) return;
-  const q = document.getElementById('search-coldstore')?.value || '';
+  const q = (document.getElementById('search-coldstore')?.value || '');
 
-  let activeCs = filterBySalesman(store.coldstore);
-  let filtered = filterRecordsBySearch(activeCs, q);
+  const active = filterBySalesman(store.coldstore);
+  const filtered = filterRecordsBySearch(active, q);
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No coldstore items found</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No coldstore inventory found</div>`;
     return;
   }
 
-  container.innerHTML = filtered.map(c => `
-    <div class="card-item" style="border-left:4px solid #0284c7;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${c.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#0284c7; margin-top:2px;">❄️ ${formatCommodityDetails(c)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#0284c7;">${c.rawQtyDisplay}</div>
-        </div>
+  container.innerHTML = filtered.map(r => `
+    <div class="card-item">
+      <div style="display:flex; justify-content:space-between; font-weight:700;">
+        <span>${r.producer}</span>
+        <span>${r.rawQtyDisplay}</span>
       </div>
+      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
     </div>
   `).join('');
 }
@@ -948,18 +848,20 @@ function renderOrders() {
   const container = document.getElementById('list-orders');
   if (!container) return;
 
-  if (store.orders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No recorded slips found</div>`;
+  const active = filterBySalesman(store.orders);
+  if (active.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No orders or slips recorded</div>`;
     return;
   }
 
-  container.innerHTML = store.orders.map(o => `
-    <div class="card-item" style="border-left:4px solid #25D366;">
-      <div style="display:flex; justify-content:space-between;">
-        <div style="font-weight:800; font-size:15px; color:#0f172a;">${o.buyer || 'Buyer Slip'}</div>
-        <div style="font-weight:700; color:#15803d;">${o.qty} units</div>
+  container.innerHTML = active.slice(0, 50).map(o => `
+    <div class="card-item">
+      <div style="display:flex; justify-content:space-between; font-weight:700;">
+        <span>Buyer: ${o.buyer || 'Unknown'}</span>
+        <span>R ${parseNumber(o.revenue).toLocaleString()}</span>
       </div>
-      <div style="font-size:12px; color:#64748b; margin-top:4px;">🌿 ${formatCommodityDetails(o)} | Producer: ${o.producer || '—'}</div>
+      <div style="font-size:13px; color:#475569; margin-top:4px;">${o.commodity || 'Item'} (${o.qty || 0} units)</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Date: ${o.date || '—'}</div>
     </div>
   `).join('');
 }
@@ -968,21 +870,27 @@ function renderCommodities() {
   const container = document.getElementById('list-commodities');
   if (!container) return;
 
-  container.innerHTML = Object.keys(COMM_MAP).map(k => `
-    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center;">
-      <span style="font-weight:700;">🌿 ${k}</span>
-      <span class="badge" style="background:#1e4d2b; color:white;">${COMM_MAP[k]}</span>
+  const active = filterBySalesman(store.stock.concat(store.floor));
+  const comms = {};
+  active.forEach(item => {
+    const c = normalizeCommodity(item.commodity);
+    if (c) comms[c] = (comms[c] || 0) + (item.qty || 0);
+  });
+
+  const keys = Object.keys(comms);
+  if (keys.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No commodities found</div>`;
+    return;
+  }
+
+  container.innerHTML = keys.map(c => `
+    <div class="card-item" style="display:flex; justify-content:space-between; font-weight:700;">
+      <span>🌿 ${c}</span>
+      <span style="color:#16a34a;">${comms[c].toLocaleString()} units</span>
     </div>
   `).join('');
 }
-
-// Auto Session Login Check
-window.addEventListener('DOMContentLoaded', () => {
-  const sess = localStorage.getItem(SK);
-  if (sess) {
-    initApp(sess);
-  }
-});
 </script>
+
 </body>
 </html>
