@@ -730,15 +730,23 @@ function triggerPhoneCall(buyerId, phone) {
 
 function triggerWhatsApp(buyerId, buyerName, phone) {
   const matchObj = (window.lastPipelineMatches || []).find(m => m.buyerId === buyerId);
-  if (!matchObj || !matchObj.matchedLines.length) return;
+  
+  // Format matched produce items into a clean list
+  let produceList = '';
+  if (matchObj && matchObj.matchedLines && matchObj.matchedLines.length > 0) {
+    produceList = matchObj.matchedLines.map(line => `• ${line}`).join('\n');
+  }
 
-  const produceLines = matchObj.matchedLines.map(line => `${line} ,`).join('\n');
-  const msg = `${buyerName.toLowerCase()}:\n${produceLines}`;
+  // Construct the generic message with the buyer's name
+  let msg = `Good day ${buyerName}, we have fresh produce available for you today:\n\n${produceList}\n\nAre you interested?`;
 
   markBuyerAsContacted(buyerId);
 
+  // Clean and format phone number for WhatsApp URL
   let cleanPhone = String(phone).replace(/[^0-9]/g, '');
-  if (cleanPhone.startsWith('0')) cleanPhone = '27' + cleanPhone.slice(1);
+  if (cleanPhone.startsWith('0')) {
+    cleanPhone = '27' + cleanPhone.slice(1);
+  }
 
   const waUrl = cleanPhone 
     ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` 
@@ -746,7 +754,6 @@ function triggerWhatsApp(buyerId, buyerName, phone) {
 
   window.open(waUrl, '_blank');
 }
-
 function updateDashboardKPIs() {
   const activeFloor = filterBySalesman(store.floor);
   let floorUnits = 0;
