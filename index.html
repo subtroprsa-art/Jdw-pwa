@@ -343,97 +343,63 @@ function extractRecords(node, defaultSalesman = '') {
 
 // ===== DETERMINISTIC MATCHING ENGINE =====
 function runDeterministicMatch(stock, buyers, todayDow) {
-  const results = [];
+  if (!stock || !buyers) return [];
 
-  for (const buyer of buyers) {
-    if (!buyer.prefs || !buyer.prefs.length) continue;
-    const buysToday = !!(buyer.buyingDays && buyer.buyingDays[todayDow]);
+  const matches = [];
 
-    for (const pref of buyer.prefs) {
-      const rawComm = pref.comm || '';
-      const targetComm = (COMM_MAP[rawComm] || rawComm).toUpperCase();
-      const targetVariety = (pref.variety || '*').toUpperCase();
-      const targetPack = (pref.pack || '').toUpperCase();
-
-      let candidates = stock.filter(s => 
-        s.commodity && s.commodity.toUpperCase() === targetComm && (s.qty || 0) > 0
-      );
-
-      if (!candidates.length) continue;
-
-      let best = null;
-      let bestScore = -1;
-
-      for (const s of candidates) {
-        const stockVariety = (s.variety || '*').toUpperCase();
-        const stockPack = (s.pack || '').toUpperCase();
-
-        let score = 40;
-        if (targetVariety !== '*' && stockVariety === targetVariety) score += 25;
-        else if (targetVariety === '*' || stockVariety === '*') score += 10;
-        
-        if (targetPack && stockPack === targetPack) score += 25;
-        else if (!targetPack) score += 5;
-        
-        score += Math.min(15, Math.round((s.qty || 0) / 50));
-        if (buysToday) score += 10;
-        score += Math.min(10, Math.round((buyer.spend || buyer.turnover || 0) / 10000));
-        if (s.inColdstore) score -= 5;
-        
-        score = Math.max(1, Math.min(100, score));
-
-        if (score > bestScore) {
-          bestScore = score;
-          best = s;
+  buyers.forEach(buyer => {
+    // Extract all target commodity codes for this buyer
+    const targetCommodities = [];
+    if (Array.isArray(buyer.prefs)) {
+      buyer.prefs.forEach(p => {
+        // Handle array structure: prefs[i].commodities = ["DRAG", "LEM"]
+        if (Array.isArray(p.commodities)) {
+          p.commodities.forEach(c => targetCommodities.push(String(c).trim().toUpperCase()));
+        } 
+        // Handle fallback single string structure: prefs[i].comm = "LEM"
+        else if (p.comm || p.commodity) {
+          targetCommodities.push(String(p.comm || p.commodity).trim().toUpperCase());
         }
-      }
-
-      if (!best) continue;
-
-      const priority = bestScore >= 65 ? 'HIGH' : bestScore >= 45 ? 'MEDIUM' : 'LOW';
-      const bestVarKey = (best.variety || '').toUpperCase();
-      const bestPackKey = (best.pack || '').toUpperCase();
-
-      const varietyDisplay = best.variety && best.variety !== '*' ? (VARIETY_NAMES[bestVarKey] || best.variety) : '';
-      const packDisplay = PACK_NAMES[bestPackKey] || best.pack || '';
-      const commDisplay = pref.comm || best.commodity;
-      
-      let stockLine = commDisplay;
-      if (varietyDisplay) stockLine += ' ' + varietyDisplay;
-      if (packDisplay) stockLine += ' (' + packDisplay + ')';
-      stockLine += ' | ' + best.qty + ' units | ' + (best.producer || 'Unknown');
-
-      const reasonParts = [];
-      reasonParts.push(`Matches ${commDisplay}.`);
-      if (buysToday) reasonParts.push(`${buyer.name} typically buys today.`);
-      reasonParts.push(`${best.qty} units available from ${best.producer || 'Unknown'}.`);
-
-      results.push({
-        buyer: buyer.name,
-        phone: buyer.phone || '',
-        score: bestScore,
-        commodity: best.commodity,
-        variety: best.variety,
-        pack: best.pack,
-        stockLine: stockLine,
-        reason: reasonParts.join(' '),
-        tip: best.inColdstore ? 'Stock is in coldstore - arrange removal first.' : `Contact ${buyer.name} about ${commDisplay} available.`,
-        buysToday: buysToday,
-        priority: priority
       });
     }
-  }
 
-  results.sort((a, b) => b.score - a.score);
-  const seen = new Set();
-  return results.filter(r => {
-    const key = `${r.buyer}|${r.commodity}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).slice(0, 20);
+    if (targetCommodities.length === 0) return;
+
+    // Find all stock lines that match any of the buyer's target commodities
+    stock.forEach(item => {
+      const stockQty = Number(item.qty || item.flr || item.qty_sort || 0);
+      if (stockQty <= 0) return; // Skip out of stock items
+
+      const stockComm = String(item.commodity || '').trim().toUpperCase();
+      if (!stockComm) return;
+
+      // Check if stock commodity matches any buyer preference (e.g., "LEM" matches "LEMS")
+      const isMatch = targetCommodities.some(tc => 
+        stockComm.includes(tc) || tc.includes(stockComm)
+      );
+
+      if (isMatch) {
+        const priority = stockQty > 50 ? 'HIGH' : stockQty > 10 ? 'MEDIUM' : 'LOW';
+        const score = (priority === 'HIGH' ? 80 : priority === 'MEDIUM' ? 50 : 20) + (buyer.turnover || 0) / 1000;
+
+        matches.push({
+          buyer: buyer.name,
+          phone: buyer.phone || 'No Contact',
+          commodity: stockComm,
+          stockLine: `${stockComm} (${item.pack || ''} - Size: ${item.size || '*'}) - ${stockQty} available`,
+          reason: `Buyer prefers ${targetCommodities.join(', ')}. Fresh stock available (${stockQty} units).`,
+          tip: `Producer: ${item.producer || 'Unknown'} | Grade: ${item.grade || '1'}`,
+          priority: priority,
+          score: Math.round(score),
+          buysToday: buyer.buyingDays ? !!buyer.buyingDays[todayDow] : false
+        });
+      }
+    });
+  });
+
+  // Sort matches by highest score
+  return matches.sort((a, b) => b.score - a.score);
 }
-
 // ===== CRM APP STATE & LOGIC =====
 let currentSalesman = 'ALL';
 let store = { stock: [], floor: [], coldstore: [], buyers: [], orders: [] };
