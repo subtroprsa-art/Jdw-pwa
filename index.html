@@ -564,20 +564,23 @@ function startFirebaseListener() {
       }
     });
 
-    window.getBuyerPhone = (name) => {
+   window.getBuyerPhone = (name) => {
       if (!name) return 'No Contact';
       const cleanTarget = String(name).toUpperCase().replace(/[^A-Z0-9]/g, '');
 
       if (window.phoneMap[cleanTarget]) return window.phoneMap[cleanTarget];
 
       const keys = Object.keys(window.phoneMap);
+      
+      // 1. Check if any database key contains the target or vice versa
       const matchedKey = keys.find(k => k.includes(cleanTarget) || cleanTarget.includes(k));
       if (matchedKey) return window.phoneMap[matchedKey];
 
-      const firstWord = cleanTarget.substring(0, 6);
-      if (firstWord.length >= 4) {
-        const wordKey = keys.find(k => k.includes(firstWord));
-        if (wordKey) return window.phoneMap[wordKey];
+      // 2. Check individual words (e.g. if buyer is "ACHMAT" and phone key is "MUSTAFA AGMAT")
+      const words = cleanTarget.split(/[^A-Z0-9]+/).filter(w => w.length > 3);
+      for (let word of words) {
+        const wordMatch = keys.find(k => k.includes(word));
+        if (wordMatch) return window.phoneMap[wordMatch];
       }
 
       return 'No Contact';
