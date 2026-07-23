@@ -345,65 +345,111 @@ function extractRecords(node, defaultSalesman = '') {
 function runDeterministicMatch(stock, buyers, todayDow) {
   if (!stock || !buyers || !stock.length || !buyers.length) return [];
 
-  const matches = [];
+  // 1. Sort buyers by historical turnover (highest spenders first)
+  const sortedBuyers = [...buyers].sort((a, b) => {
+    const turnoverA = Number(a.turnover || a.spend || a.totalSpend || 0);
+    const turnoverB = Number(b.turnover || b.spend || b.totalSpend || 0);
+    return turnoverB - turnoverA;
+  });
 
-  buyers.forEach(buyer => {
-    // 1. Extract target commodity codes
-    const targetCommodities = [];
+  // 2. Limit to Top 30 Buyers by Turnover
+  const top30Buyers = sortedBuyers.slice(0, 30);
+
+  const buyerMatchesMap = {};
+
+  top30Buyers.forEach(buyer => {
+    // Extract historical commodity preferences
+    const historyComms = new Set();
     if (Array.isArray(buyer.prefs)) {
       buyer.prefs.forEach(p => {
         if (Array.isArray(p.commodities)) {
-          p.commodities.forEach(c => targetCommodities.push(String(c).trim().toUpperCase()));
+          p.commodities.forEach(c => historyComms.add(String(c).trim().toUpperCase()));
         } else if (p.comm || p.commodity) {
-          targetCommodities.push(String(p.comm || p.commodity).trim().toUpperCase());
+          historyComms.add(String(p.comm || p.commodity).trim().toUpperCase());
         }
       });
     }
 
-    // 2. Filter available stock
+    // Skip buyers who have no preferences recorded
+    if (historyComms.size === 0) return;
+
+    const buyerMatchedItems = [];
+
+    // Scan available stock against buyer history
     stock.forEach(item => {
       const stockQty = Number(item.qty || item.flr || item.qty_sort || item.qty_rec || 0);
-      if (stockQty <= 0) return; // Skip zero quantity
+      if (stockQty <= 0) return; // Skip out-of-stock items
 
       const stockComm = String(item.commodity || '').trim().toUpperCase();
       if (!stockComm) return;
 
-      let isMatch = false;
-      let matchReason = '';
-
-      // If buyer has specific preferences, check for commodity match
-      if (targetCommodities.length > 0) {
-        isMatch = targetCommodities.some(tc => stockComm.includes(tc) || tc.includes(stockComm));
-        if (isMatch) {
-          matchReason = `Buyer prefers ${targetCommodities.join(', ')}. Fresh stock available (${stockQty} units).`;
+      // Check for exact historical commodity match
+      let isExactMatch = false;
+      historyComms.forEach(hc => {
+        if (stockComm.includes(hc) || hc.includes(stockComm)) {
+          isExactMatch = true;
         }
-      } else {
-        // FALLBACK: If buyer has NO preferences, match top available stock so they aren't ignored
-        isMatch = true;
-        matchReason = `Available floor stock (${stockQty} units). No explicit preferences recorded.`;
-      }
+      });
 
-      if (isMatch) {
-        const priority = (targetCommodities.length > 0) ? (stockQty > 50 ? 'HIGH' : 'MEDIUM') : 'LOW';
-        const score = (priority === 'HIGH' ? 80 : priority === 'MEDIUM' ? 50 : 20) + (buyer.turnover || 0) / 1000;
-
-        matches.push({
-          buyer: buyer.name,
-          phone: buyer.phone || 'No Contact',
+      if (isExactMatch) {
+        // --- 100% HISTORICAL MATCH ---
+        buyerMatchedItems.push({
+          stockLine: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`,
           commodity: stockComm,
-          stockLine: `${stockComm} (${item.pack || ''} - Size: ${item.size || '*'}) - ${stockQty} available`,
-          reason: matchReason,
+          qty: stockQty,
+          matchType: 'EXACT',
+          is100Percent: true,
+          reason: `100% Match: Buyer regularly buys ${stockComm}. ${stockQty} units available today.`,
           tip: `Producer: ${item.producer || 'Unknown'} | Grade: ${item.grade || '1'}`,
-          priority: priority,
-          score: Math.round(score),
-          buysToday: buyer.buyingDays ? !!buyer.buyingDays[todayDow] : false
+          priority: stockQty > 50 ? 'HIGH' : 'MEDIUM',
+          score: 100 + (stockQty > 50 ? 20 : 0)
         });
+      } else {
+        // --- PARTIAL / SUGGESTED MATCH ---
+        // Suggest stock if it's available in good volume (>= 30 units)
+        if (stockQty >= 30) {
+          buyerMatchedItems.push({
+            stockLine: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`,
+            commodity: stockComm,
+            qty: stockQty,
+            matchType: 'SUGGESTION',
+            is100Percent: false,
+            reason: `💡 Suggested Match (Partial): Not in buyer's usual history, but available in good volume (${stockQty} units).`,
+            tip: `Alternative option | Producer: ${item.producer || 'Unknown'}`,
+            priority: 'LOW',
+            score: 40
+          });
+        }
       }
     });
+
+    // Add buyer entry if any items matched
+    if (buyerMatchedItems.length > 0) {
+      // Sort buyer's matched items so 100% matches appear first
+      buyerMatchedItems.sort((a, b) => b.score - a.score);
+
+      const buyerTurnover = Number(buyer.turnover || buyer.spend || buyer.totalSpend || 0);
+
+      buyerMatchesMap[buyer.name] = {
+        buyer: buyer.name,
+        phone: buyer.phone || 'No Contact',
+        turnover: buyerTurnover,
+        buysToday: buyer.buyingDays ? !!buyer.buyingDays[todayDow] : false,
+        totalMatches: buyerMatchedItems.length,
+        items: buyerMatchedItems,
+        // Flat references for backward compatibility with list UI
+        stockLine: buyerMatchedItems[0].stockLine,
+        commodity: buyerMatchedItems[0].commodity,
+        reason: buyerMatchedItems[0].reason,
+        tip: buyerMatchedItems[0].tip,
+        priority: buyerMatchedItems[0].priority,
+        score: buyerMatchedItems[0].score + (buyerTurnover / 10000)
+      };
+    }
   });
 
-  // Sort matches by highest score, remove duplicates, limit per buyer
-  return matches.sort((a, b) => b.score - a.score);
+  // Return formatted array ordered by turnover & top match score
+  return Object.values(buyerMatchesMap).sort((a, b) => b.turnover - a.turnover);
 }
 // ===== CRM APP STATE & LOGIC =====
 let currentSalesman = 'ALL';
