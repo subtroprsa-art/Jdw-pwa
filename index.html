@@ -74,7 +74,6 @@ try {
   .list-container { display: flex; flex-direction: column; gap: 8px; }
 
   .card-item { background: #fff; padding: 14px 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease; }
-  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #334155; margin-left: 6px; }
 
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
   .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
@@ -130,7 +129,7 @@ try {
       </div>
 
       <button class="pipeline-btn" onclick="goToPage('pipeline')">
-        ⚡ PIPELINE (Top 30 Buyer Matches)
+        ⚡ PIPELINE (Top 30 Buyer Cards)
       </button>
 
       <div class="cols-grid">
@@ -155,69 +154,28 @@ try {
       </button>
     </div>
 
-    <!-- SUB-PAGES -->
-    <div class="page" id="page-buyers">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers or phone numbers..." oninput="renderBuyers()"/>
-      <div class="list-container" id="list-buyers">Loading buyers...</div>
-    </div>
-
-    <div class="page" id="page-orders">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-orders">Loading orders and slips...</div>
-    </div>
-
-    <div class="page" id="page-scanslip">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div style="background:#fff; padding:20px; border-radius:12px;">
-        <h3>📷 Scan Delivery Slip</h3>
-        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory and update buyer history.</p>
-        <input type="file" accept="image/*" capture="environment"/>
-      </div>
-    </div>
-
-    <div class="page" id="page-stock">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock..." oninput="renderStock()"/>
-      <div class="list-container" id="list-stock">Loading stock...</div>
-    </div>
-
-    <div class="page" id="page-floor">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance..." oninput="renderFloor()"/>
-      <div class="list-container" id="list-floor">Loading floor balance...</div>
-    </div>
-
-    <div class="page" id="page-coldstore">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="renderColdstore()"/>
-      <div class="list-container" id="list-coldstore">Loading coldstore...</div>
-    </div>
-
-    <div class="page" id="page-commodities">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-commodities">Loading commodities...</div>
-    </div>
-
+    <!-- PIPELINE PAGE -->
     <div class="page" id="page-pipeline">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search top buyers or product lines..." oninput="renderPipeline()"/>
-      <div class="list-container" id="list-pipeline">Loading top 30 buyer cards...</div>
+      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search buyers or products..." oninput="renderPipeline()"/>
+      <div class="list-container" id="list-pipeline">Loading buyer cards...</div>
     </div>
 
-    <div class="page" id="page-analytics">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div style="background:#fff; padding:20px; border-radius:12px;">
-        <h3>📈 Reports & Analytics</h3>
-        <p style="color:#64748b; font-size:13px; margin-top:8px;">Live performance metrics and daily turnover breakdowns.</p>
-      </div>
-    </div>
+    <!-- OTHER SUB-PAGES -->
+    <div class="page" id="page-buyers"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div class="list-container" id="list-buyers">Loading buyers...</div></div>
+    <div class="page" id="page-orders"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div class="list-container" id="list-orders">Loading orders...</div></div>
+    <div class="page" id="page-stock"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div class="list-container" id="list-stock">Loading stock...</div></div>
+    <div class="page" id="page-floor"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div class="list-container" id="list-floor">Loading floor...</div></div>
+    <div class="page" id="page-coldstore"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div class="list-container" id="list-coldstore">Loading coldstore...</div></div>
+    <div class="page" id="page-commodities"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div class="list-container" id="list-commodities">Loading commodities...</div></div>
+    <div class="page" id="page-scanslip"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div style="background:#fff; padding:20px; border-radius:12px;"><h3>📷 Scan Delivery Slip</h3><input type="file" accept="image/*" capture="environment"/></div></div>
+    <div class="page" id="page-analytics"><div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div><div style="background:#fff; padding:20px; border-radius:12px;"><h3>📈 Reports</h3></div></div>
 
   </div>
 </div>
 
 <script>
-// ===== CLEAN MAPPINGS =====
+// ===== SIMPLE CLEAN MAPPINGS =====
 const COMM_MAP = {
   'AVOCADOS': 'avocado', 'AVOS': 'avocado', 'LEMONS': 'lemons', 'LEMS': 'lemons', 
   'FIGS': 'figs', 'KIWIFRUIT': 'kiwi', 'KIWI': 'kiwi', 'ORANGES': 'orgs', 
@@ -226,32 +184,19 @@ const COMM_MAP = {
   'MANGOES': 'mangoes', 'GRAPEFRUIT': 'grapefruit', 'SATSUMAS': 'satsumas', 'PAPINO': 'papino'
 };
 
-const VARIETY_MAP = {
-  'AF': 'fuerte', 'AK': 'hass', 'AH': 'hass', 'AX': 'pinkerton', 'AE': 'edranol',
-  'FUERTE': 'fuerte', 'HASS': 'hass', 'PINKERTON': 'pinkerton', 'EDRANOL': 'edranol',
-  'RYAN': 'ryan', 'LAMB HASS': 'lamb hass', '*': ''
-};
-
 const PACK_MAP = {
   'TR040': '4kg', '4KG TRAY': '4kg', 'TR060': '6kg', '6KG TRAY': '6kg',
   'BG150': '15kg', '15KG BAG': '15kg', 'BG160': '16kg', '16KG BAG': '16kg',
   'BG200': '20kg', '20KG BAG': '20kg', 'CTT150': '15kg carton', '15KG CARTON': '15kg carton',
-  'PTB005': '500g', '500G PUNNET': '500g',
-  'PTB025': '250g', '250G PUNNET': '250g',
-  'PTB002': '160g', '160G PUNNET': '160g',
-  '300G PUNNET': '300g', '10KG CARTON': '10kg', '3KG POCKET': '3kg', '6KG POCKET': '6kg'
+  'PTB005': '500g', '500G PUNNET': '500g', 'PTB025': '250g', '250G PUNNET': '250g',
+  'PTB002': '160g', '160G PUNNET': '160g', '300G PUNNET': '300g', 
+  '10KG CARTON': '10kg', '3KG POCKET': '3kg', '6KG POCKET': '6kg'
 };
 
 function normalizeCommodity(str) {
   if (!str) return '';
   const clean = String(str).trim().toUpperCase();
   return COMM_MAP[clean] || clean.toLowerCase();
-}
-
-function normalizeVariety(str) {
-  if (!str || str === '*') return '';
-  const clean = String(str).trim().toUpperCase();
-  return VARIETY_MAP[clean] || clean.toLowerCase();
 }
 
 function normalizePack(str) {
@@ -281,16 +226,14 @@ function extractRecords(node, defaultSalesman = '') {
       let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.user || pathSalesman;
       const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.quantity ?? obj.units ?? obj.flr ?? obj.total;
       const rawAmount = obj.amount ?? obj.revenue ?? obj.price ?? obj.totalPrice ?? obj.randVal ?? 0;
-      const commodity = obj.commodity || obj.product || obj.variety || obj.item || '';
+      const commodity = obj.commodity || obj.product || obj.item || '';
 
       if (rawQty !== undefined || commodity || obj.buyer) {
         records.push({
           salesmanCode: String(sm || '').toUpperCase(),
           buyer: obj.buyer || obj.buyerName || '',
-          producer: obj.producer || obj.grower || 'Unknown Producer',
           commodity: commodity || 'Commodity',
           pack: obj.pack || '',
-          variety: obj.variety || '*',
           qty: parseNumber(rawQty),
           revenue: parseNumber(rawAmount)
         });
@@ -308,13 +251,13 @@ function extractRecords(node, defaultSalesman = '') {
   return records;
 }
 
-// ===== TOP 30 BUYER CONSOLIDATED MATCHING ENGINE =====
+// ===== SIMPLE PRODUCT + PACK MATCHING ENGINE =====
 function runPipelineMatching(stock, buyers, slips) {
   if (!stock || !stock.length) return [];
 
   const buyerMap = {};
 
-  // 1. Calculate Revenue per Buyer across all slip/order transactions
+  // 1. Calculate Combined Revenue per Buyer
   slips.forEach(slip => {
     const bName = slip.buyer;
     if (!bName) return;
@@ -328,12 +271,11 @@ function runPipelineMatching(stock, buyers, slips) {
     buyerMap[key].revenue += rev;
 
     const comm = normalizeCommodity(slip.commodity);
-    const vName = normalizeVariety(slip.variety);
-    const pName = normalizePack(slip.pack);
+    const pack = normalizePack(slip.pack);
 
     if (comm) {
-      const prodKey = `${comm}||${vName}||${pName}`;
-      buyerMap[key].items[prodKey] = { comm, vName, pName };
+      const prodKey = `${comm}||${pack}`;
+      buyerMap[key].items[prodKey] = { comm, pack };
     }
   });
 
@@ -350,22 +292,21 @@ function runPipelineMatching(stock, buyers, slips) {
     if (Array.isArray(b.prefs)) {
       b.prefs.forEach(p => {
         const comm = normalizeCommodity(typeof p === 'string' ? p : p.commodity);
-        const vName = normalizeVariety(typeof p === 'object' ? p.variety : '');
-        const pName = normalizePack(typeof p === 'object' ? p.pack : '');
+        const pack = normalizePack(typeof p === 'object' ? p.pack : '');
         if (comm) {
-          const prodKey = `${comm}||${vName}||${pName}`;
-          buyerMap[key].items[prodKey] = { comm, vName, pName };
+          const prodKey = `${comm}||${pack}`;
+          buyerMap[key].items[prodKey] = { comm, pack };
         }
       });
     }
   });
 
-  // 2. Filter & Rank Top 30 Buyers by Combined Revenue
+  // 2. Select Top 30 Buyers by Combined Revenue
   const sortedBuyers = Object.values(buyerMap)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 30);
 
-  // 3. Consolidate Stock Matches into Simplified Product Line Names
+  // 3. Match Stock purely on PRODUCT + PACK
   const pipelineMatches = [];
 
   sortedBuyers.forEach(buyer => {
@@ -375,18 +316,15 @@ function runPipelineMatching(stock, buyers, slips) {
       if ((stockItem.qty || 0) <= 0) return;
 
       const stockComm = normalizeCommodity(stockItem.commodity);
-      const stockVar = normalizeVariety(stockItem.variety);
       const stockPack = normalizePack(stockItem.pack);
 
       Object.values(buyer.items).forEach(pref => {
         const commMatch = stockComm && (stockComm.includes(pref.comm) || pref.comm.includes(stockComm));
-        const varMatch = !pref.vName || (stockVar === pref.vName);
-        const packMatch = !pref.pName || (stockPack === pref.pName);
+        const packMatch = !pref.pack || (stockPack === pref.pack);
 
-        if (commMatch && varMatch && packMatch) {
-          // Format strictly as: "avocado fuerte 4kg" or "naar 10kg"
+        if (commMatch && packMatch) {
+          // Output format strictly: "naar 10kg" or "avocado 4kg"
           let cleanLine = stockComm;
-          if (stockVar) cleanLine += ` ${stockVar}`;
           if (stockPack) cleanLine += ` ${stockPack}`;
 
           distinctLines.add(cleanLine.trim().toLowerCase());
@@ -577,7 +515,7 @@ function updateDashboardKPIs() {
   if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '38%' : '0%';
 }
 
-// ===== CLEAN BUYER CARD RENDERER =====
+// ===== ULTRA-CLEAN BUYER CARD RENDERER =====
 function renderPipeline() {
   const container = document.getElementById('list-pipeline');
   if (!container) return;
