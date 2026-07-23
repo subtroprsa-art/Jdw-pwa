@@ -818,7 +818,9 @@ function renderFloor() {
         <span>${r.rawQtyDisplay}</span>
       </div>
       <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
+        GRN: ${r.grn || '---'} | Seq: <strong>${r.seq || '---'}</strong> | Aging: <strong>${r.days !== undefined ? r.days + ' days' : '---'}</strong> | Salesman: ${r.salesmanCode || 'ALL'}
+      </div>
     </div>
   `).join('');
 }
