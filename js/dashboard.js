@@ -2,9 +2,9 @@
 
 async function loadDashboard() {
   try {
-    const stockRes = await fetch(FB_DB + '/stock.json?auth=' + FB_SECRET);
-    if (stockRes.ok) {
-      const stockRaw = await stockRes.json();
+    const snapshot = await firebase.database().ref('stock').once('value');
+    const stockRaw = snapshot.val();
+    if (stockRaw) {
       const allStock = [];
       for (const uk in stockRaw || {}) {
         for (const ek in stockRaw[uk] || {}) {
