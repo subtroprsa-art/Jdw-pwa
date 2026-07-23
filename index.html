@@ -131,7 +131,7 @@ try {
       </div>
 
       <button class="pipeline-btn" onclick="goToPage('pipeline')">
-        ⚡ PIPELINE (Grouped Buyer Matches)
+        ⚡ PIPELINE (Top 30 Buyer Matches)
       </button>
 
       <div class="cols-grid">
@@ -202,7 +202,7 @@ try {
 
     <div class="page" id="page-pipeline">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches by buyer, product, variety or size..." oninput="renderPipeline()"/>
+      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search top buyers or product lines..." oninput="renderPipeline()"/>
       <div class="list-container" id="list-pipeline">Loading pipeline matches...</div>
     </div>
 
@@ -220,26 +220,25 @@ try {
 <script>
 // ===== DICTIONARIES & LOOKUPS =====
 const COMM_MAP = {
-  'AVOCADOS': 'AVOS', 'AVOS': 'AVOS', 'LEMONS': 'LEMS', 'LEMS': 'LEMS', 
+  'AVOCADOS': 'AVOCADO', 'AVOS': 'AVOCADO', 'LEMONS': 'LEMONS', 'LEMS': 'LEMONS', 
   'FIGS': 'FIGS', 'KIWIFRUIT': 'KIWI', 'KIWI': 'KIWI', 'ORANGES': 'ORGS', 
-  'GUAVAS': 'GVS', 'CLEMENTINES': 'CLTM', 'NAARTJIES': 'NAAR',
-  'STRAWBERRIES': 'BERS', 'BERRIES': 'BERS', 'DRAGON FRUIT': 'DRAG', 
-  'MANGOES': 'MANG', 'GRAPEFRUIT': 'GFT', 'SATSUMAS': 'SATS', 'PAPINO': 'PAPO'
+  'GUAVAS': 'GUAVAS', 'CLEMENTINES': 'CLEMENTINES', 'NAARTJIES': 'NAAR',
+  'STRAWBERRIES': 'BERS, STRAWBERRY', 'BERRIES': 'BERS, STRAWBERRY', 'DRAGON FRUIT': 'DRAGON FRUIT', 
+  'MANGOES': 'MANGOES', 'GRAPEFRUIT': 'GRAPEFRUIT', 'SATSUMAS': 'SATSUMAS', 'PAPINO': 'PAPINO'
 };
 
 const PACK_MAP = {
-  'TR040': '4KG TRAY', '4KG TRAY': '4KG TRAY', 'TR060': '6KG TRAY', '6KG TRAY': '6KG TRAY',
-  'BG150': '15KG BAG', '15KG BAG': '15KG BAG', 'BG160': '16KG BAG', '16KG BAG': '16KG BAG',
-  'BG200': '20KG BAG', '20KG BAG': '20KG BAG', 'CTT150': '15KG CARTON', '15KG CARTON': '15KG CARTON',
-  'PTB005': '500G PUNNET', '500G PUNNET': '500G PUNNET', '500G PUNNET I': '500G PUNNET',
-  'PTB025': '250G PUNNET', '250G PUNNET': '250G PUNNET', '250G PUNNET I': '250G PUNNET',
-  'PTB002': '160G PUNNET', '160G PUNNET': '160G PUNNET', '160G PUNNET I': '160G PUNNET',
-  '300G PUNNET': '300G PUNNET', '300G PUNNET I': '300G PUNNET',
-  '10KG CARTON': '10KG CARTON', '3KG POCKET': '3KG POCKET', '6KG POCKET': '6KG POCKET'
+  'TR040': '4KG', '4KG TRAY': '4KG', 'TR060': '6KG', '6KG TRAY': '6KG',
+  'BG150': '15KG', '15KG BAG': '15KG', 'BG160': '16KG', '16KG BAG': '16KG',
+  'BG200': '20KG', '20KG BAG': '20KG', 'CTT150': '15KG CARTON', '15KG CARTON': '15KG CARTON',
+  'PTB005': '500G', '500G PUNNET': '500G',
+  'PTB025': '250G', '250G PUNNET': '250G',
+  'PTB002': '160G', '160G PUNNET': '160G',
+  '300G PUNNET': '300G', '10KG CARTON': '10KG', '3KG POCKET': '3KG', '6KG POCKET': '6KG'
 };
 
 function normalizeCommodity(str) {
-  if (!str) return 'PRODUCE';
+  if (!str) return '';
   const clean = String(str).trim().toUpperCase();
   return COMM_MAP[clean] || clean;
 }
@@ -250,10 +249,10 @@ function normalizePack(str) {
   return PACK_MAP[clean] || clean;
 }
 
-function parseQuantity(val) {
+function parseNumber(val) {
   if (val === '*' || val === undefined || val === null) return 0;
   if (typeof val === 'number') return val;
-  const parsed = parseInt(String(val).replace(/[^0-9]/g, ''), 10);
+  const parsed = parseFloat(String(val).replace(/[^0-9.]/g, ''));
   return isNaN(parsed) ? 0 : parsed;
 }
 
@@ -263,8 +262,6 @@ function formatCommodityDetails(r) {
   if (r.variety && r.variety !== '*') parts.push(r.variety);
   if (r.pack) parts.push(`(${r.pack})`);
   if (r.size && r.size !== '*') parts.push(`• Sz ${r.size}`);
-  if (r.count && r.count !== '*') parts.push(`• Count ${r.count}`);
-  if (r.grade && r.grade !== '1' && r.grade !== '*') parts.push(`• Cl ${r.grade}`);
   return parts.join(' ');
 }
 
@@ -275,8 +272,7 @@ function filterRecordsBySearch(records, query) {
   return records.filter(r => {
     const searchableText = [
       r.producer, r.buyer, r.grn, r.seq, r.commodity, 
-      r.variety, r.pack, r.size, r.count, 
-      r.grade, r.loc, r.salesmanCode
+      r.variety, r.pack, r.size, r.salesmanCode
     ].join(' ').toLowerCase();
 
     return terms.every(term => searchableText.includes(term));
@@ -299,28 +295,29 @@ function extractRecords(node, defaultSalesman = '') {
       const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.quantity ?? obj.units ?? 
                      obj.flr ?? obj.bags ?? obj.cartons ?? obj.count ?? obj.total;
 
+      const rawAmount = obj.amount ?? obj.revenue ?? obj.price ?? obj.totalPrice ?? obj.randVal ?? 0;
+
       const commodity = obj.commodity || obj.product || obj.variety || obj.item || parentKeys.commodity || '';
       const producer = obj.producer || obj.producerName || obj.grower || obj.farmer || parentKeys.producer;
       const buyer = obj.buyer || obj.buyerName || parentKeys.buyer || '';
 
       if (rawQty !== undefined || commodity || producer || obj.grn || buyer) {
-        let numericQty = parseQuantity(rawQty);
+        let numericQty = parseNumber(rawQty);
+        let numericRevenue = parseNumber(rawAmount);
 
         records.push({
           salesmanCode: String(sm || '').toUpperCase(),
           buyer: buyer,
-          grn: obj.grn || obj.grnNo || obj.docNo || obj.consignment || parentKeys.grn || '—',
-          seq: obj.seq || obj.sequence || parentKeys.seq || '—',
-          date: obj.date || obj.receivedDate || obj.floorDate || parentKeys.date || '—',
+          grn: obj.grn || obj.grnNo || obj.docNo || parentKeys.grn || '—',
+          seq: obj.seq || parentKeys.seq || '—',
+          date: obj.date || parentKeys.date || '—',
           producer: producer || 'Unknown Producer',
           commodity: commodity || 'Commodity',
-          pack: obj.pack || obj.packaging || parentKeys.pack || '',
+          pack: obj.pack || parentKeys.pack || '',
           variety: obj.variety || parentKeys.variety || '*',
-          grade: obj.grade || obj.cls || '1',
           size: obj.size || '*',
-          count: obj.count || '*',
-          loc: obj.loc || '',
           qty: numericQty,
+          revenue: numericRevenue,
           rawQtyDisplay: `${numericQty} units`,
           ...obj
         });
@@ -350,133 +347,107 @@ function extractRecords(node, defaultSalesman = '') {
   return records;
 }
 
-// ===== CONSOLIDATED PIPELINE MATCHING ENGINE =====
+// ===== TOP 30 REVENUE MATCHING ENGINE =====
 function runPipelineMatching(stock, buyers, slips) {
-  if (!stock || !stock.length || !buyers || !buyers.length) return [];
+  if (!stock || !stock.length) return [];
 
-  // 1. Map buyer preferences from past transactions
-  const buyerPreferences = {};
+  // 1. Calculate Combined Revenue & Preferences per Buyer
+  const buyerMap = {};
 
+  // Aggregate revenue from all transaction history/slips
   slips.forEach(slip => {
     const bName = slip.buyer || slip.buyerName;
     if (!bName) return;
 
     const key = String(bName).trim().toUpperCase();
-    if (!buyerPreferences[key]) {
-      buyerPreferences[key] = { name: bName, items: {}, totalVolume: 0 };
+    if (!buyerMap[key]) {
+      buyerMap[key] = { name: bName, revenue: 0, items: {}, phone: slip.phone || 'No Contact' };
     }
 
-    const commNorm = normalizeCommodity(slip.commodity);
-    const packNorm = normalizePack(slip.pack);
-    const varNorm = slip.variety && slip.variety !== '*' ? String(slip.variety).trim().toUpperCase() : '';
-    const szNorm = slip.size && slip.size !== '*' ? String(slip.size).trim().toUpperCase() : '';
-    const qty = parseQuantity(slip.qty);
+    // Revenue calculation: use explicit total amount or qty * price
+    const rev = slip.revenue || ((slip.qty || 0) * (slip.price || slip.rate || 0));
+    buyerMap[key].revenue += rev;
 
-    if (commNorm) {
-      const itemKey = `${commNorm}||${packNorm}||${varNorm}||${szNorm}`;
-      if (!buyerPreferences[key].items[itemKey]) {
-        buyerPreferences[key].items[itemKey] = {
-          commodity: commNorm,
-          pack: packNorm,
-          variety: varNorm,
-          size: szNorm
-        };
-      }
-      buyerPreferences[key].totalVolume += (qty || 1);
+    // Track buyer product preferences
+    const comm = normalizeCommodity(slip.commodity);
+    const varName = slip.variety && slip.variety !== '*' ? String(slip.variety).trim() : '';
+    const pack = normalizePack(slip.pack);
+
+    if (comm) {
+      const prodKey = `${comm}||${varName}||${pack}`;
+      buyerMap[key].items[prodKey] = { comm, varName, pack };
     }
   });
 
+  // Blend with master buyer database
   buyers.forEach(buyer => {
     const key = String(buyer.name).trim().toUpperCase();
-    if (!buyerPreferences[key]) {
-      buyerPreferences[key] = { name: buyer.name, items: {}, totalVolume: buyer.turnover || 0 };
+    if (!buyerMap[key]) {
+      buyerMap[key] = { name: buyer.name, revenue: buyer.turnover || buyer.revenue || 0, items: {}, phone: buyer.phone || 'No Contact' };
+    } else {
+      if (!buyerMap[key].revenue && buyer.turnover) buyerMap[key].revenue = buyer.turnover;
+      if (buyer.phone && buyer.phone !== 'No Contact') buyerMap[key].phone = buyer.phone;
     }
 
     if (Array.isArray(buyer.prefs)) {
       buyer.prefs.forEach(p => {
-        const comm = typeof p === 'string' ? p : (p.comm || p.commodity || p.product);
-        const pack = typeof p === 'object' ? (p.pack || '') : '';
-        const varNorm = typeof p === 'object' && p.variety ? String(p.variety).trim().toUpperCase() : '';
-        const szNorm = typeof p === 'object' && p.size ? String(p.size).trim().toUpperCase() : '';
+        const comm = normalizeCommodity(typeof p === 'string' ? p : (p.comm || p.commodity));
+        const varName = typeof p === 'object' && p.variety ? String(p.variety).trim() : '';
+        const pack = normalizePack(typeof p === 'object' ? p.pack : '');
         if (comm) {
-          const commNorm = normalizeCommodity(comm);
-          const packNorm = normalizePack(pack);
-          const itemKey = `${commNorm}||${packNorm}||${varNorm}||${szNorm}`;
-          if (!buyerPreferences[key].items[itemKey]) {
-            buyerPreferences[key].items[itemKey] = {
-              commodity: commNorm,
-              pack: packNorm,
-              variety: varNorm,
-              size: szNorm
-            };
-          }
+          const prodKey = `${comm}||${varName}||${pack}`;
+          buyerMap[key].items[prodKey] = { comm, varName, pack };
         }
       });
     }
   });
 
-  // 2. Perform Stock Matching & Group distinct lines (Commodity + Variety + Pack + Size)
-  const matches = [];
+  // 2. Rank Buyers by Combined Revenue & Select Top 30
+  const sortedBuyers = Object.values(buyerMap)
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 30);
 
-  Object.keys(buyerPreferences).forEach(bKey => {
-    const bData = buyerPreferences[bKey];
-    const buyerObj = buyers.find(b => String(b.name).trim().toUpperCase() === bKey) || { name: bData.name, phone: 'No Contact' };
+  // 3. Match Available Stock Lines to Top 30 Buyers
+  const pipelineMatches = [];
 
-    const groupedMatches = {};
+  sortedBuyers.forEach(buyer => {
+    const matchedProductLines = new Set();
 
     stock.forEach(stockItem => {
-      const stockQty = parseQuantity(stockItem.qty);
-      if (stockQty <= 0) return;
+      if ((stockItem.qty || 0) <= 0) return;
 
-      const stockCommNorm = normalizeCommodity(stockItem.commodity);
-      const stockPackNorm = normalizePack(stockItem.pack);
-      const stockVarNorm = stockItem.variety && stockItem.variety !== '*' ? String(stockItem.variety).trim().toUpperCase() : '';
-      const stockSzNorm = stockItem.size && stockItem.size !== '*' ? String(stockItem.size).trim().toUpperCase() : '';
+      const stockComm = normalizeCommodity(stockItem.commodity);
+      const stockVar = stockItem.variety && stockItem.variety !== '*' ? String(stockItem.variety).trim() : '';
+      const stockPack = normalizePack(stockItem.pack);
 
-      let isMatch = false;
+      Object.values(buyer.items).forEach(pref => {
+        const commMatch = stockComm && (stockComm.includes(pref.comm) || pref.comm.includes(stockComm));
+        const varMatch = !pref.varName || (stockVar.toUpperCase() === pref.varName.toUpperCase());
+        const packMatch = !pref.pack || (stockPack.toUpperCase() === pref.pack.toUpperCase());
 
-      Object.values(bData.items).forEach(pref => {
-        const commMatch = (stockCommNorm === pref.commodity) || stockCommNorm.includes(pref.commodity) || pref.commodity.includes(stockCommNorm);
-        const packMatch = !pref.pack || !stockPackNorm || (stockPackNorm === pref.pack);
-        const varMatch = !pref.variety || (stockVarNorm === pref.variety);
-        const szMatch = !pref.size || (stockSzNorm === pref.size);
+        if (commMatch && varMatch && packMatch) {
+          // Format output: "avocado fuerte 4kg", "bers, strawberry 250g", "naar 10kg"
+          let lineStr = stockComm.toLowerCase();
+          if (stockVar) lineStr += ` ${stockVar.toLowerCase()}`;
+          if (stockPack) lineStr += ` ${stockPack.toLowerCase()}`;
 
-        if (commMatch && packMatch && varMatch && szMatch) {
-          isMatch = true;
+          matchedProductLines.add(lineStr);
         }
       });
-
-      if (isMatch) {
-        // Build unique summary key per product grade/size line
-        const groupKey = `${stockCommNorm}_${stockVarNorm}_${stockPackNorm}_${stockSzNorm}`;
-        
-        if (!groupedMatches[groupKey]) {
-          groupedMatches[groupKey] = {
-            commodity: stockItem.commodity || stockCommNorm,
-            variety: stockVarNorm,
-            pack: stockItem.pack || stockPackNorm || 'Standard Pack',
-            size: stockSzNorm,
-            totalQty: 0
-          };
-        }
-        groupedMatches[groupKey].totalQty += stockQty;
-      }
     });
 
-    const summaryLines = Object.values(groupedMatches);
-
-    if (summaryLines.length > 0) {
-      matches.push({
-        buyerId: String(buyerObj.name || bKey).replace(/[^a-zA-Z0-9]/g, '_'),
-        buyerName: buyerObj.name || bData.name,
-        phone: buyerObj.phone || buyerObj.phoneNumber || 'No Contact',
-        totalVolume: bData.totalVolume,
-        matchedItems: summaryLines
+    if (matchedProductLines.size > 0) {
+      pipelineMatches.push({
+        buyerId: String(buyer.name).replace(/[^a-zA-Z0-9]/g, '_'),
+        buyerName: buyer.name,
+        phone: buyer.phone,
+        totalRevenue: buyer.revenue,
+        matchedLines: Array.from(matchedProductLines)
       });
     }
   });
 
-  return matches.sort((a, b) => b.totalVolume - a.totalVolume);
+  return pipelineMatches;
 }
 
 // ===== CRM APP STATE & LOGIC =====
@@ -593,21 +564,14 @@ function startFirebaseListener() {
         const item = buyersNode[k] || {};
         const bName = item.name || item.buyer || k;
         if (buyersMap[bName]) {
-          buyersMap[bName].turnover = item.turnover || item.total || buyersMap[bName].turnover;
+          buyersMap[bName].turnover = item.turnover || item.revenue || item.total || buyersMap[bName].turnover;
         } else {
-          buyersMap[bName] = { name: bName, phone: item.phone || phoneMap[bName] || 'No Contact', prefs: item.prefs || [], turnover: item.turnover || 0 };
+          buyersMap[bName] = { name: bName, phone: item.phone || phoneMap[bName] || 'No Contact', prefs: item.prefs || [], turnover: item.turnover || item.revenue || 0 };
         }
       });
     }
 
-    store.orders.forEach(o => {
-      if (o.buyer && !buyersMap[o.buyer]) {
-        buyersMap[o.buyer] = { name: o.buyer, phone: phoneMap[o.buyer] || 'No Contact', prefs: [], turnover: 0 };
-      }
-    });
-
     store.buyers = Object.values(buyersMap);
-    store.buyers.sort((a, b) => (b.turnover || 0) - (a.turnover || 0));
 
     updateDashboardKPIs();
     renderBuyers();
@@ -637,7 +601,6 @@ function markBuyerAsContacted(buyerId) {
     card.style.opacity = "0.55";
     card.style.background = "#f1f5f9";
     card.style.borderLeft = "4px solid #94a3b8";
-    card.style.filter = "grayscale(40%)";
     const nameEl = card.querySelector('.buyer-name');
     if (nameEl) {
       nameEl.style.textDecoration = "line-through";
@@ -657,13 +620,10 @@ function triggerPhoneCall(buyerId, phone) {
 
 function triggerWhatsApp(buyerId, buyerName, phone) {
   const matchObj = (window.lastPipelineMatches || []).find(m => m.buyerId === buyerId);
-  if (!matchObj || !matchObj.matchedItems.length) return;
+  if (!matchObj || !matchObj.matchedLines.length) return;
 
-  const produceLines = matchObj.matchedItems
-    .map(item => `• ${item.commodity}${item.variety ? ' ' + item.variety : ''} (${item.pack})${item.size ? ' Sz ' + item.size : ''} — ${item.totalQty} units total`)
-    .join('\n');
-
-  const msg = `Hello ${buyerName},\n\nWe have stock available today matching your requirements:\n${produceLines}\n\nPlease let me know if you'd like to reserve any!`;
+  const produceLines = matchObj.matchedLines.map(line => `• ${line}`).join('\n');
+  const msg = `${buyerName.toLowerCase()}:\n${produceLines}`;
 
   markBuyerAsContacted(buyerId);
 
@@ -701,21 +661,21 @@ function renderPipeline() {
   window.lastPipelineMatches = matches;
 
   let filtered = matches.filter(p => 
-    (p.buyerName && p.buyerName.toLowerCase().includes(q)) || 
-    p.matchedItems.some(item => `${item.commodity} ${item.variety} ${item.pack} ${item.size}`.toLowerCase().includes(q))
+    p.buyerName.toLowerCase().includes(q) || 
+    p.matchedLines.some(line => line.toLowerCase().includes(q))
   );
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No matching buyers found for active stock</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No top buyer matches found for active stock</div>`;
     return;
   }
 
   const contactedMap = window.contactedBuyers || {};
 
-  container.innerHTML = filtered.map(p => {
+  container.innerHTML = filtered.map((p, idx) => {
     const isContacted = !!contactedMap[p.buyerId];
     const cardStyle = isContacted 
-      ? "opacity:0.55; background:#f1f5f9; border-left:4px solid #94a3b8; filter:grayscale(40%);" 
+      ? "opacity:0.55; background:#f1f5f9; border-left:4px solid #94a3b8;" 
       : "background:#ffffff; border-left:4px solid #1a4479; box-shadow:0 2px 8px rgba(0,0,0,0.05);";
 
     const nameStyle = isContacted 
@@ -726,24 +686,18 @@ function renderPipeline() {
       <div class="card-item" id="card-${p.buyerId}" style="padding:16px; margin-bottom:12px; border-radius:10px; transition:all 0.2s; ${cardStyle}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <span class="buyer-name" style="font-weight:800; font-size:16px; ${nameStyle}">${p.buyerName}</span>
-            ${isContacted ? `<span style="margin-left:8px; background:#e2e8f0; color:#475569; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">CONTACTED TODAY</span>` : ''}
+            <span style="font-size:11px; font-weight:800; color:#64748b;">#${idx + 1} TOP BUYER</span>
+            <div class="buyer-name" style="font-weight:800; font-size:17px; text-transform:lowercase; ${nameStyle}">${p.buyerName}:</div>
           </div>
-          <span style="font-size:11px; background:#e0f2fe; color:#0369a1; font-weight:700; padding:4px 8px; border-radius:6px;">
-            ${p.matchedItems.length} Product Match${p.matchedItems.length > 1 ? 'es' : ''}
-          </span>
+          ${isContacted ? `<span style="background:#e2e8f0; color:#475569; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">CONTACTED TODAY</span>` : ''}
         </div>
 
-        <div style="margin-top:12px;">
-          <label style="font-size:11px; font-weight:800; color:#475569; display:block; margin-bottom:6px;">MATCHED PRODUCT LINES (CONSOLIDATED):</label>
-          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; font-size:13px; display:flex; flex-direction:column; gap:6px;">
-            ${p.matchedItems.map(item => `
-              <div style="color:#1e293b; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
-                <span>📦 <strong>${item.commodity}</strong> ${item.variety ? '(' + item.variety + ')' : ''} — ${item.pack}${item.size ? ' • Sz: ' + item.size : ''}</span>
-                <span style="color:#15803d; font-weight:800;">${item.totalQty} total units</span>
-              </div>
-            `).join('<div style="border-bottom:1px dashed #e2e8f0; margin:2px 0;"></div>')}
-          </div>
+        <div style="margin-top:10px; padding-left:4px;">
+          ${p.matchedLines.map(line => `
+            <div style="font-size:14px; font-weight:600; color:#334155; line-height:1.5;">
+              ${line},
+            </div>
+          `).join('')}
         </div>
 
         <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
@@ -752,7 +706,7 @@ function renderPipeline() {
           </button>
           
           <button onclick="triggerWhatsApp('${p.buyerId}', '${p.buyerName}', '${p.phone}')" style="flex:1; background:#25D366; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
-            💬 WhatsApp Match
+            💬 WhatsApp
           </button>
         </div>
       </div>
@@ -785,12 +739,6 @@ function renderFloor() {
           ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
         </div>
       </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${f.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${f.seq}</strong></span>
-        <span class="meta-tag">📅 ${f.date}</span>
-        ${f.loc ? `<span class="meta-tag">📍 LOC: <strong>${f.loc}</strong></span>` : ''}
-      </div>
     </div>
   `).join('');
 }
@@ -819,12 +767,6 @@ function renderStock() {
           <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.rawQtyDisplay}</div>
           ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
         </div>
-      </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${s.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${s.seq}</strong></span>
-        <span class="meta-tag">📅 ${s.date}</span>
-        ${s.loc ? `<span class="meta-tag">📍 LOC: <strong>${s.loc}</strong></span>` : ''}
       </div>
     </div>
   `).join('');
@@ -901,7 +843,6 @@ function renderOrders() {
         <div style="font-weight:700; color:#15803d;">${o.qty} units</div>
       </div>
       <div style="font-size:12px; color:#64748b; margin-top:4px;">🌿 ${formatCommodityDetails(o)} | Producer: ${o.producer || '—'}</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Date: ${o.date || '—'}</div>
     </div>
   `).join('');
 }
