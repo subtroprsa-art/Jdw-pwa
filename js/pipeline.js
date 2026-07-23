@@ -1,3 +1,13 @@
+// ===== GLOBAL DATA SCOPES =====
+var allLiveStockData = allLiveStockData || [];
+var liveBuyerData = liveBuyerData || [];
+
+// Helper function to safely read available quantity across different payload structures
+function getStockQty(s) {
+  if (!s) return 0;
+  return Number(s.flr || s.qty || s.pallets || s.available || s.total || 0);
+}
+
 // ===== PIPELINE FUNCTIONS =====
 
 function loadPipelineState() {
@@ -107,8 +117,12 @@ function renderPipelineBuyers() {
   const scored = buyers.map(b => {
     let he = 0;
     if (b.prefs) b.prefs.forEach(p => {
-      const targetComm = p.comm;
-      const sf = stock.filter(s => s.commodity === targetComm && s.flr > 0);
+      const targetComm = String(p.comm || '').trim().toUpperCase();
+      const sf = stock.filter(s => {
+        const stockComm = String(s.commodity || '').trim().toUpperCase();
+        const matchesComm = stockComm.includes(targetComm) || targetComm.includes(stockComm);
+        return matchesComm && getStockQty(s) > 0;
+      });
       if (sf.length > 0) he++;
     });
     const mp = he > 0 ? 3 : 0;
@@ -139,7 +153,6 @@ function togglePipelineCall(el, event) {
   callsRef.once('value').then(snapshot => {
     const current = snapshot.val() || false;
     callsRef.set(!current).then(() => {
-      // Intelligently re-render the view we are currently working in to prevent jumps
       const todayMatchKey = 'ai-results-' + new Date().toISOString().slice(0, 10);
       const saved = JSON.parse(localStorage.getItem(todayMatchKey) || '{}');
       if (saved && saved.matches && saved.matches.length > 0) {
@@ -212,7 +225,7 @@ function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  const stock = allLiveStockData ? allLiveStockData.filter(s => s.flr > 0) : [];
+  const stock = allLiveStockData ? allLiveStockData.filter(s => getStockQty(s) > 0) : [];
   const buyers = liveBuyerData || [];
 
   console.log('Stock lines for matching:', stock.length);
@@ -238,7 +251,9 @@ function runAIMatch() {
 
   const todayDow = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
 
-  const matches = runDeterministicMatch(stock, buyers, todayDow);
+  const matches = (typeof runDeterministicMatch === 'function') 
+    ? runDeterministicMatch(stock, buyers, todayDow) 
+    : [];
 
   console.log('Matches found:', matches.length);
 
@@ -283,7 +298,6 @@ async function renderAICallList(matches, summary) {
   const el = document.getElementById('pipeline-buyers');
   if (!el) return;
 
-  // Get called list from Firebase
   const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
   let called = {};
   try {
@@ -311,7 +325,6 @@ async function renderAICallList(matches, summary) {
     html += '<div style="background:var(--sage-light);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#1a5c2a;border-left:3px solid var(--sage)">' + summary + '</div>';
   }
 
-  // Add WhatsApp All button
   if (matches && matches.length) {
     html += '<div style="margin-top:10px;padding:10px;background:#f0faf0;border-radius:8px;border:1px solid #25D366;display:flex;gap:8px;flex-wrap:wrap">';
     html += '<button onclick="sendWhatsAppToAllMatches()" style="padding:10px 20px;background:#25D366;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer">📱 WhatsApp All Matches</button>';
@@ -365,7 +378,6 @@ async function renderAICallList(matches, summary) {
 // ===== WHATSAPP FUNCTIONS =====
 
 function sendWhatsAppToBuyer(buyerName, message) {
-  // Get phone number from Firebase
   const phoneRef = firebase.database().ref('buyerPhones/' + buyerName);
   
   phoneRef.once('value').then(snapshot => {
@@ -460,7 +472,6 @@ function exportPipelineMatchesToPDF() {
     return;
   }
 
-  // Retrieve today's matches directly from your app's local storage state
   const todayKey = 'ai-results-' + new Date().toISOString().slice(0, 10);
   const saved = JSON.parse(localStorage.getItem(todayKey) || '{}');
   const matches = saved.matches || [];
@@ -483,7 +494,6 @@ function exportPipelineMatchesToPDF() {
                    todayRaw.getFullYear();
   const filename = `SubTrop_Matches_${fileDate}.pdf`;
 
-  // Group matches by buyer (identical to your rendering logic)
   const byBuyer = {};
   const order = [];
   for (const m of matches) {
@@ -494,7 +504,6 @@ function exportPipelineMatchesToPDF() {
     byBuyer[m.buyer].push(m);
   }
 
-  // Create a clean off-screen HTML block purely for the PDF (no WhatsApp buttons!)
   const tempContainer = document.createElement('div');
   tempContainer.style.fontFamily = "'Outfit', -apple-system, sans-serif";
   tempContainer.style.color = '#1a1a1a';
@@ -519,7 +528,6 @@ function exportPipelineMatchesToPDF() {
     `;
   }
 
-  // Generate clean buyer cards for the print layout
   pdfHtml += order.map((buyer, i) => {
     const items = byBuyer[buyer];
     const top = items[0];
@@ -557,7 +565,6 @@ function exportPipelineMatchesToPDF() {
 
   tempContainer.innerHTML = pdfHtml;
 
-  // Run html2pdf conversion engine
   const opt = {
     margin:       [15, 15, 15, 15], 
     filename:     filename,
