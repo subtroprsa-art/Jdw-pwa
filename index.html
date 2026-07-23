@@ -234,7 +234,7 @@ const VARIETY_NAMES = {
 
 const PACK_NAMES = {
   'TR040': '4KG Tray', 'TR060': '6KG Tray', 'BG150': '15KG Bag', 'BG160': '16KG Bag',
-  'CTT150': '15KG Carton', 'PTB005': '500G Punnet', 'PTB025': '250G Punnet',
+  'BG200': '20KG Bag', 'CTT150': '15KG Carton', 'PTB005': '500G Punnet', 'PTB025': '250G Punnet',
   'PTB002': '160G Punnet', 'DL076': 'DL076 Carton', 'PC030': '3KG Pocket',
   'PC060': '6KG Pocket', 'CO100': '10KG Carton', 'CO150': '15KG Carton',
   'SP170': '17KG Sack', 'EC020': '20KG Box'
@@ -252,7 +252,7 @@ function formatCommodityDetails(r) {
   const parts = [];
   if (r.commodity) parts.push(r.commodity);
   if (r.variety && r.variety !== '*') parts.push(r.variety);
-  if (r.pack) parts.push(`(${r.pack})`);
+  if (r.pack) parts.push(`(${PACK_NAMES[r.pack] || r.pack})`);
   if (r.size && r.size !== '*') parts.push(`• Sz ${r.size}`);
   if (r.count && r.count !== '*') parts.push(`• Count ${r.count}`);
   if (r.grade && r.grade !== '1' && r.grade !== '*') parts.push(`• Cl ${r.grade}`);
@@ -264,9 +264,10 @@ function filterRecordsBySearch(records, query) {
   const terms = query.toLowerCase().trim().split(/\s+/);
 
   return records.filter(r => {
+    const packLabel = PACK_NAMES[r.pack] || r.pack || '';
     const searchableText = [
       r.producer, r.grn, r.seq, r.commodity, 
-      r.variety, r.pack, r.size, r.count, 
+      r.variety, r.pack, packLabel, r.size, r.count, 
       r.grade, r.loc, r.salesmanCode
     ].join(' ').toLowerCase();
 
