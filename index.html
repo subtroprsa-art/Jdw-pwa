@@ -343,43 +343,48 @@ function extractRecords(node, defaultSalesman = '') {
 
 // ===== DETERMINISTIC MATCHING ENGINE =====
 function runDeterministicMatch(stock, buyers, todayDow) {
-  if (!stock || !buyers) return [];
+  if (!stock || !buyers || !stock.length || !buyers.length) return [];
 
   const matches = [];
 
   buyers.forEach(buyer => {
-    // Extract all target commodity codes for this buyer
+    // 1. Extract target commodity codes
     const targetCommodities = [];
     if (Array.isArray(buyer.prefs)) {
       buyer.prefs.forEach(p => {
-        // Handle array structure: prefs[i].commodities = ["DRAG", "LEM"]
         if (Array.isArray(p.commodities)) {
           p.commodities.forEach(c => targetCommodities.push(String(c).trim().toUpperCase()));
-        } 
-        // Handle fallback single string structure: prefs[i].comm = "LEM"
-        else if (p.comm || p.commodity) {
+        } else if (p.comm || p.commodity) {
           targetCommodities.push(String(p.comm || p.commodity).trim().toUpperCase());
         }
       });
     }
 
-    if (targetCommodities.length === 0) return;
-
-    // Find all stock lines that match any of the buyer's target commodities
+    // 2. Filter available stock
     stock.forEach(item => {
-      const stockQty = Number(item.qty || item.flr || item.qty_sort || 0);
-      if (stockQty <= 0) return; // Skip out of stock items
+      const stockQty = Number(item.qty || item.flr || item.qty_sort || item.qty_rec || 0);
+      if (stockQty <= 0) return; // Skip zero quantity
 
       const stockComm = String(item.commodity || '').trim().toUpperCase();
       if (!stockComm) return;
 
-      // Check if stock commodity matches any buyer preference (e.g., "LEM" matches "LEMS")
-      const isMatch = targetCommodities.some(tc => 
-        stockComm.includes(tc) || tc.includes(stockComm)
-      );
+      let isMatch = false;
+      let matchReason = '';
+
+      // If buyer has specific preferences, check for commodity match
+      if (targetCommodities.length > 0) {
+        isMatch = targetCommodities.some(tc => stockComm.includes(tc) || tc.includes(stockComm));
+        if (isMatch) {
+          matchReason = `Buyer prefers ${targetCommodities.join(', ')}. Fresh stock available (${stockQty} units).`;
+        }
+      } else {
+        // FALLBACK: If buyer has NO preferences, match top available stock so they aren't ignored
+        isMatch = true;
+        matchReason = `Available floor stock (${stockQty} units). No explicit preferences recorded.`;
+      }
 
       if (isMatch) {
-        const priority = stockQty > 50 ? 'HIGH' : stockQty > 10 ? 'MEDIUM' : 'LOW';
+        const priority = (targetCommodities.length > 0) ? (stockQty > 50 ? 'HIGH' : 'MEDIUM') : 'LOW';
         const score = (priority === 'HIGH' ? 80 : priority === 'MEDIUM' ? 50 : 20) + (buyer.turnover || 0) / 1000;
 
         matches.push({
@@ -387,7 +392,7 @@ function runDeterministicMatch(stock, buyers, todayDow) {
           phone: buyer.phone || 'No Contact',
           commodity: stockComm,
           stockLine: `${stockComm} (${item.pack || ''} - Size: ${item.size || '*'}) - ${stockQty} available`,
-          reason: `Buyer prefers ${targetCommodities.join(', ')}. Fresh stock available (${stockQty} units).`,
+          reason: matchReason,
           tip: `Producer: ${item.producer || 'Unknown'} | Grade: ${item.grade || '1'}`,
           priority: priority,
           score: Math.round(score),
@@ -397,7 +402,7 @@ function runDeterministicMatch(stock, buyers, todayDow) {
     });
   });
 
-  // Sort matches by highest score
+  // Sort matches by highest score, remove duplicates, limit per buyer
   return matches.sort((a, b) => b.score - a.score);
 }
 // ===== CRM APP STATE & LOGIC =====
