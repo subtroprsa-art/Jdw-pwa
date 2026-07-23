@@ -352,95 +352,124 @@ function runPipelineMatching(stock, buyers, slips) {
 
   const buyerMap = {};
 
+  // 1. Build a quick lookup dictionary from store.buyers
+  const masterBuyerPhoneMap = {};
+  (buyers || []).forEach(b => {
+    if (b.name) {
+      const cleanK = String(b.name).trim().toUpperCase();
+      masterBuyerPhoneMap[cleanK] = b.phone;
+    }
+  });
+
+  // Helper to always retrieve the best available phone number
+  const resolvePhone = (bName, fallbackPhone = '') => {
+    if (!bName) return 'No Contact';
+    const cleanK = String(bName).trim().toUpperCase();
+    if (masterBuyerPhoneMap[cleanK] && masterBuyerPhoneMap[cleanK] !== 'No Contact') {
+      return masterBuyerPhoneMap[cleanK];
+    }
+    if (fallbackPhone && fallbackPhone !== 'No Contact') return fallbackPhone;
+    return 'No Contact';
+  };
+
+  // 2. Aggregate Slips & Orders
   slips.forEach(slip => {
-    const bName = slip.buyer || slip.buyerName;
+    const bName = slip.buyer;
     if (!bName) return;
 
     const key = String(bName).trim().toUpperCase();
     if (!buyerMap[key]) {
-      buyerMap[key] = { name: bName, revenue: 0, items: {}, phone: slip.phone || 'No Contact' };
+      buyerMap[key] = { 
+        name: bName, 
+        revenue: 0, 
+        items: {}, 
+        phone: resolvePhone(bName, slip.phone) 
+      };
     }
 
-    const rev = slip.revenue || ((slip.qty || 0) * (slip.price || slip.rate || 0));
+    const rev = slip.revenue || ((slip.qty || 0) * (slip.price || 0));
     buyerMap[key].revenue += rev;
 
     const comm = normalizeCommodity(slip.commodity);
-    const varName = slip.variety && slip.variety !== '*' ? String(slip.variety).trim() : '';
     const pack = normalizePack(slip.pack);
 
     if (comm) {
-      const prodKey = `${comm}||${varName}||${pack}`;
-      buyerMap[key].items[prodKey] = { comm, varName, pack };
+      const prodKey = `${comm}||${pack}`;
+      buyerMap[key].items[prodKey] = { comm, pack };
     }
   });
 
-  buyers.forEach(buyer => {
-    const key = String(buyer.name).trim().toUpperCase();
+  // 3. Aggregate Buyer Preferences & Master List
+  buyers.forEach(b => {
+    const key = String(b.name).trim().toUpperCase();
+    const resolvedPhone = resolvePhone(b.name, b.phone);
+
     if (!buyerMap[key]) {
-      buyerMap[key] = { name: buyer.name, revenue: buyer.turnover || buyer.revenue || 0, items: {}, phone: buyer.phone || 'No Contact' };
+      buyerMap[key] = { 
+        name: b.name, 
+        revenue: b.turnover || 0, 
+        items: {}, 
+        phone: resolvedPhone 
+      };
     } else {
-      if (!buyerMap[key].revenue && buyer.turnover) buyerMap[key].revenue = buyer.turnover;
-      if (buyer.phone && buyer.phone !== 'No Contact') buyerMap[key].phone = buyer.phone;
+      if (!buyerMap[key].revenue && b.turnover) buyerMap[key].revenue = b.turnover;
+      buyerMap[key].phone = resolvedPhone; // Always force-update phone number
     }
 
-    if (Array.isArray(buyer.prefs)) {
-      buyer.prefs.forEach(p => {
-        const comm = normalizeCommodity(typeof p === 'string' ? p : (p.comm || p.commodity));
-        const varName = typeof p === 'object' && p.variety ? String(p.variety).trim() : '';
+    if (Array.isArray(b.prefs)) {
+      b.prefs.forEach(p => {
+        const comm = normalizeCommodity(typeof p === 'string' ? p : p.commodity);
         const pack = normalizePack(typeof p === 'object' ? p.pack : '');
         if (comm) {
-          const prodKey = `${comm}||${varName}||${pack}`;
-          buyerMap[key].items[prodKey] = { comm, varName, pack };
+          const prodKey = `${comm}||${pack}`;
+          buyerMap[key].items[prodKey] = { comm, pack };
         }
       });
     }
   });
 
+  // 4. Sort Top 30 Buyers
   const sortedBuyers = Object.values(buyerMap)
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 30);
 
   const pipelineMatches = [];
 
+  // 5. Match Stock to Buyer Preferences
   sortedBuyers.forEach(buyer => {
-    const matchedProductLines = new Set();
+    const distinctLines = new Set();
 
     stock.forEach(stockItem => {
       if ((stockItem.qty || 0) <= 0) return;
 
       const stockComm = normalizeCommodity(stockItem.commodity);
-      const stockVar = stockItem.variety && stockItem.variety !== '*' ? String(stockItem.variety).trim() : '';
       const stockPack = normalizePack(stockItem.pack);
 
       Object.values(buyer.items).forEach(pref => {
         const commMatch = stockComm && (stockComm.includes(pref.comm) || pref.comm.includes(stockComm));
-        const varMatch = !pref.varName || (stockVar.toUpperCase() === pref.varName.toUpperCase());
-        const packMatch = !pref.pack || (stockPack.toUpperCase() === pref.pack.toUpperCase());
+        const packMatch = !pref.pack || (stockPack === pref.pack);
 
-        if (commMatch && varMatch && packMatch) {
-          let lineStr = stockComm.toLowerCase();
-          if (stockVar) lineStr += ` ${stockVar.toLowerCase()}`;
-          if (stockPack) lineStr += ` ${stockPack.toLowerCase()}`;
-
-          matchedProductLines.add(lineStr);
+        if (commMatch && packMatch) {
+          let cleanLine = stockComm;
+          if (stockPack) cleanLine += ` ${stockPack}`;
+          distinctLines.add(cleanLine.trim().toLowerCase());
         }
       });
     });
 
-    if (matchedProductLines.size > 0) {
+    if (distinctLines.size > 0) {
       pipelineMatches.push({
         buyerId: String(buyer.name).replace(/[^a-zA-Z0-9]/g, '_'),
         buyerName: buyer.name,
         phone: buyer.phone,
         totalRevenue: buyer.revenue,
-        matchedLines: Array.from(matchedProductLines)
+        matchedLines: Array.from(distinctLines)
       });
     }
   });
 
   return pipelineMatches;
 }
-
 // ===== CRM APP STATE & LOGIC =====
 let currentSalesman = 'ALL';
 let store = { stock: [], floor: [], coldstore: [], buyers: [], orders: [] };
