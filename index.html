@@ -533,23 +533,41 @@ function startFirebaseListener() {
     const rawPhones = raw.buyerPhones || {};
     const buyersNode = raw.buyers || {};
 
-    // Build flexible phone map ignoring symbols, spacing, and casing
+    // 1. Build Phone Map with cleaned keys
     const phoneMap = {};
-    Object.keys(rawPhones).forEach(key => {
-      const cleanKey = String(key).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const phoneKeys = Object.keys(rawPhones);
+
+    phoneKeys.forEach(key => {
+      const cleanKey = String(key).trim().toUpperCase();
       phoneMap[cleanKey] = rawPhones[key];
     });
 
+    // 2. Smart Phone Lookup Function (Exact + Partial Match)
     const getPhoneForBuyer = (name, fallback = '') => {
       if (!name) return fallback || 'No Contact';
-      const cleanKey = String(name).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      return phoneMap[cleanKey] || fallback || 'No Contact';
+      const cleanName = String(name).trim().toUpperCase();
+
+      // Check 1: Exact match
+      if (phoneMap[cleanName]) return phoneMap[cleanName];
+
+      // Check 2: Partial match (e.g. "FERREIRA FRESH" in "FERREIRA FRESH (PTY)")
+      const matchedKey = phoneKeys.find(pk => {
+        const cleanPK = pk.trim().toUpperCase();
+        return cleanPK.includes(cleanName) || cleanName.includes(cleanPK);
+      });
+
+      if (matchedKey && phoneMap[matchedKey.trim().toUpperCase()]) {
+        return phoneMap[matchedKey.trim().toUpperCase()];
+      }
+
+      return fallback || 'No Contact';
     };
 
     const buyersMap = {};
 
+    // Process Preferences
     Object.keys(rawPrefs).forEach(k => {
-      const cleanKey = String(k).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cleanKey = String(k).trim().toUpperCase();
       buyersMap[cleanKey] = { 
         name: k, 
         phone: getPhoneForBuyer(k), 
@@ -558,10 +576,11 @@ function startFirebaseListener() {
       };
     });
 
+    // Process Buyers Node
     Object.keys(buyersNode).forEach(k => {
       const b = buyersNode[k] || {};
       const bName = b.name || k;
-      const cleanKey = String(bName).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cleanKey = String(bName).trim().toUpperCase();
 
       const existingPhone = buyersMap[cleanKey]?.phone !== 'No Contact' ? buyersMap[cleanKey]?.phone : '';
       const phone = getPhoneForBuyer(bName, b.phone || existingPhone);
