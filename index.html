@@ -560,126 +560,73 @@ function startFirebaseListener() {
     store.orders = extractRecords(raw.orders || raw.cart || raw.slips || raw.salesHistory);
 
     const rawPrefs = raw.preferences || raw.buyerPreferences || {};
-    const rawPhones = raw.buyerPhones || raw.phones || raw.contacts || {};
-    const buyersNode = raw.buyers || raw.buyerDetails || {};
+    const rawPhones = raw.buyerPhones || {};
 
-    // 1. Helper to sanitize names into searchable tokens
-    const cleanStr = (str) => {
-      if (!str) return '';
-      return String(str)
-        .toUpperCase()
-        .replace(/\(PTY\)|PTY|LTD|CO|INC|HOUSE OF FOOD|MARKET/gi, '') // Remove common filler words
-        .replace(/[^A-Z0-9\s]/g, '')                                // Remove special chars/punctuation
-        .replace(/\s+/g, ' ')                                       // Normalize spaces
-        .trim();
-    };
+    // 1. Build a direct, clean lookup map from your `buyerPhones` node
+    window.phoneMap = {};
+    Object.keys(rawPhones).forEach(key => {
+      const val = rawPhones[key];
+      if (val) {
+        // Strip everything down to uppercase alphanumeric for foolproof matching
+        const cleanK = String(key).toUpperCase().replace(/[^A-Z0-9]/g, '');
+        window.phoneMap[cleanK] = String(val).trim();
+      }
+    });
 
-    // 2. Build explicit Directory from raw phones and other nodes
-    const phoneDirectory = [];
+    // Smart lookup function
+    window.getBuyerPhone = (name) => {
+      if (!name) return 'No Contact';
+      const cleanTarget = String(name).toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-    const addPhoneToDir = (rawName, phoneVal) => {
-      if (!rawName || !phoneVal) return;
-      let phoneStr = String(phoneVal).trim();
-      if (!phoneStr.startsWith('+') && phoneStr.startsWith('27')) {
-        phoneStr = '+' + phoneStr;
+      // Direct exact match
+      if (window.phoneMap[cleanTarget]) return window.phoneMap[cleanTarget];
+
+      // Substring match
+      const keys = Object.keys(window.phoneMap);
+      const matchedKey = keys.find(k => k.includes(cleanTarget) || cleanTarget.includes(k));
+      if (matchedKey) return window.phoneMap[matchedKey];
+
+      // First word match (e.g. FERREIRA)
+      const firstWord = cleanTarget.substring(0, 6);
+      if (firstWord.length >= 4) {
+        const wordKey = keys.find(k => k.includes(firstWord));
+        if (wordKey) return window.phoneMap[wordKey];
       }
 
-      phoneDirectory.push({
-        originalName: String(rawName).trim(),
-        cleanName: cleanStr(rawName),
-        rawUpper: String(rawName).trim().toUpperCase(),
-        phone: phoneStr
-      });
+      return 'No Contact';
     };
 
-    // Index phone numbers from buyerPhones node
-    Object.keys(rawPhones).forEach(k => {
-      const p = typeof rawPhones[k] === 'object' ? (rawPhones[k].phone || rawPhones[k].number) : rawPhones[k];
-      addPhoneToDir(k, p);
-    });
-
-    // Index from buyers node
-    Object.keys(buyersNode).forEach(k => {
-      const b = buyersNode[k] || {};
-      addPhoneToDir(b.name || k, b.phone || b.cell || b.contact);
-    });
-
-    // Index from recent orders
-    (store.orders || []).forEach(o => {
-      if (o.buyer && o.phone) addPhoneToDir(o.buyer, o.phone);
-    });
-
-    // 3. Multi-tier Matching Engine
-    const getPhoneForBuyer = (buyerName, fallback = '') => {
-      if (!buyerName) return fallback || 'No Contact';
-
-      const targetRaw = String(buyerName).trim().toUpperCase();
-      const targetClean = cleanStr(buyerName);
-
-      // Level 1: Exact Raw Key Match
-      let match = phoneDirectory.find(entry => entry.rawUpper === targetRaw);
-      if (match) return match.phone;
-
-      // Level 2: Exact Cleaned Name Match
-      match = phoneDirectory.find(entry => entry.cleanName === targetClean && targetClean.length > 0);
-      if (match) return match.phone;
-
-      // Level 3: Substring Inclusion Match
-      match = phoneDirectory.find(entry => {
-        if (!entry.cleanName || !targetClean) return false;
-        return entry.cleanName.includes(targetClean) || targetClean.includes(entry.cleanName);
-      });
-      if (match) return match.phone;
-
-      // Level 4: First Core Word Match (e.g. "FERREIRA" or "MJOLI")
-      const targetWords = targetClean.split(' ').filter(w => w.length >= 3);
-      if (targetWords.length > 0) {
-        match = phoneDirectory.find(entry => {
-          return targetWords.some(word => entry.cleanName.includes(word));
-        });
-        if (match) return match.phone;
-      }
-
-      return fallback || 'No Contact';
-    };
-
-    // 4. Construct Final Buyers Map
+    // 2. Build store.buyers from preferences and orders
     const buyersMap = {};
 
     Object.keys(rawPrefs).forEach(k => {
       const cleanKey = String(k).trim().toUpperCase();
       buyersMap[cleanKey] = { 
         name: k, 
-        phone: getPhoneForBuyer(k), 
+        phone: window.getBuyerPhone(k), 
         prefs: rawPrefs[k], 
         turnover: 0 
       };
     });
 
-    Object.keys(buyersNode).forEach(k => {
-      const b = buyersNode[k] || {};
-      const bName = b.name || k;
-      const cleanKey = String(bName).trim().toUpperCase();
-
-      const existingPhone = (buyersMap[cleanKey] && buyersMap[cleanKey].phone !== 'No Contact') ? buyersMap[cleanKey].phone : '';
-      const phone = getPhoneForBuyer(bName, b.phone || b.cell || existingPhone);
-
-      if (buyersMap[cleanKey]) {
-        buyersMap[cleanKey].turnover = b.turnover || b.revenue || buyersMap[cleanKey].turnover;
-        buyersMap[cleanKey].phone = phone;
-      } else {
-        buyersMap[cleanKey] = { 
-          name: bName, 
-          phone: phone, 
-          prefs: [], 
-          turnover: b.turnover || b.revenue || 0 
-        };
+    // Add any buyers seen in orders
+    (store.orders || []).forEach(o => {
+      if (o.buyer) {
+        const cleanKey = String(o.buyer).trim().toUpperCase();
+        if (!buyersMap[cleanKey]) {
+          buyersMap[cleanKey] = {
+            name: o.buyer,
+            phone: window.getBuyerPhone(o.buyer),
+            prefs: [],
+            turnover: 0
+          };
+        }
       }
     });
 
     store.buyers = Object.values(buyersMap);
 
-    // Refresh Views
+    // Refresh UI
     updateDashboardKPIs();
     renderBuyers();
     renderStock();
@@ -691,6 +638,62 @@ function startFirebaseListener() {
   });
 }
 
+// ===== PIPELINE RENDERER =====
+function renderPipeline() {
+  const container = document.getElementById('list-pipeline');
+  if (!container) return;
+  const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
+
+  let rawStock = (store.stock || []).concat(store.floor || []);
+  let activeStock = filterBySalesman(rawStock);
+
+  let matches = runPipelineMatching(activeStock, store.buyers || [], store.orders || []);
+  window.lastPipelineMatches = matches;
+
+  let filtered = matches.filter(p => 
+    p.buyerName.toLowerCase().includes(q) || 
+    p.matchedLines.some(line => line.toLowerCase().includes(q))
+  );
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No top buyer matches found for active stock</div>`;
+    return;
+  }
+
+  const contactedMap = window.contactedBuyers || {};
+
+  container.innerHTML = filtered.map((p) => {
+    const isContacted = !!contactedMap[p.buyerId];
+    // Always resolve the latest phone number directly from phoneMap
+    const phoneNum = window.getBuyerPhone ? window.getBuyerPhone(p.buyerName) : (p.phone || 'No Contact');
+
+    return `
+      <div class="card-item" id="card-${p.buyerId}" style="padding:16px; margin-bottom:12px; border-radius:10px; border-left:4px solid #1a4479; ${isContacted ? 'opacity:0.5; background:#f1f5f9;' : 'background:#ffffff;'}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="buyer-name" style="font-weight:800; font-size:18px; text-transform:lowercase; color:#0f172a; margin-bottom:4px; ${isContacted ? 'text-decoration:line-through; color:#64748b;' : ''}">
+            ${p.buyerName}:
+          </div>
+          <div style="font-size:12px; font-weight:700; color:${phoneNum !== 'No Contact' ? '#16a34a' : '#dc2626'};">
+            ${phoneNum}
+          </div>
+        </div>
+
+        <div style="font-size:15px; font-weight:600; color:#334155; line-height:1.6; text-transform:lowercase; margin-top:6px;">
+          ${p.matchedLines.map(line => `<div>${line} ,</div>`).join('')}
+        </div>
+
+        <div style="margin-top:14px; display:flex; gap:10px;">
+          <button onclick="triggerPhoneCall('${p.buyerId}', '${phoneNum}')" style="flex:1; background:#1a4479; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
+            📞 Call
+          </button>
+          <button onclick="triggerWhatsApp('${p.buyerId}', '${p.buyerName}', '${phoneNum}')" style="flex:1; background:#25D366; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
+            💬 WhatsApp
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 function markBuyerAsContacted(buyerId) {
   const todayStr = new Date().toISOString().split('T')[0];
   if (!window.contactedBuyers) window.contactedBuyers = {};
