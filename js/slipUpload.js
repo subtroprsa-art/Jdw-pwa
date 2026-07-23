@@ -204,13 +204,8 @@ async function saveParsedData() {
       source: 'mobile_photo_tesseract'
     };
     
-    const response = await fetch(CONFIG.FIREBASE_DATABASE_URL + '/jdw/history.json?auth=' + CONFIG.FIREBASE_SECRET, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(record)
-    });
-    
-    if (!response.ok) throw new Error('Failed to save');
+    const dbRef = firebase.database().ref('jdw/history');
+    await dbRef.push(record);
     
     status.textContent = '✅ Saved successfully!';
     status.style.color = 'var(--sage)';
@@ -287,7 +282,6 @@ function parseSlipText(text) {
   }
   
   // --- Extract SALE line ---
-  // Format: "SALE    104 @    50.00    5,200.00"
   let saleMatch = fullText.match(/SALE\s+([\d,]+)\s*[@]\s*([\d,.]+)\s+([\d,.]+)/i);
   if (!saleMatch) {
     saleMatch = fullText.match(/SALE\s+([\d,]+)\s+([\d,.]+)\s+([\d,.]+)/i);
