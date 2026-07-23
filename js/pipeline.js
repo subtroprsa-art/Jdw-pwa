@@ -2,35 +2,54 @@
 window.allLiveStockData = window.allLiveStockData || [];
 window.liveBuyerData = window.liveBuyerData || [];
 
-var allLiveStockData = window.allLiveStockData;
-var liveBuyerData = window.liveBuyerData;
-
 // ===== LIVE FIREBASE DATA SYNC =====
 function syncPipelineData() {
-  if (typeof firebase === 'undefined' || !firebase.database) {
-    console.warn("Firebase SDK not detected yet for auto-sync.");
+  if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
+    console.warn("⏳ Waiting for Firebase initialization...");
+    setTimeout(syncPipelineData, 500);
     return;
   }
+
+  console.log("🔄 Initializing Pipeline Data Listeners...");
 
   // Synchronize Live Stock Data
   firebase.database().ref('stock').on('value', snapshot => {
     const raw = snapshot.val() || {};
-    window.allLiveStockData = Array.isArray(raw) ? raw : Object.values(raw);
-    allLiveStockData = window.allLiveStockData;
+    let items = [];
+    
+    // Flatten if stored under salesman keys (RJ, CW, POT) or single array
+    if (Array.isArray(raw)) {
+      items = raw;
+    } else if (typeof raw === 'object') {
+      Object.keys(raw).forEach(key => {
+        if (Array.isArray(raw[key])) {
+          items = items.concat(raw[key]);
+        } else if (typeof raw[key] === 'object') {
+          items = items.concat(Object.values(raw[key]));
+        }
+      });
+    }
+
+    window.allLiveStockData = items;
     console.log("✅ Pipeline Live Stock Synced:", window.allLiveStockData.length, "lines");
   }, err => console.error("Stock sync error:", err));
 
   // Synchronize Live Buyer Data
   firebase.database().ref('buyers').on('value', snapshot => {
     const raw = snapshot.val() || {};
-    window.liveBuyerData = Array.isArray(raw) ? raw : Object.values(raw);
-    liveBuyerData = window.liveBuyerData;
+    let buyers = Array.isArray(raw) ? raw : Object.values(raw);
+    
+    window.liveBuyerData = buyers;
     console.log("✅ Pipeline Live Buyers Synced:", window.liveBuyerData.length, "buyers");
   }, err => console.error("Buyer sync error:", err));
 }
 
-// Trigger data sync on script execution
-syncPipelineData();
+// Start watching Firebase
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  syncPipelineData();
+} else {
+  document.addEventListener('DOMContentLoaded', syncPipelineData);
+}
 
 // Helper function to safely read available quantity across different payload structures
 function getStockQty(s) {
