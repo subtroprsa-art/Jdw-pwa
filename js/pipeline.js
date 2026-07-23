@@ -222,8 +222,8 @@ async function renderPipelineOrders(elId, mode) {
   if (!el) return;
   el.innerHTML = 'Loading...';
   try {
-    const res = await fetch(FB_DB + '/orders.json?auth=' + FB_SECRET);
-    const raw = await res.json();
+    const snapshot = await firebase.database().ref('orders').once('value');
+    const raw = snapshot.val();
     if (!raw) { el.innerHTML = '<div style="color:var(--muted)">No open orders.</div>'; return; }
     const orders = Object.entries(raw).map(e => ({ id: e[0], ...e[1] })).filter(o => o.status === 'open');
     if (!orders.length) { el.innerHTML = '<div style="color:var(--muted)">No open orders.</div>'; return; }
