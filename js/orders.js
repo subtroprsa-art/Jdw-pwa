@@ -4,8 +4,8 @@ async function loadOrders() {
   const el = document.getElementById('orders-list');
   el.innerHTML = '<div class="empty">Loading...</div>';
   try {
-    const res = await fetch(FB_DB + '/orders.json?auth=' + FB_SECRET);
-    const raw = await res.json();
+    const snapshot = await firebase.database().ref('orders').once('value');
+    const raw = snapshot.val();
     if (!raw) { el.innerHTML = '<div class="empty">No open orders</div>'; document.getElementById('orders-count').textContent = '0'; return; }
 
     const orders = Object.entries(raw).map(([id, o]) => ({ id, ...o })).filter(o => o.status === 'open').sort((a, b) => {
@@ -66,19 +66,17 @@ async function loadOrders() {
 }
 
 async function fulfillOrder(id) {
-  await fetch(FB_DB + '/orders/' + id + '.json?auth=' + FB_SECRET, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'fulfilled', fulfilledAt: new Date().toISOString() })
+  await firebase.database().ref('orders/' + id).update({
+    status: 'fulfilled',
+    fulfilledAt: new Date().toISOString()
   });
   loadOrders();
 }
 
 async function cancelOrder(id) {
-  await fetch(FB_DB + '/orders/' + id + '.json?auth=' + FB_SECRET, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'cancelled', cancelledAt: new Date().toISOString() })
+  await firebase.database().ref('orders/' + id).update({
+    status: 'cancelled',
+    cancelledAt: new Date().toISOString()
   });
   loadOrders();
 }
@@ -179,11 +177,8 @@ async function saveOrder() {
   stat.textContent = 'Saving…';
   stat.style.color = 'var(--muted)';
   try {
-    await fetch(FB_DB + '/orders.json?auth=' + FB_SECRET, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ buyer, commodity, pack, size, grade, qty, price, notes, collectDate: collectDate || null, collectTime: collectTime || null, status: 'open', createdAt: new Date().toISOString(), flagged: false, matchedStock: null })
-    });
+    const newRef = firebase.database().ref('orders').push();
+    await newRef.set({ buyer, commodity, pack, size, grade, qty, price, notes, collectDate: collectDate || null, collectTime: collectTime || null, status: 'open', createdAt: new Date().toISOString(), flagged: false, matchedStock: null });
     stat.style.color = 'var(--sage)';
     stat.textContent = '✅ Order saved!';
     ['order-buyer', 'order-size', 'order-qty', 'order-price', 'order-notes', 'order-collect-date'].forEach(id => document.getElementById(id).value = '');
@@ -217,11 +212,8 @@ async function saveManualOrder() {
   stat.textContent = 'Saving...';
   stat.style.color = 'var(--muted)';
   try {
-    await fetch(FB_DB + '/orders.json?auth=' + FB_SECRET, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ buyer, commodity, pack, variety, size, grade, qty, price, notes, collectDate: collectDate || null, collectTime: null, status: 'open', manual: true, createdAt: new Date().toISOString(), flagged: false, matchedStock: null })
-    });
+    const newRef = firebase.database().ref('orders').push();
+    await newRef.set({ buyer, commodity, pack, variety, size, grade, qty, price, notes, collectDate: collectDate || null, collectTime: null, status: 'open', manual: true, createdAt: new Date().toISOString(), flagged: false, matchedStock: null });
     stat.style.color = 'var(--sage)';
     stat.textContent = 'Manual order saved!';
     ['m-order-buyer', 'm-order-variety', 'm-order-pack', 'm-order-size', 'm-order-qty', 'm-order-price', 'm-order-notes', 'm-order-collect-date'].forEach(id => document.getElementById(id).value = '');
