@@ -6,8 +6,8 @@ async function loadColdstore() {
   const el = document.getElementById('coldstore-list');
   if (el) el.innerHTML = '<div class="empty">Loading...</div>';
   try {
-    const r = await fetch(FB_DB + '/coldstore.json?auth=' + FB_SECRET);
-    const raw = await r.json();
+    const snapshot = await firebase.database().ref('coldstore').once('value');
+    const raw = snapshot.val();
     if (!raw) { el.innerHTML = '<div class="empty">No coldstore stock</div>'; liveColdstoreData = []; return; }
     const all = Object.entries(raw).map(([id, item]) => ({ id, ...item }));
     liveColdstoreData = all.filter(s => s.status !== 'removed');
@@ -124,7 +124,7 @@ async function deleteColdstoreItem(btn) {
   const producer = btn.dataset.producer;
   if (!confirm('Delete coldstore record for ' + producer + '? This cannot be undone.')) return;
   try {
-    await fetch(FB_DB + '/coldstore/' + id + '.json?auth=' + FB_SECRET, { method: 'DELETE' });
+    await firebase.database().ref('coldstore/' + id).remove();
     loadColdstore();
   } catch (e) { alert('Error: ' + e.message); }
 }
@@ -133,10 +133,9 @@ async function manualMarkWithdrawalRequested(btn) {
   const id = btn.dataset ? btn.dataset.id : btn;
   if (!confirm('Mark this stock as withdrawal requested?')) return;
   try {
-    await fetch(FB_DB + '/coldstore/' + id + '.json?auth=' + FB_SECRET, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'withdrawal_pending', withdrawalRequestedAt: new Date().toISOString() })
+    await firebase.database().ref('coldstore/' + id).update({
+      status: 'withdrawal_pending',
+      withdrawalRequestedAt: new Date().toISOString()
     });
     loadColdstore();
   } catch (e) { alert('Error: ' + e.message); }
