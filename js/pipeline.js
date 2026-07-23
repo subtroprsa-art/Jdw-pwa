@@ -2,6 +2,27 @@
 var allLiveStockData = allLiveStockData || [];
 var liveBuyerData = liveBuyerData || [];
 
+// Sync live Firebase data into the global variables expected by pipeline.js
+function syncPipelineData() {
+  // 1. Fetch live stock from Firebase
+  firebase.database().ref('stock').on('value', snapshot => {
+    const raw = snapshot.val() || {};
+    // Flatten stock objects into an array
+    allLiveStockData = Array.isArray(raw) ? raw : Object.values(raw);
+    console.log("Pipeline Stock Synced:", allLiveStockData.length, "lines");
+  });
+
+  // 2. Fetch live buyers from Firebase
+  firebase.database().ref('buyers').on('value', snapshot => {
+    const raw = snapshot.val() || {};
+    liveBuyerData = Array.isArray(raw) ? raw : Object.values(raw);
+    console.log("Pipeline Buyers Synced:", liveBuyerData.length, "buyers");
+  });
+}
+
+// Automatically start listening when script loads
+syncPipelineData();
+
 // Helper function to safely read available quantity across different payload structures
 function getStockQty(s) {
   if (!s) return 0;
