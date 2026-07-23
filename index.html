@@ -131,14 +131,14 @@ try {
       </div>
 
       <button class="pipeline-btn" onclick="goToPage('pipeline')">
-        ⚡ PIPELINE (Match + Call Buyers)
+        ⚡ PIPELINE (Match Product, Pack & Buyers)
       </button>
 
       <div class="cols-grid">
         <div class="col-sec">
           <div class="sec-title">OPERATIONS & SALES</div>
           <button class="nav-btn" onclick="goToPage('buyers')">👥 Buyers</button>
-          <button class="nav-btn" onclick="goToPage('orders')">📋 Orders</button>
+          <button class="nav-btn" onclick="goToPage('orders')">📋 Orders & Slips</button>
           <button class="nav-btn" onclick="goToPage('scanslip')">📷 Scan Slip</button>
         </div>
 
@@ -165,27 +165,27 @@ try {
 
     <div class="page" id="page-orders">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-orders">Loading orders...</div>
+      <div class="list-container" id="list-orders">Loading orders and slips...</div>
     </div>
 
     <div class="page" id="page-scanslip">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div style="background:#fff; padding:20px; border-radius:12px;">
         <h3>📷 Scan Delivery Slip</h3>
-        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory.</p>
+        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory and update buyer history.</p>
         <input type="file" accept="image/*" capture="environment"/>
       </div>
     </div>
 
     <div class="page" id="page-stock">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by producer, GRN, variety, size (e.g. af 14)..." oninput="renderStock()"/>
+      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by producer, GRN, variety, pack, size..." oninput="renderStock()"/>
       <div class="list-container" id="list-stock">Loading stock...</div>
     </div>
 
     <div class="page" id="page-floor">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by producer, GRN, variety, size (e.g. af 14)..." oninput="renderFloor()"/>
+      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by producer, GRN, variety, pack, size..." oninput="renderFloor()"/>
       <div class="list-container" id="list-floor">Loading floor balance...</div>
     </div>
 
@@ -202,7 +202,7 @@ try {
 
     <div class="page" id="page-pipeline">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches by buyer or commodity..." oninput="renderPipeline()"/>
+      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches by buyer, product, or pack..." oninput="renderPipeline()"/>
       <div class="list-container" id="list-pipeline">Loading pipeline matches...</div>
     </div>
 
@@ -220,27 +220,36 @@ try {
 <script>
 // ===== DICTIONARIES & LOOKUPS =====
 const COMM_MAP = {
-  'Avocados': 'AVOS', 'Lemons': 'LEMS', 'Figs': 'FIGS', 'Kiwifruit': 'KIWI',
-  'Oranges': 'ORGS', 'Guavas': 'GVS', 'Clementines': 'CLTM', 'Naartjies': 'NAAR',
-  'Strawberries': 'BERS', 'Berries': 'BERS', 'Dragon Fruit': 'DRAG', 'Mangoes': 'MANG',
-  'Grapefruit': 'GFT', 'Satsumas': 'SATS', 'Papino': 'PAPO'
+  'AVOCADOS': 'AVOS', 'AVOS': 'AVOS', 'LEMONS': 'LEMS', 'LEMS': 'LEMS', 
+  'FIGS': 'FIGS', 'KIWIFRUIT': 'KIWI', 'KIWI': 'KIWI', 'ORANGES': 'ORGS', 
+  'GUAVAS': 'GVS', 'CLEMENTINES': 'CLTM', 'NAARTJIES': 'NAAR',
+  'STRAWBERRIES': 'BERS', 'BERRIES': 'BERS', 'DRAGON FRUIT': 'DRAG', 
+  'MANGOES': 'MANG', 'GRAPEFRUIT': 'GFT', 'SATSUMAS': 'SATS', 'PAPINO': 'PAPO'
 };
 
-const VARIETY_NAMES = {
-  'AF': 'Fuerte', 'AH': 'Hass', 'AK': 'Pinkerton', 'MA': 'Maluma', 'MAH': 'Maluma',
-  'MD': 'Mendez', 'NV': 'Navel', 'CN': 'Cara Cara', 'AX': 'Mixed', 'LR': 'Leanri',
-  'HM': 'Honey Murcott', 'M1': 'Mandarin', 'NAR': 'Nardocott', '*': 'Any'
+const PACK_MAP = {
+  'TR040': '4KG TRAY', '4KG TRAY': '4KG TRAY', 'TR060': '6KG TRAY', '6KG TRAY': '6KG TRAY',
+  'BG150': '15KG BAG', '15KG BAG': '15KG BAG', 'BG160': '16KG BAG', '16KG BAG': '16KG BAG',
+  'BG200': '20KG BAG', '20KG BAG': '20KG BAG', 'CTT150': '15KG CARTON', '15KG CARTON': '15KG CARTON',
+  'PTB005': '500G PUNNET', '500G PUNNET': '500G PUNNET', '500G PUNNET I': '500G PUNNET',
+  'PTB025': '250G PUNNET', '250G PUNNET': '250G PUNNET', '250G PUNNET I': '250G PUNNET',
+  'PTB002': '160G PUNNET', '160G PUNNET': '160G PUNNET', '160G PUNNET I': '160G PUNNET',
+  '300G PUNNET': '300G PUNNET', '300G PUNNET I': '300G PUNNET',
+  '10KG CARTON': '10KG CARTON', '3KG POCKET': '3KG POCKET', '6KG POCKET': '6KG POCKET'
 };
 
-const PACK_NAMES = {
-  'TR040': '4KG Tray', 'TR060': '6KG Tray', 'BG150': '15KG Bag', 'BG160': '16KG Bag',
-  'BG200': '20KG Bag', 'CTT150': '15KG Carton', 'PTB005': '500G Punnet', 'PTB025': '250G Punnet',
-  'PTB002': '160G Punnet', 'DL076': 'DL076 Carton', 'PC030': '3KG Pocket',
-  'PC060': '6KG Pocket', 'CO100': '10KG Carton', 'CO150': '15KG Carton',
-  'SP170': '17KG Sack', 'EC020': '20KG Box'
-};
+function normalizeCommodity(str) {
+  if (!str) return 'PRODUCE';
+  const clean = String(str).trim().toUpperCase();
+  return COMM_MAP[clean] || clean;
+}
 
-// ===== HELPER FUNCTIONS =====
+function normalizePack(str) {
+  if (!str) return '';
+  const clean = String(str).trim().toUpperCase();
+  return PACK_MAP[clean] || clean;
+}
+
 function parseQuantity(val) {
   if (val === '*' || val === undefined || val === null) return 0;
   if (typeof val === 'number') return val;
@@ -252,7 +261,7 @@ function formatCommodityDetails(r) {
   const parts = [];
   if (r.commodity) parts.push(r.commodity);
   if (r.variety && r.variety !== '*') parts.push(r.variety);
-  if (r.pack) parts.push(`(${PACK_NAMES[r.pack] || r.pack})`);
+  if (r.pack) parts.push(`(${r.pack})`);
   if (r.size && r.size !== '*') parts.push(`• Sz ${r.size}`);
   if (r.count && r.count !== '*') parts.push(`• Count ${r.count}`);
   if (r.grade && r.grade !== '1' && r.grade !== '*') parts.push(`• Cl ${r.grade}`);
@@ -264,10 +273,9 @@ function filterRecordsBySearch(records, query) {
   const terms = query.toLowerCase().trim().split(/\s+/);
 
   return records.filter(r => {
-    const packLabel = PACK_NAMES[r.pack] || r.pack || '';
     const searchableText = [
-      r.producer, r.grn, r.seq, r.commodity, 
-      r.variety, r.pack, packLabel, r.size, r.count, 
+      r.producer, r.buyer, r.grn, r.seq, r.commodity, 
+      r.variety, r.pack, r.size, r.count, 
       r.grade, r.loc, r.salesmanCode
     ].join(' ').toLowerCase();
 
@@ -293,12 +301,14 @@ function extractRecords(node, defaultSalesman = '') {
 
       const commodity = obj.commodity || obj.product || obj.variety || obj.item || parentKeys.commodity || '';
       const producer = obj.producer || obj.producerName || obj.grower || obj.farmer || parentKeys.producer;
+      const buyer = obj.buyer || obj.buyerName || parentKeys.buyer || '';
 
-      if (rawQty !== undefined || commodity || producer || obj.grn) {
+      if (rawQty !== undefined || commodity || producer || obj.grn || buyer) {
         let numericQty = parseQuantity(rawQty);
 
         records.push({
           salesmanCode: String(sm || '').toUpperCase(),
+          buyer: buyer,
           grn: obj.grn || obj.grnNo || obj.docNo || obj.consignment || parentKeys.grn || '—',
           seq: obj.seq || obj.sequence || parentKeys.seq || '—',
           date: obj.date || obj.receivedDate || obj.floorDate || parentKeys.date || '—',
@@ -323,7 +333,7 @@ function extractRecords(node, defaultSalesman = '') {
         producer: producer || parentKeys.producer,
         commodity: commodity || parentKeys.commodity,
         pack: obj.pack || parentKeys.pack,
-        variety: obj.variety || parentKeys.variety
+        buyer: buyer || parentKeys.buyer
       };
 
       Object.keys(obj).forEach(k => {
@@ -340,88 +350,140 @@ function extractRecords(node, defaultSalesman = '') {
   return records;
 }
 
-// ===== DETERMINISTIC MATCHING ENGINE WITH AUTOMATIC MULTI-PRODUCE SUMMARY =====
-function runDeterministicMatch(stock, buyers, todayDow) {
-  if (!stock || !buyers || !stock.length || !buyers.length) return [];
+// ===== ENHANCED PIPELINE MATCHING ENGINE (BUYERS <-> PRODUCT, PACK & QTY) =====
+function runPipelineMatching(stock, buyers, slips) {
+  if (!stock || !stock.length || !buyers || !buyers.length) return [];
 
-  // 1. Rank buyers by turnover / historical sales volume
-  const sortedBuyers = [...buyers].sort((a, b) => {
-    const turnoverA = Number(a.turnover || a.totalPrice || a.spend || a.totalSpend || 0);
-    const turnoverB = Number(b.turnover || b.totalPrice || b.spend || b.totalSpend || 0);
-    return turnoverB - turnoverA;
+  // 1. Build buyer preference matrix from history/slips
+  const buyerPreferences = {};
+
+  // Parse past slips/orders to understand what each buyer buys (Commodity, Pack, typical Qty)
+  slips.forEach(slip => {
+    const bName = slip.buyer || slip.buyerName;
+    if (!bName) return;
+
+    const key = String(bName).trim().toUpperCase();
+    if (!buyerPreferences[key]) {
+      buyerPreferences[key] = { name: bName, items: {}, totalVolume: 0 };
+    }
+
+    const commNorm = normalizeCommodity(slip.commodity);
+    const packNorm = normalizePack(slip.pack);
+    const qty = parseQuantity(slip.qty);
+
+    if (commNorm) {
+      const itemKey = `${commNorm}||${packNorm}`;
+      if (!buyerPreferences[key].items[itemKey]) {
+        buyerPreferences[key].items[itemKey] = {
+          commodity: commNorm,
+          pack: packNorm,
+          rawCommodity: slip.commodity,
+          rawPack: slip.pack,
+          totalBought: 0,
+          usualQty: qty || 1
+        };
+      }
+      buyerPreferences[key].items[itemKey].totalBought += (qty || 1);
+      buyerPreferences[key].totalVolume += (qty || 1);
+    }
   });
 
-  // 2. Select Top 30 Buyers
-  const top30Buyers = sortedBuyers.slice(0, 30);
-  const results = [];
+  // Also include buyer defined preferences/preferred items
+  buyers.forEach(buyer => {
+    const key = String(buyer.name).trim().toUpperCase();
+    if (!buyerPreferences[key]) {
+      buyerPreferences[key] = { name: buyer.name, items: {}, totalVolume: buyer.turnover || 0 };
+    }
 
-  top30Buyers.forEach(buyer => {
-    const historyComms = new Set();
-
-    // Collect historical commodities from preferred items
-    const prefsList = buyer.prefs || buyer.preferredItems || [];
-    if (Array.isArray(prefsList)) {
-      prefsList.forEach(p => {
-        if (typeof p === 'string') {
-          historyComms.add(p.trim().toUpperCase());
-        } else if (Array.isArray(p.commodities)) {
-          p.commodities.forEach(c => historyComms.add(String(c).trim().toUpperCase()));
-        } else if (p.comm || p.commodity || p.product) {
-          historyComms.add(String(p.comm || p.commodity || p.product).trim().toUpperCase());
+    if (Array.isArray(buyer.prefs)) {
+      buyer.prefs.forEach(p => {
+        const comm = typeof p === 'string' ? p : (p.comm || p.commodity || p.product);
+        const pack = typeof p === 'object' ? (p.pack || '') : '';
+        if (comm) {
+          const commNorm = normalizeCommodity(comm);
+          const packNorm = normalizePack(pack);
+          const itemKey = `${commNorm}||${packNorm}`;
+          if (!buyerPreferences[key].items[itemKey]) {
+            buyerPreferences[key].items[itemKey] = {
+              commodity: commNorm,
+              pack: packNorm,
+              rawCommodity: comm,
+              rawPack: pack,
+              totalBought: 10,
+              usualQty: p.qty || 10
+            };
+          }
         }
       });
     }
+  });
 
-    // Collect historical commodities from slips / sales history
-    const historyList = buyer.salesHistory || buyer.history || buyer.slips || [];
-    if (Array.isArray(historyList)) {
-      historyList.forEach(h => {
-        const itemComm = h.product || h.commodity || h.item;
-        if (itemComm) historyComms.add(String(itemComm).trim().toUpperCase());
-      });
-    }
+  // 2. Perform Stock-to-Buyer Matching
+  const matches = [];
 
-    const matchedItems = [];
+  Object.keys(buyerPreferences).forEach(bKey => {
+    const bData = buyerPreferences[bKey];
+    const buyerObj = buyers.find(b => String(b.name).trim().toUpperCase() === bKey) || { name: bData.name, phone: 'No Contact' };
 
-    // Match stock lines against historical list
-    stock.forEach(item => {
-      const stockQty = Number(item.qty || item.flr || item.qty_sort || item.qty_rec || 0);
+    const matchedStockLines = [];
+
+    // Check each stock line against buyer items
+    stock.forEach(stockItem => {
+      const stockQty = parseQuantity(stockItem.qty);
       if (stockQty <= 0) return;
 
-      const stockComm = String(item.commodity || item.product || '').trim().toUpperCase();
-      if (!stockComm) return;
+      const stockCommNorm = normalizeCommodity(stockItem.commodity);
+      const stockPackNorm = normalizePack(stockItem.pack);
 
       let isMatch = false;
-      if (historyComms.size > 0) {
-        historyComms.forEach(hc => {
-          if (stockComm.includes(hc) || hc.includes(stockComm)) isMatch = true;
-        });
-      }
+      let matchedPref = null;
+
+      Object.values(bData.items).forEach(pref => {
+        // Match product (commodity)
+        const commMatch = (stockCommNorm === pref.commodity) || 
+                          stockCommNorm.includes(pref.commodity) || 
+                          pref.commodity.includes(stockCommNorm);
+
+        // Match pack type
+        const packMatch = !pref.pack || !stockPackNorm || 
+                          (stockPackNorm === pref.pack) || 
+                          stockPackNorm.includes(pref.pack) || 
+                          pref.pack.includes(stockPackNorm);
+
+        if (commMatch && packMatch) {
+          isMatch = true;
+          matchedPref = pref;
+        }
+      });
 
       if (isMatch) {
-        matchedItems.push({
-          commodity: stockComm,
-          pack: item.pack || '',
-          size: item.size || '*',
-          qty: stockQty,
-          producer: item.producer || 'Unknown',
-          displayText: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`
+        matchedStockLines.push({
+          producer: stockItem.producer || 'Unknown Producer',
+          commodity: stockItem.commodity || stockCommNorm,
+          pack: stockItem.pack || matchedPref.rawPack || 'Standard Pack',
+          size: stockItem.size !== '*' ? stockItem.size : '',
+          variety: stockItem.variety !== '*' ? stockItem.variety : '',
+          grade: stockItem.grade !== '*' ? stockItem.grade : '',
+          qtyAvailable: stockQty,
+          usualBuyerQty: matchedPref ? matchedPref.usualQty : stockQty,
+          displayText: `${stockItem.producer || 'Producer'} - ${stockItem.commodity} (${stockItem.pack || 'Pack'}${stockItem.size ? ' Sz:' + stockItem.size : ''}) • Available: ${stockQty} units`
         });
       }
     });
 
-    if (matchedItems.length > 0) {
-      results.push({
-        buyerId: String(buyer.name || buyer.id).replace(/[^a-zA-Z0-9]/g, '_'),
-        buyer: buyer.name,
-        phone: buyer.phone || buyer.phoneNumber || 'No Contact',
-        turnover: Number(buyer.turnover || buyer.totalPrice || buyer.spend || 0),
-        matchedItems: matchedItems
+    if (matchedStockLines.length > 0) {
+      matches.push({
+        buyerId: String(buyerObj.name || bKey).replace(/[^a-zA-Z0-9]/g, '_'),
+        buyerName: buyerObj.name || bData.name,
+        phone: buyerObj.phone || buyerObj.phoneNumber || 'No Contact',
+        totalVolume: bData.totalVolume,
+        matchedItems: matchedStockLines
       });
     }
   });
 
-  return results.sort((a, b) => b.turnover - a.turnover);
+  // Sort buyers by matching volume/turnover
+  return matches.sort((a, b) => b.totalVolume - a.totalVolume);
 }
 
 // ===== CRM APP STATE & LOGIC =====
@@ -497,7 +559,6 @@ function startFirebaseListener() {
   const db = firebase.database();
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Daily Contacted Buyers Strikethrough Sync across devices
   db.ref(`contacted_buyers/${todayStr}`).on('value', (snapshot) => {
     window.contactedBuyers = snapshot.val() || {};
     if (document.getElementById('page-pipeline').classList.contains('active')) {
@@ -511,9 +572,8 @@ function startFirebaseListener() {
     store.floor = extractRecords(raw.floor);
     store.stock = extractRecords(raw.stock);
     store.coldstore = extractRecords(raw.coldstore || raw.coldStore);
-    store.orders = extractRecords(raw.orders || raw.cart);
+    store.orders = extractRecords(raw.orders || raw.cart || raw.slips || raw.salesHistory);
 
-    // Parse Preferences and Phones
     const rawPrefs = raw.preferences || raw.buyerPreferences || {};
     const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
     const buyersNode = raw.buyers || raw.buyerStats || {};
@@ -546,6 +606,13 @@ function startFirebaseListener() {
         }
       });
     }
+
+    // Add buyers found in sales slips
+    store.orders.forEach(o => {
+      if (o.buyer && !buyersMap[o.buyer]) {
+        buyersMap[o.buyer] = { name: o.buyer, phone: phoneMap[o.buyer] || 'No Contact', prefs: [], turnover: 0 };
+      }
+    });
 
     store.buyers = Object.values(buyersMap);
     store.buyers.sort((a, b) => (b.turnover || 0) - (a.turnover || 0));
@@ -597,15 +664,14 @@ function triggerPhoneCall(buyerId, phone) {
 }
 
 function triggerWhatsApp(buyerId, buyerName, phone) {
-  const matchObj = window.lastPipelineMatches.find(m => m.buyerId === buyerId);
+  const matchObj = (window.lastPipelineMatches || []).find(m => m.buyerId === buyerId);
   if (!matchObj || !matchObj.matchedItems.length) return;
 
-  // Auto-compiles ALL matching produce lines into one single message
   const produceLines = matchObj.matchedItems
-    .map(item => `• ${item.commodity} (${item.pack || ''} Size:${item.size || '*'}) - ${item.qty} available`)
+    .map(item => `• ${item.commodity} - ${item.pack} ${item.size ? '(Sz ' + item.size + ')' : ''} | ${item.qtyAvailable} units available [Producer: ${item.producer}]`)
     .join('\n');
 
-  const msg = `Hello ${buyerName},\n\nWe have the following produce available for you today:\n${produceLines}\n\nAre you interested?`;
+  const msg = `Hello ${buyerName},\n\nWe have stock available today matching your requirements:\n${produceLines}\n\nPlease let me know how many units you would like to order!`;
 
   markBuyerAsContacted(buyerId);
 
@@ -628,28 +694,27 @@ function updateDashboardKPIs() {
   if (floorEl) floorEl.textContent = `${floorUnits.toLocaleString('en-ZA')} units`;
 
   const clearanceEl = document.getElementById('kpi-clearance');
-  if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '35%' : '0%';
+  if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '38%' : '0%';
 }
 
 function renderPipeline() {
   const container = document.getElementById('list-pipeline');
   if (!container) return;
   const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
-  const todayDow = new Date().getDay();
 
   let rawStock = (store.stock || []).concat(store.floor || []);
   let activeStock = filterBySalesman(rawStock);
 
-  let matches = runDeterministicMatch(activeStock, store.buyers || [], todayDow);
+  let matches = runPipelineMatching(activeStock, store.buyers || [], store.orders || []);
   window.lastPipelineMatches = matches;
 
   let filtered = matches.filter(p => 
-    (p.buyer && p.buyer.toLowerCase().includes(q)) || 
+    (p.buyerName && p.buyerName.toLowerCase().includes(q)) || 
     p.matchedItems.some(item => item.displayText.toLowerCase().includes(q))
   );
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No matching buyers for available stock</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No matching buyers found for active stock</div>`;
     return;
   }
 
@@ -659,7 +724,7 @@ function renderPipeline() {
     const isContacted = !!contactedMap[p.buyerId];
     const cardStyle = isContacted 
       ? "opacity:0.55; background:#f1f5f9; border-left:4px solid #94a3b8; filter:grayscale(40%);" 
-      : "background:#ffffff; border-left:4px solid #15803d; box-shadow:0 2px 8px rgba(0,0,0,0.05);";
+      : "background:#ffffff; border-left:4px solid #1a4479; box-shadow:0 2px 8px rgba(0,0,0,0.05);";
 
     const nameStyle = isContacted 
       ? "text-decoration:line-through; color:#64748b;" 
@@ -669,32 +734,34 @@ function renderPipeline() {
       <div class="card-item" id="card-${p.buyerId}" style="padding:16px; margin-bottom:12px; border-radius:10px; transition:all 0.2s; ${cardStyle}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <span class="buyer-name" style="font-weight:800; font-size:16px; ${nameStyle}">${p.buyer}</span>
+            <span class="buyer-name" style="font-weight:800; font-size:16px; ${nameStyle}">${p.buyerName}</span>
             ${isContacted ? `<span style="margin-left:8px; background:#e2e8f0; color:#475569; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">CONTACTED TODAY</span>` : ''}
           </div>
-          <span style="font-size:11px; background:#f0fdf4; color:#166534; font-weight:700; padding:4px 8px; border-radius:6px;">
-            ${p.matchedItems.length} Produce Match${p.matchedItems.length > 1 ? 'es' : ''}
+          <span style="font-size:11px; background:#e0f2fe; color:#0369a1; font-weight:700; padding:4px 8px; border-radius:6px;">
+            ${p.matchedItems.length} Stock Match${p.matchedItems.length > 1 ? 'es' : ''}
           </span>
         </div>
 
-        <!-- Displays All Matched Stock Lines automatically in buyer card -->
         <div style="margin-top:12px;">
-          <label style="font-size:11px; font-weight:700; color:#475569; display:block; margin-bottom:4px;">MATCHED PRODUCE FOR TODAY:</label>
-          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:8px 12px; font-size:13px;">
+          <label style="font-size:11px; font-weight:800; color:#475569; display:block; margin-bottom:6px;">MATCHED STOCK LINES (PRODUCT & PACK):</label>
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px 12px; font-size:13px; display:flex; flex-direction:column; gap:6px;">
             ${p.matchedItems.map(item => `
-              <div style="padding:2px 0; color:#334155; font-weight:600;">📦 ${item.displayText}</div>
-            `).join('')}
+              <div style="color:#1e293b; font-weight:600; display:flex; justify-content:space-between; align-items:center;">
+                <span>📦 <strong>${item.commodity}</strong> (${item.pack}${item.size ? ' • Sz:' + item.size : ''})</span>
+                <span style="color:#15803d; font-weight:800;">${item.qtyAvailable} avail</span>
+              </div>
+              <div style="font-size:11px; color:#64748b; padding-left:18px;">Producer: ${item.producer}</div>
+            `).join('<div style="border-bottom:1px dashed #e2e8f0; margin:2px 0;"></div>')}
           </div>
         </div>
 
-        <!-- Single Call & WhatsApp Trigger for ALL Items -->
         <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
-          <button onclick="triggerPhoneCall('${p.buyerId}', '${p.phone}')" style="flex:1; background:#1a4479; color:white; border:none; padding:9px; border-radius:6px; font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
+          <button onclick="triggerPhoneCall('${p.buyerId}', '${p.phone}')" style="flex:1; background:#1a4479; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
             📞 Call
           </button>
           
-          <button onclick="triggerWhatsApp('${p.buyerId}', '${p.buyer}', '${p.phone}')" style="flex:1; background:#25D366; color:white; border:none; padding:9px; border-radius:6px; font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
-            💬 WhatsApp
+          <button onclick="triggerWhatsApp('${p.buyerId}', '${p.buyerName}', '${p.phone}')" style="flex:1; background:#25D366; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:6px;">
+            💬 WhatsApp Match
           </button>
         </div>
       </div>
@@ -832,14 +899,18 @@ function renderOrders() {
   if (!container) return;
 
   if (store.orders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No active orders found</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No recorded slips found</div>`;
     return;
   }
 
   container.innerHTML = store.orders.map(o => `
     <div class="card-item" style="border-left:4px solid #25D366;">
-      <div style="font-weight:800; font-size:15px; color:#0f172a;">Order #${o.grn || '—'}</div>
-      <div style="font-size:12px; color:#64748b; margin-top:4px;">${formatCommodityDetails(o)}</div>
+      <div style="display:flex; justify-content:space-between;">
+        <div style="font-weight:800; font-size:15px; color:#0f172a;">${o.buyer || 'Buyer Slip'}</div>
+        <div style="font-weight:700; color:#15803d;">${o.qty} units</div>
+      </div>
+      <div style="font-size:12px; color:#64748b; margin-top:4px;">🌿 ${formatCommodityDetails(o)} | Producer: ${o.producer || '—'}</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:4px;">Date: ${o.date || '—'}</div>
     </div>
   `).join('');
 }
