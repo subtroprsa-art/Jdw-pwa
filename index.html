@@ -345,77 +345,92 @@ function extractRecords(node, defaultSalesman = '') {
 function runDeterministicMatch(stock, buyers, todayDow) {
   if (!stock || !buyers || !stock.length || !buyers.length) return [];
 
-  // 1. Sort buyers by historical turnover (highest spenders first)
+  // 1. Rank buyers by turnover / historical sales volume
   const sortedBuyers = [...buyers].sort((a, b) => {
-    const turnoverA = Number(a.turnover || a.spend || a.totalSpend || 0);
-    const turnoverB = Number(b.turnover || b.spend || b.totalSpend || 0);
+    const turnoverA = Number(a.turnover || a.totalPrice || a.spend || a.totalSpend || 0);
+    const turnoverB = Number(b.turnover || b.totalPrice || b.spend || b.totalSpend || 0);
     return turnoverB - turnoverA;
   });
 
-  // 2. Limit to Top 30 Buyers by Turnover
+  // 2. Select Top 30 Buyers
   const top30Buyers = sortedBuyers.slice(0, 30);
-
   const buyerMatchesMap = {};
 
   top30Buyers.forEach(buyer => {
-    // Extract historical commodity preferences
+    // Collect historical commodities from preferred items, sales history, or slips
     const historyComms = new Set();
-    if (Array.isArray(buyer.prefs)) {
-      buyer.prefs.forEach(p => {
-        if (Array.isArray(p.commodities)) {
+
+    // Check 'prefs' or 'preferredItems' (Buyer_Directory)
+    const prefsList = buyer.prefs || buyer.preferredItems || [];
+    if (Array.isArray(prefsList)) {
+      prefsList.forEach(p => {
+        if (typeof p === 'string') {
+          historyComms.add(p.trim().toUpperCase());
+        } else if (Array.isArray(p.commodities)) {
           p.commodities.forEach(c => historyComms.add(String(c).trim().toUpperCase()));
-        } else if (p.comm || p.commodity) {
-          historyComms.add(String(p.comm || p.commodity).trim().toUpperCase());
+        } else if (p.comm || p.commodity || p.product) {
+          historyComms.add(String(p.comm || p.commodity || p.product).trim().toUpperCase());
         }
       });
     }
 
-    // Skip buyers who have no preferences recorded
-    if (historyComms.size === 0) return;
+    // Check 'salesHistory' or 'slips' (Sales_History / Buyer Slips)
+    const historyList = buyer.salesHistory || buyer.history || buyer.slips || [];
+    if (Array.isArray(historyList)) {
+      historyList.forEach(h => {
+        const itemComm = h.product || h.commodity || h.item;
+        if (itemComm) historyComms.add(String(itemComm).trim().toUpperCase());
+      });
+    }
 
     const buyerMatchedItems = [];
 
-    // Scan available stock against buyer history
+    // Match against current floor stock
     stock.forEach(item => {
       const stockQty = Number(item.qty || item.flr || item.qty_sort || item.qty_rec || 0);
-      if (stockQty <= 0) return; // Skip out-of-stock items
+      if (stockQty <= 0) return;
 
-      const stockComm = String(item.commodity || '').trim().toUpperCase();
+      const stockComm = String(item.commodity || item.product || '').trim().toUpperCase();
       if (!stockComm) return;
 
-      // Check for exact historical commodity match
+      // Check if current stock matches buyer's historical slip/buying pattern
       let isExactMatch = false;
-      historyComms.forEach(hc => {
-        if (stockComm.includes(hc) || hc.includes(stockComm)) {
-          isExactMatch = true;
-        }
-      });
+      if (historyComms.size > 0) {
+        historyComms.forEach(hc => {
+          if (stockComm.includes(hc) || hc.includes(stockComm)) {
+            isExactMatch = true;
+          }
+        });
+      }
 
       if (isExactMatch) {
-        // --- 100% HISTORICAL MATCH ---
+        // --- 100% HISTORICAL PATTERN MATCH ---
         buyerMatchedItems.push({
           stockLine: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`,
           commodity: stockComm,
           qty: stockQty,
           matchType: 'EXACT',
           is100Percent: true,
-          reason: `100% Match: Buyer regularly buys ${stockComm}. ${stockQty} units available today.`,
+          reason: `100% Match: Buyer regularly buys ${stockComm} (matched from Buyer Slips / Sales History). ${stockQty} available.`,
           tip: `Producer: ${item.producer || 'Unknown'} | Grade: ${item.grade || '1'}`,
           priority: stockQty > 50 ? 'HIGH' : 'MEDIUM',
           score: 100 + (stockQty > 50 ? 20 : 0)
         });
       } else {
         // --- PARTIAL / SUGGESTED MATCH ---
-        // Suggest stock if it's available in good volume (>= 30 units)
-        if (stockQty >= 30) {
+        if (stockQty >= 10) {
+          const reasonText = historyComms.size > 0 
+            ? `💡 Suggested Match (Partial): Not in buyer's usual history, but available in good volume (${stockQty} units).`
+            : `💡 Available Stock Recommendation: ${stockQty} units available on floor.`;
+
           buyerMatchedItems.push({
             stockLine: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`,
             commodity: stockComm,
             qty: stockQty,
             matchType: 'SUGGESTION',
             is100Percent: false,
-            reason: `💡 Suggested Match (Partial): Not in buyer's usual history, but available in good volume (${stockQty} units).`,
-            tip: `Alternative option | Producer: ${item.producer || 'Unknown'}`,
+            reason: reasonText,
+            tip: `Producer: ${item.producer || 'Unknown'} | Grade: ${item.grade || '1'}`,
             priority: 'LOW',
             score: 40
           });
@@ -423,32 +438,28 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       }
     });
 
-    // Add buyer entry if any items matched
     if (buyerMatchedItems.length > 0) {
-      // Sort buyer's matched items so 100% matches appear first
       buyerMatchedItems.sort((a, b) => b.score - a.score);
 
-      const buyerTurnover = Number(buyer.turnover || buyer.spend || buyer.totalSpend || 0);
+      const buyerTurnover = Number(buyer.turnover || buyer.totalPrice || buyer.spend || 0);
 
       buyerMatchesMap[buyer.name] = {
         buyer: buyer.name,
-        phone: buyer.phone || 'No Contact',
+        phone: buyer.phone || buyer.phoneNumber || 'No Contact',
         turnover: buyerTurnover,
         buysToday: buyer.buyingDays ? !!buyer.buyingDays[todayDow] : false,
         totalMatches: buyerMatchedItems.length,
         items: buyerMatchedItems,
-        // Flat references for backward compatibility with list UI
         stockLine: buyerMatchedItems[0].stockLine,
         commodity: buyerMatchedItems[0].commodity,
         reason: buyerMatchedItems[0].reason,
         tip: buyerMatchedItems[0].tip,
         priority: buyerMatchedItems[0].priority,
-        score: buyerMatchedItems[0].score + (buyerTurnover / 10000)
+        score: buyerMatchedItems[0].score
       };
     }
   });
 
-  // Return formatted array ordered by turnover & top match score
   return Object.values(buyerMatchesMap).sort((a, b) => b.turnover - a.turnover);
 }
 // ===== CRM APP STATE & LOGIC =====
