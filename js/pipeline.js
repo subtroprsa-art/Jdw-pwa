@@ -1,26 +1,35 @@
-// ===== GLOBAL DATA SCOPES =====
-var allLiveStockData = allLiveStockData || [];
-var liveBuyerData = liveBuyerData || [];
+// ===== GLOBAL WINDOW ATTACHMENT =====
+window.allLiveStockData = window.allLiveStockData || [];
+window.liveBuyerData = window.liveBuyerData || [];
 
-// Sync live Firebase data into the global variables expected by pipeline.js
+var allLiveStockData = window.allLiveStockData;
+var liveBuyerData = window.liveBuyerData;
+
+// ===== LIVE FIREBASE DATA SYNC =====
 function syncPipelineData() {
-  // 1. Fetch live stock from Firebase
+  if (typeof firebase === 'undefined' || !firebase.database) {
+    console.warn("Firebase SDK not detected yet for auto-sync.");
+    return;
+  }
+
+  // Synchronize Live Stock Data
   firebase.database().ref('stock').on('value', snapshot => {
     const raw = snapshot.val() || {};
-    // Flatten stock objects into an array
-    allLiveStockData = Array.isArray(raw) ? raw : Object.values(raw);
-    console.log("Pipeline Stock Synced:", allLiveStockData.length, "lines");
-  });
+    window.allLiveStockData = Array.isArray(raw) ? raw : Object.values(raw);
+    allLiveStockData = window.allLiveStockData;
+    console.log("✅ Pipeline Live Stock Synced:", window.allLiveStockData.length, "lines");
+  }, err => console.error("Stock sync error:", err));
 
-  // 2. Fetch live buyers from Firebase
+  // Synchronize Live Buyer Data
   firebase.database().ref('buyers').on('value', snapshot => {
     const raw = snapshot.val() || {};
-    liveBuyerData = Array.isArray(raw) ? raw : Object.values(raw);
-    console.log("Pipeline Buyers Synced:", liveBuyerData.length, "buyers");
-  });
+    window.liveBuyerData = Array.isArray(raw) ? raw : Object.values(raw);
+    liveBuyerData = window.liveBuyerData;
+    console.log("✅ Pipeline Live Buyers Synced:", window.liveBuyerData.length, "buyers");
+  }, err => console.error("Buyer sync error:", err));
 }
 
-// Automatically start listening when script loads
+// Trigger data sync on script execution
 syncPipelineData();
 
 // Helper function to safely read available quantity across different payload structures
@@ -68,7 +77,7 @@ function runAIFromPipeline() {
 
 function goToOrders() {
   togglePipelineStep(3);
-  goToPage('orders');
+  if (typeof goToPage === 'function') goToPage('orders');
 }
 
 function togglePipelineStep(n) {
@@ -124,17 +133,19 @@ function togglePipelinePackers() {
 
 function renderPipelineBuyers() {
   const el = document.getElementById('pipeline-buyers');
+  if (!el) return;
+  
   const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
   const called = JSON.parse(localStorage.getItem(todayKey) || '{}');
-  const buyers = liveBuyerData || [];
+  const buyers = window.liveBuyerData || [];
   const todayDow = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
 
   if (!buyers.length) {
-    el.innerHTML = '<div style="color:var(--muted)">No buyer data - go to Buyers tab first.</div>';
+    el.innerHTML = '<div style="color:var(--muted)">No buyer data loaded yet.</div>';
     return;
   }
 
-  const stock = allLiveStockData || [];
+  const stock = window.allLiveStockData || [];
   const scored = buyers.map(b => {
     let he = 0;
     if (b.prefs) b.prefs.forEach(p => {
@@ -189,6 +200,7 @@ function togglePipelineCall(el, event) {
 
 async function renderPipelineOrders(elId, mode) {
   const el = document.getElementById(elId);
+  if (!el) return;
   el.innerHTML = 'Loading...';
   try {
     const res = await fetch(FB_DB + '/orders.json?auth=' + FB_SECRET);
@@ -246,15 +258,15 @@ function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  const stock = allLiveStockData ? allLiveStockData.filter(s => getStockQty(s) > 0) : [];
-  const buyers = liveBuyerData || [];
+  const stock = window.allLiveStockData ? window.allLiveStockData.filter(s => getStockQty(s) > 0) : [];
+  const buyers = window.liveBuyerData || [];
 
   console.log('Stock lines for matching:', stock.length);
   console.log('Buyers for matching:', buyers.length);
 
   if (!stock.length) {
     if (err) {
-      err.textContent = 'No stock on floor. Please load stock data first.';
+      err.textContent = 'No stock available. Please ensure stock data is synced.';
       err.style.display = 'block';
     }
     resetMatchButton();
@@ -263,7 +275,7 @@ function runAIMatch() {
 
   if (!buyers.length) {
     if (err) {
-      err.textContent = 'No buyer data. Please go to the Buyers tab first.';
+      err.textContent = 'No buyer data available. Please ensure buyer data is synced.';
       err.style.display = 'block';
     }
     resetMatchButton();
@@ -279,7 +291,7 @@ function runAIMatch() {
   console.log('Matches found:', matches.length);
 
   if (!matches.length) {
-    if (st) st.textContent = 'No matches found between current floor stock and buyer history.';
+    if (st) st.textContent = 'No matches found between current floor stock and buyer preferences.';
     if (se) se.style.display = 'block';
   } else {
     const topComms = [...new Set(matches.slice(0, 3).map(m => m.commodity))];
@@ -396,19 +408,15 @@ async function renderAICallList(matches, summary) {
   el.innerHTML = html || '<div style="color:var(--muted)">No matches found.</div>';
 }
 
-// ===== WHATSAPP FUNCTIONS =====
-
 function sendWhatsAppToBuyer(buyerName, message) {
   const phoneRef = firebase.database().ref('buyerPhones/' + buyerName);
   
   phoneRef.once('value').then(snapshot => {
     const phone = snapshot.val();
-    
     if (!phone) {
-      alert('No phone number found for ' + buyerName + '. Please add it to the buyerPhones in Firebase.');
+      alert('No phone number found for ' + buyerName + '. Please add it to buyerPhones in Firebase.');
       return;
     }
-    
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const url = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(message);
     window.open(url, '_blank');
@@ -482,8 +490,6 @@ function sendWhatsAppToAllMatches() {
   
   sendNext();
 }
-
-// ===== PDF EXPORT FUNCTION =====
 
 function exportPipelineMatchesToPDF() {
   const matchesContainer = document.getElementById('pipeline-buyers');
@@ -594,5 +600,9 @@ function exportPipelineMatchesToPDF() {
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
-  html2pdf().set(opt).from(tempContainer).save();
+  if (typeof html2pdf !== 'undefined') {
+    html2pdf().set(opt).from(tempContainer).save();
+  } else {
+    alert("html2pdf library is not loaded.");
+  }
 }
