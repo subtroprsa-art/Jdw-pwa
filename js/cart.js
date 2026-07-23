@@ -31,14 +31,11 @@ function addToCartFromFloor(seq, commodity, producer) {
 
 async function saveCartToFirebase(sale) {
   try {
-    await fetch(FB_DB + '/cart/' + sale.id + '.json?auth=' + FB_SECRET, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(sale)
-    });
+    await firebase.database().ref('cart/' + sale.id).set(sale);
     console.log('Cart item saved:', sale.id);
   } catch (error) {
     console.error('Error saving cart:', error);
     alert('Error adding to cart. Please try again.');
   }
+}
 }
