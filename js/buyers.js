@@ -6,9 +6,8 @@ async function loadBuyersFromFirebase() {
   const el = document.getElementById('buyer-list');
   if (el) el.innerHTML = '<div class="empty">Loading buyers…</div>';
   try {
-    const r = await fetch(FB_DB + '/jdw/history.json?auth=' + FB_SECRET);
-    if (!r.ok) throw new Error('fetch failed');
-    const raw = await r.json();
+    const snapshot = await firebase.database().ref('jdw/history').once('value');
+    const raw = snapshot.val();
     if (!raw) { renderBuyers([]); return; }
     const hist = Array.isArray(raw) ? raw : Object.values(raw);
     liveBuyerData = buildBuyerProfiles(hist);
