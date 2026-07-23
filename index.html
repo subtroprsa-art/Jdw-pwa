@@ -1,856 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<meta name="theme-color" content="#1e4d2b"/>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
-
-<script>
-const CONFIG = {
-  FIREBASE_DATABASE_URL: 'https://jdw-crm-default-rtdb.firebaseio.com',
-  FIREBASE_SECRET: 'RETjHHMyxAHbm4frvZd6dCl6lPDg8LR136T86fhs'
-};
-const USERS = {
-  'riaan.joubert': { display: 'Riaan Joubert', code: 'RJ', pw: 'rsasubtrop2026' },
-  'christoff.dewet': { display: 'Christoff de Wet', code: 'CW', pw: 'rsasubtrop2026' }
-};
-const SALESMEN = [
-  { code: 'ALL', name: 'All Salesmen' },
-  { code: 'RJ', name: 'Riaan Joubert (RJ)' },
-  { code: 'CW', name: 'Christoff de Wet (CW)' },
-  { code: 'POT', name: 'Potgieter (POT)' }
-];
-const SK = 'st_sess';
-</script>
-
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-<script>
-try {
-  firebase.initializeApp({
-    apiKey: "AIzaSyBo9c1yISFcGJFPEEjqAVMuVS14MojBAOU",
-    databaseURL: CONFIG.FIREBASE_DATABASE_URL,
-    projectId: "jdw-crm"
-  });
-} catch (e) { console.error('Firebase initialization error:', e); }
-</script>
-
-<title>SubTrop CRM</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
-  body { background-color: #f1f5f9; color: #1e293b; padding-bottom: 30px; }
-  
-  .hdr { background: #1e4d2b; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
-  .hdr-brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 18px; }
-  .hdr-brand span { color: #86efac; font-weight: 500; font-size: 14px; }
-  .hdr-right { display: flex; align-items: center; gap: 8px; }
-  .hdr-btn { background: rgba(255,255,255,0.18); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px; }
-
-  .container { max-width: 900px; margin: 0 auto; padding: 16px; }
-
-  .salesman-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 12px; }
-  .sm-chip { background: white; border: 1px solid #cbd5e1; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer; white-space: nowrap; }
-  .sm-chip.active { background: #1e4d2b; color: white; border-color: #1e4d2b; }
-
-  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-  .kpi-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  .kpi-lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-  .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; }
-
-  .pipeline-btn { width: 100%; padding: 16px; background: #1a4479; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; text-align: left; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
-  .cols-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-  .col-sec { display: flex; flex-direction: column; gap: 10px; }
-  .sec-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
-  
-  .nav-btn { width: 100%; padding: 14px 16px; background: #2c3e50; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-  .analytics-btn { width: 100%; padding: 14px 16px; background: #334155; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: left; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-
-  .nav-bar-sub { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .nav-bar-sub button { background: #1e4d2b; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-
-  .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; font-size: 14px; outline: none; }
-  .list-container { display: flex; flex-direction: column; gap: 8px; }
-
-  .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #334155; margin-left: 6px; }
-  .meta-tag { display: inline-block; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; margin-top: 4px; }
-
-  #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
-  .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
-  .login-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
-  .login-submit { background: #1e4d2b; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
-  .page { display: none; }
-  .page.active { display: block; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Pipeline & Matching Engine</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 16px;
+      color: #1e293b;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .toolbar {
+      margin: 16px 0;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      background: #15803d;
+      color: #ffffff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .btn-action:hover {
+      background: #166534;
+    }
+    .badge-count {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .card-item {
+      padding: 16px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .btn-call {
+      flex: 1;
+      background: #1a4479;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-wa {
+      flex: 1;
+      background: #25D366;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-call:hover { opacity: 0.9; }
+    .btn-wa:hover { opacity: 0.9; }
+  </style>
 </head>
 <body>
 
-<div id="login-screen">
-  <h2 style="margin-bottom: 16px;">SubTrop CRM</h2>
-  <form class="login-box" onsubmit="event.preventDefault(); doLogin();">
-    <div>
-      <label style="font-size: 12px; font-weight: 700;">Username</label>
-      <input type="text" id="login-user" class="login-input" placeholder="riaan.joubert"/>
-    </div>
-    <div>
-      <label style="font-size: 12px; font-weight: 700;">Password</label>
-      <input type="password" id="login-pass" class="login-input"/>
-    </div>
-    <button type="submit" class="login-submit">Sign In</button>
-  </form>
-</div>
-
-<div id="app" style="display:none;">
-  <div class="hdr">
-    <div class="hdr-brand">
-      SubTrop CRM <span id="hdr-page-name">[Home]</span>
-    </div>
-    <div class="hdr-right">
-      <span id="hdr-user-display" style="font-size: 13px; font-weight: 600;"></span>
-      <button class="hdr-btn" onclick="goHome()">🏠 Home</button>
-      <button class="hdr-btn" onclick="doLogout()">Sign Out</button>
-    </div>
-  </div>
-
   <div class="container">
-    <div class="salesman-bar" id="salesman-selector"></div>
+    <h2>📊 Produce Sales Pipeline</h2>
 
-    <!-- DASHBOARD PAGE -->
-    <div class="page active" id="page-dashboard">
-      <div class="kpi-grid">
-        <div class="kpi-card" style="border-top: 4px solid #b91c1c;">
-          <div class="kpi-lbl">FLOOR STOCK</div>
-          <div class="kpi-val" id="kpi-floor">0 units</div>
-        </div>
-        <div class="kpi-card" style="border-top: 4px solid #15803d;">
-          <div class="kpi-lbl">CLEARANCE RATE</div>
-          <div class="kpi-val" id="kpi-clearance">0%</div>
-        </div>
-      </div>
-
-      <button class="pipeline-btn" onclick="goToPage('pipeline')">
-        ⚡ PIPELINE (Match + Call Buyers)
+    <!-- Action Toolbar -->
+    <div class="toolbar">
+      <button class="btn-action" onclick="generateAndRenderPipeline()">
+        ⚡ Generate Historical Matches
       </button>
-
-      <div class="cols-grid">
-        <div class="col-sec">
-          <div class="sec-title">OPERATIONS & SALES</div>
-          <button class="nav-btn" onclick="goToPage('buyers')">👥 Buyers</button>
-          <button class="nav-btn" onclick="goToPage('orders')">📋 Orders</button>
-          <button class="nav-btn" onclick="goToPage('scanslip')">📷 Scan Slip</button>
-        </div>
-
-        <div class="col-sec">
-          <div class="sec-title">INVENTORY & LOGISTICS</div>
-          <button class="nav-btn" onclick="goToPage('stock')">📦 Stock</button>
-          <button class="nav-btn" onclick="goToPage('floor')">📊 Floor Balance</button>
-          <button class="nav-btn" onclick="goToPage('coldstore')">❄️ Coldstore</button>
-          <button class="nav-btn" onclick="goToPage('commodities')">🌿 Commodities</button>
-        </div>
-      </div>
-
-      <button class="analytics-btn" onclick="goToPage('analytics')">
-        📈 Reports & Analytics
-      </button>
+      <span id="match-count-badge" class="badge-count"></span>
     </div>
 
-    <!-- SUB-PAGES -->
-    <div class="page" id="page-buyers">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers or phone numbers..." oninput="renderBuyers()"/>
-      <div class="list-container" id="list-buyers">Loading buyers...</div>
-    </div>
-
-    <div class="page" id="page-orders">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-orders">Loading orders...</div>
-    </div>
-
-    <div class="page" id="page-scanslip">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div style="background:#fff; padding:20px; border-radius:12px;">
-        <h3>📷 Scan Delivery Slip</h3>
-        <p style="color:#64748b; font-size:13px; margin:10px 0;">Upload or capture an image of a delivery slip to process inventory.</p>
-        <input type="file" accept="image/*" capture="environment"/>
+    <!-- Target List Container -->
+    <div id="list-pipeline">
+      <div style="text-align:center; padding:40px; color:#94a3b8; font-weight:600;">
+        Click "Generate Historical Matches" to process current stock against buyer history.
       </div>
     </div>
-
-    <div class="page" id="page-stock">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by producer, GRN, variety, size (e.g. af 14)..." oninput="renderStock()"/>
-      <div class="list-container" id="list-stock">Loading stock...</div>
-    </div>
-
-    <div class="page" id="page-floor">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by producer, GRN, variety, size (e.g. af 14)..." oninput="renderFloor()"/>
-      <div class="list-container" id="list-floor">Loading floor balance...</div>
-    </div>
-
-    <div class="page" id="page-coldstore">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="renderColdstore()"/>
-      <div class="list-container" id="list-coldstore">Loading coldstore...</div>
-    </div>
-
-    <div class="page" id="page-commodities">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-commodities">Loading commodities...</div>
-    </div>
-
-    <div class="page" id="page-pipeline">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches by buyer or commodity..." oninput="renderPipeline()"/>
-      <div class="list-container" id="list-pipeline">Loading pipeline matches...</div>
-    </div>
-
-    <div class="page" id="page-analytics">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div style="background:#fff; padding:20px; border-radius:12px;">
-        <h3>📈 Reports & Analytics</h3>
-        <p style="color:#64748b; font-size:13px; margin-top:8px;">Live performance metrics and daily turnover breakdowns.</p>
-      </div>
-    </div>
-
   </div>
-</div>
 
-<script>
-// ===== DICTIONARIES & LOOKUPS =====
-const COMM_MAP = {
-  'Avocados': 'AVOS', 'Lemons': 'LEMS', 'Figs': 'FIGS', 'Kiwifruit': 'KIWI',
-  'Oranges': 'ORGS', 'Guavas': 'GVS', 'Clementines': 'CLTM', 'Naartjies': 'NAAR',
-  'Strawberries': 'BERS', 'Berries': 'BERS', 'Dragon Fruit': 'DRAG', 'Mangoes': 'MANG',
-  'Grapefruit': 'GFT', 'Satsumas': 'SATS', 'Papino': 'PAPO'
-};
+  <script>
+    // Global fallback store setup
+    window.store = window.store || { stock: [], floor: [], buyers: [] };
+    window.contactedBuyers = window.contactedBuyers || {};
 
-const VARIETY_NAMES = {
-  'AF': 'Fuerte', 'AH': 'Hass', 'AK': 'Pinkerton', 'MA': 'Maluma', 'MAH': 'Maluma',
-  'MD': 'Mendez', 'NV': 'Navel', 'CN': 'Cara Cara', 'AX': 'Mixed', 'LR': 'Leanri',
-  'HM': 'Honey Murcott', 'M1': 'Mandarin', 'NAR': 'Nardocott', '*': 'Any'
-};
-
-const PACK_NAMES = {
-  'TR040': '4KG Tray', 'TR060': '6KG Tray', 'BG150': '15KG Bag', 'BG160': '16KG Bag',
-  'BG200': '20KG Bag', 'CTT150': '15KG Carton', 'PTB005': '500G Punnet', 'PTB025': '250G Punnet',
-  'PTB002': '160G Punnet', 'DL076': 'DL076 Carton', 'PC030': '3KG Pocket',
-  'PC060': '6KG Pocket', 'CO100': '10KG Carton', 'CO150': '15KG Carton',
-  'SP170': '17KG Sack', 'EC020': '20KG Box'
-};
-
-// ===== HELPER FUNCTIONS =====
-function parseQuantity(val) {
-  if (val === '*' || val === undefined || val === null) return 0;
-  if (typeof val === 'number') return val;
-  const parsed = parseInt(String(val).replace(/[^0-9]/g, ''), 10);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-function formatCommodityDetails(r) {
-  const parts = [];
-  if (r.commodity) parts.push(r.commodity);
-  if (r.variety && r.variety !== '*') parts.push(r.variety);
-  if (r.pack) parts.push(`(${PACK_NAMES[r.pack] || r.pack})`);
-  if (r.size && r.size !== '*') parts.push(`• Sz ${r.size}`);
-  if (r.count && r.count !== '*') parts.push(`• Count ${r.count}`);
-  if (r.grade && r.grade !== '1' && r.grade !== '*') parts.push(`• Cl ${r.grade}`);
-  return parts.join(' ');
-}
-
-function filterRecordsBySearch(records, query) {
-  if (!query || !query.trim()) return records;
-  const terms = query.toLowerCase().trim().split(/\s+/);
-
-  return records.filter(r => {
-    const packLabel = PACK_NAMES[r.pack] || r.pack || '';
-    const searchableText = [
-      r.producer, r.grn, r.seq, r.commodity, 
-      r.variety, r.pack, packLabel, r.size, r.count, 
-      r.grade, r.loc, r.salesmanCode
-    ].join(' ').toLowerCase();
-
-    return terms.every(term => searchableText.includes(term));
-  });
-}
-
-function extractRecords(node, defaultSalesman = '') {
-  let records = [];
-  if (!node || typeof node !== 'object') return records;
-
-  function traverse(obj, pathSalesman = '', parentKeys = {}) {
-    if (Array.isArray(obj)) {
-      obj.forEach(item => traverse(item, pathSalesman, parentKeys));
-      return;
-    }
-
-    if (typeof obj === 'object' && obj !== null) {
-      let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.user || obj._user || pathSalesman;
-
-      // Extract PDF and Firebase key variations (Stock -> qty_rec, Floor -> balance, Slip -> qty)
-      const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.quantity ?? obj.units ?? 
-                     obj.flr ?? obj.bags ?? obj.cartons ?? obj.count ?? obj.total;
-
-      const commodity = obj.commodity || obj.product || obj.variety || obj.item || parentKeys.commodity || '';
-      const producer = obj.producer || obj.producerName || obj.grower || obj.farmer || parentKeys.producer;
-
-      if (rawQty !== undefined || commodity || producer || obj.grn) {
-        let numericQty = parseQuantity(rawQty);
-
-        records.push({
-          salesmanCode: String(sm || '').toUpperCase(),
-          grn: obj.grn || obj.grnNo || obj.docNo || obj.consignment || parentKeys.grn || '—',
-          seq: obj.seq || obj.sequence || parentKeys.seq || '—',
-          date: obj.date || obj.receivedDate || obj.floorDate || parentKeys.date || '—',
-          producer: producer || 'Unknown Producer',
-          commodity: commodity || 'Commodity',
-          pack: obj.pack || obj.packaging || parentKeys.pack || '',
-          variety: obj.variety || parentKeys.variety || '*',
-          grade: obj.grade || obj.cls || '1',
-          size: obj.size || '*',
-          count: obj.count || '*',
-          loc: obj.loc || '',
-          qty: numericQty,
-          rawQtyDisplay: `${numericQty} units`,
-          ...obj
-        });
-      }
-
-      const currentParentContext = {
-        grn: obj.grn || parentKeys.grn,
-        seq: obj.seq || parentKeys.seq,
-        date: obj.date || parentKeys.date,
-        producer: producer || parentKeys.producer,
-        commodity: commodity || parentKeys.commodity,
-        pack: obj.pack || parentKeys.pack,
-        variety: obj.variety || parentKeys.variety
-      };
-
-      Object.keys(obj).forEach(k => {
-        let childSm = sm;
-        if (['RJ', 'CW', 'POT'].includes(k.toUpperCase())) childSm = k.toUpperCase();
-        if (typeof obj[k] === 'object' && obj[k] !== null) {
-          traverse(obj[k], childSm, currentParentContext);
-        }
-      });
-    }
-  }
-
-  traverse(node, defaultSalesman);
-  return records;
-}
-
-// ===== DETERMINISTIC MATCHING ENGINE =====
-function runDeterministicMatch(stock, buyers, todayDow) {
-  if (!stock || !buyers || !stock.length || !buyers.length) return [];
-
-  // 1. Rank buyers by turnover / historical sales volume
-  const sortedBuyers = [...buyers].sort((a, b) => {
-    const turnoverA = Number(a.turnover || a.totalPrice || a.spend || a.totalSpend || 0);
-    const turnoverB = Number(b.turnover || b.totalPrice || b.spend || b.totalSpend || 0);
-    return turnoverB - turnoverA;
-  });
-
-  // 2. Select Top 30 Buyers
-  const top30Buyers = sortedBuyers.slice(0, 30);
-  const buyerMatchesMap = {};
-
-  top30Buyers.forEach(buyer => {
-    // Collect historical commodities from preferred items, sales history, or slips
-    const historyComms = new Set();
-
-    // Check 'prefs' or 'preferredItems' (Buyer_Directory)
-    const prefsList = buyer.prefs || buyer.preferredItems || [];
-    if (Array.isArray(prefsList)) {
-      prefsList.forEach(p => {
-        if (typeof p === 'string') {
-          historyComms.add(p.trim().toUpperCase());
-        } else if (Array.isArray(p.commodities)) {
-          p.commodities.forEach(c => historyComms.add(String(c).trim().toUpperCase()));
-        } else if (p.comm || p.commodity || p.product) {
-          historyComms.add(String(p.comm || p.commodity || p.product).trim().toUpperCase());
-        }
-      });
-    }
-
-    // Check 'salesHistory' or 'slips' (Sales_History / Buyer Slips)
-    const historyList = buyer.salesHistory || buyer.history || buyer.slips || [];
-    if (Array.isArray(historyList)) {
-      historyList.forEach(h => {
-        const itemComm = h.product || h.commodity || h.item;
-        if (itemComm) historyComms.add(String(itemComm).trim().toUpperCase());
-      });
-    }
-
-    const buyerMatchedItems = [];
-
-    // Match against current floor stock
-    stock.forEach(item => {
-      const stockQty = Number(item.qty || item.flr || item.qty_sort || item.qty_rec || 0);
-      if (stockQty <= 0) return;
-
-      const stockComm = String(item.commodity || item.product || '').trim().toUpperCase();
-      if (!stockComm) return;
-
-      // Check if current stock matches buyer's historical slip/buying pattern
-      let isExactMatch = false;
-      if (historyComms.size > 0) {
-        historyComms.forEach(hc => {
-          if (stockComm.includes(hc) || hc.includes(stockComm)) {
-            isExactMatch = true;
+    // 1. Realtime Firebase Sync for Strikethroughs Across All Devices
+    function listenToDailyContactedStatus() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (typeof firebase !== 'undefined' && firebase.database) {
+        firebase.database().ref(`contacted_buyers/${todayStr}`).on('value', (snapshot) => {
+          window.contactedBuyers = snapshot.val() || {};
+          if (window.lastPipelineMatches) {
+            renderPipelineCards(window.lastPipelineMatches);
           }
         });
       }
+    }
+    listenToDailyContactedStatus();
 
-      if (isExactMatch) {
-        // --- 100% HISTORICAL PATTERN MATCH ---
-        buyerMatchedItems.push({
-          stockLine: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`,
-          commodity: stockComm,
-          qty: stockQty,
-          matchType: 'EXACT',
-          is100Percent: true,
-          reason: `100% Match: Buyer regularly buys ${stockComm} (matched from Buyer Slips / Sales History). ${stockQty} available.`,
-          tip: `Producer: ${item.producer || 'Unknown'} | Grade: ${item.grade || '1'}`,
-          priority: stockQty > 50 ? 'HIGH' : 'MEDIUM',
-          score: 100 + (stockQty > 50 ? 20 : 0)
-        });
-      } else {
-        // --- PARTIAL / SUGGESTED MATCH ---
-        if (stockQty >= 10) {
-          const reasonText = historyComms.size > 0 
-            ? `💡 Suggested Match (Partial): Not in buyer's usual history, but available in good volume (${stockQty} units).`
-            : `💡 Available Stock Recommendation: ${stockQty} units available on floor.`;
+    // 2. Trigger Pipeline Generation
+    function generateAndRenderPipeline() {
+      const rawStock = (store.stock || []).concat(store.floor || []);
+      const buyers = store.buyers || [];
+      const todayDow = new Date().getDay();
 
-          buyerMatchedItems.push({
-            stockLine: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`,
-            commodity: stockComm,
-            qty: stockQty,
-            matchType: 'SUGGESTION',
-            is100Percent: false,
-            reason: reasonText,
-            tip: `Producer: ${item.producer || 'Unknown'} | Grade: ${item.grade || '1'}`,
-            priority: 'LOW',
-            score: 40
+      const filteredStock = typeof filterBySalesman === 'function' ? filterBySalesman(rawStock) : rawStock;
+      const matches = runHistoricalBuyerMatch(filteredStock, buyers, todayDow);
+
+      window.lastPipelineMatches = matches;
+      renderPipelineCards(matches);
+    }
+
+    // 3. Strict Historical Buyer Matching Engine
+    function runHistoricalBuyerMatch(stock, buyers, todayDow) {
+      if (!stock || !buyers || !stock.length || !buyers.length) return [];
+
+      // Rank buyers by spend/turnover (highest spenders first)
+      const sortedBuyers = [...buyers].sort((a, b) => {
+        const tA = Number(a.turnover || a.totalPrice || a.spend || 0);
+        const tB = Number(b.turnover || b.totalPrice || b.spend || 0);
+        return tB - tA;
+      }).slice(0, 30); // Top 30 Buyers
+
+      const results = [];
+
+      sortedBuyers.forEach(buyer => {
+        const historyComms = new Set();
+
+        // Collect historical commodities from preferred items
+        const prefsList = buyer.prefs || buyer.preferredItems || [];
+        if (Array.isArray(prefsList)) {
+          prefsList.forEach(p => {
+            if (typeof p === 'string') historyComms.add(p.trim().toUpperCase());
+            else if (Array.isArray(p.commodities)) p.commodities.forEach(c => historyComms.add(String(c).trim().toUpperCase()));
+            else if (p.comm || p.commodity || p.product) historyComms.add(String(p.comm || p.commodity || p.product).trim().toUpperCase());
           });
         }
-      }
-    });
 
-    if (buyerMatchedItems.length > 0) {
-      buyerMatchedItems.sort((a, b) => b.score - a.score);
+        // Collect historical commodities from slips / sales history
+        const historyList = buyer.salesHistory || buyer.history || buyer.slips || [];
+        if (Array.isArray(historyList)) {
+          historyList.forEach(h => {
+            const itemComm = h.product || h.commodity || h.item;
+            if (itemComm) historyComms.add(String(itemComm).trim().toUpperCase());
+          });
+        }
 
-      const buyerTurnover = Number(buyer.turnover || buyer.totalPrice || buyer.spend || 0);
+        if (historyComms.size === 0) return; // Skip buyers without historical purchases
 
-      buyerMatchesMap[buyer.name] = {
-        buyer: buyer.name,
-        phone: buyer.phone || buyer.phoneNumber || 'No Contact',
-        turnover: buyerTurnover,
-        buysToday: buyer.buyingDays ? !!buyer.buyingDays[todayDow] : false,
-        totalMatches: buyerMatchedItems.length,
-        items: buyerMatchedItems,
-        stockLine: buyerMatchedItems[0].stockLine,
-        commodity: buyerMatchedItems[0].commodity,
-        reason: buyerMatchedItems[0].reason,
-        tip: buyerMatchedItems[0].tip,
-        priority: buyerMatchedItems[0].priority,
-        score: buyerMatchedItems[0].score
-      };
-    }
-  });
+        const matchedItems = [];
 
-  return Object.values(buyerMatchesMap).sort((a, b) => b.turnover - a.turnover);
-}
-// ===== CRM APP STATE & LOGIC =====
-let currentSalesman = 'ALL';
-let store = { stock: [], floor: [], coldstore: [], buyers: [], orders: [] };
+        // Match available stock lines against historical list
+        stock.forEach(item => {
+          const stockQty = Number(item.qty || item.flr || item.qty_sort || item.qty_rec || 0);
+          if (stockQty <= 0) return;
 
-function doLogin() {
-  const u = document.getElementById('login-user').value.toLowerCase().trim();
-  const p = document.getElementById('login-pass').value;
-  if (USERS[u] && USERS[u].pw === p) {
-    localStorage.setItem(SK, USERS[u].display);
-    if (USERS[u].code) currentSalesman = USERS[u].code;
-    initApp(USERS[u].display);
-  } else { alert('Invalid credentials'); }
-}
+          const stockComm = String(item.commodity || item.product || '').trim().toUpperCase();
+          if (!stockComm) return;
 
-function initApp(name) {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-user-display').textContent = `(${name})`;
-  renderSalesmanSelector();
-  startFirebaseListener();
-  goToPage('dashboard');
-}
+          let isMatch = false;
+          historyComms.forEach(hc => {
+            if (stockComm.includes(hc) || hc.includes(stockComm)) isMatch = true;
+          });
 
-function renderSalesmanSelector() {
-  const container = document.getElementById('salesman-selector');
-  container.innerHTML = SALESMEN.map(s => `
-    <button class="sm-chip ${currentSalesman === s.code ? 'active' : ''}" onclick="setSalesman('${s.code}')">
-      ${s.name}
-    </button>
-  `).join('');
-}
+          if (isMatch) {
+            matchedItems.push({
+              commodity: stockComm,
+              pack: item.pack || '',
+              size: item.size || '*',
+              qty: stockQty,
+              producer: item.producer || 'Unknown',
+              displayText: `${stockComm} (${item.pack || ''} Size:${item.size || '*'}) - ${stockQty} available`
+            });
+          }
+        });
 
-function setSalesman(code) {
-  currentSalesman = code;
-  renderSalesmanSelector();
-  updateDashboardKPIs();
-  renderStock();
-  renderFloor();
-  renderColdstore();
-  renderBuyers();
-  renderPipeline();
-}
-
-function goToPage(pageId) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const target = document.getElementById('page-' + pageId);
-  if (target) target.classList.add('active');
-  document.getElementById('hdr-page-name').textContent = pageId === 'dashboard' ? '[Home]' : `[${pageId}]`;
-}
-
-function goHome() { goToPage('dashboard'); }
-
-function doLogout() {
-  localStorage.removeItem(SK);
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-}
-
-function filterBySalesman(list) {
-  if (currentSalesman === 'ALL') return list;
-  return list.filter(item => {
-    const sm = (item.salesmanCode || item.salesman || item.rep || '').toUpperCase();
-    return sm.includes(currentSalesman) || sm === '';
-  });
-}
-
-function startFirebaseListener() {
-  if (typeof firebase === 'undefined') return;
-  const db = firebase.database();
-
-  db.ref('/').on('value', (snapshot) => {
-    const raw = snapshot.val() || {};
-
-    store.floor = extractRecords(raw.floor);
-    store.stock = extractRecords(raw.stock);
-    store.coldstore = extractRecords(raw.coldstore || raw.coldStore);
-    store.orders = extractRecords(raw.orders || raw.cart);
-
-    // Parse Preferences and Phones
-    const rawPrefs = raw.preferences || raw.buyerPreferences || {};
-    const phoneMap = raw.buyerPhones || raw.buyerPhone || {};
-    const buyersNode = raw.buyers || raw.buyerStats || {};
-
-    const buyersMap = {};
-    Object.keys(rawPrefs).forEach(buyerKey => {
-      const p = rawPrefs[buyerKey];
-      buyersMap[buyerKey] = {
-        name: buyerKey,
-        phone: phoneMap[buyerKey] || 'No Contact',
-        prefs: Array.isArray(p) ? p : (p.prefs || [p]),
-        turnover: 0
-      };
-    });
-
-    Object.keys(phoneMap).forEach(bName => {
-      if (!buyersMap[bName]) {
-        buyersMap[bName] = { name: bName, phone: phoneMap[bName], prefs: [], turnover: 0 };
-      }
-    });
-
-    if (typeof buyersNode === 'object') {
-      Object.keys(buyersNode).forEach(k => {
-        const item = buyersNode[k] || {};
-        const bName = item.name || item.buyer || k;
-        if (buyersMap[bName]) {
-          buyersMap[bName].turnover = item.turnover || item.total || buyersMap[bName].turnover;
-        } else {
-          buyersMap[bName] = { name: bName, phone: item.phone || phoneMap[bName] || 'No Contact', prefs: item.prefs || [], turnover: item.turnover || 0 };
+        if (matchedItems.length > 0) {
+          results.push({
+            buyerId: String(buyer.name || buyer.id).replace(/[^a-zA-Z0-9]/g, '_'),
+            buyerName: buyer.name,
+            phone: buyer.phone || buyer.phoneNumber || '',
+            turnover: Number(buyer.turnover || buyer.totalPrice || 0),
+            matchedItems: matchedItems
+          });
         }
       });
+
+      return results;
     }
 
-    store.buyers = Object.values(buyersMap);
-    store.buyers.sort((a, b) => (b.turnover || 0) - (a.turnover || 0));
+    // 4. Render Buyer Cards with Complete Produce List
+    function renderPipelineCards(matches) {
+      const container = document.getElementById('list-pipeline');
+      const countBadge = document.getElementById('match-count-badge');
+      if (!container) return;
 
-    updateDashboardKPIs();
-    renderBuyers();
-    renderStock();
-    renderFloor();
-    renderColdstore();
-    renderOrders();
-    renderPipeline();
-    renderCommodities();
-  });
-}
+      if (countBadge) countBadge.innerText = `${matches.length} matching buyers found`;
 
-function updateDashboardKPIs() {
-  const activeFloor = filterBySalesman(store.floor);
-  let floorUnits = 0;
-  activeFloor.forEach(item => { floorUnits += (item.qty || 0); });
-
-  const floorEl = document.getElementById('kpi-floor');
-  if (floorEl) floorEl.textContent = `${floorUnits.toLocaleString('en-ZA')} units`;
-
-  const clearanceEl = document.getElementById('kpi-clearance');
-  if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '35%' : '0%';
-}
-
-function renderPipeline() {
-  const container = document.getElementById('list-pipeline');
-  if (!container) return;
-  const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
-
-  const todayDow = new Date().getDay();
-
-  // 1. Safely gather all stock sources from store or window
-  let rawStock = [];
-  if (typeof store !== 'undefined') {
-    const s = store.stock || [];
-    const f = store.floor || [];
-    rawStock = Array.isArray(s) ? s.concat(f) : Object.values(s).concat(Object.values(f));
-  } else if (window.allLiveStockData) {
-    rawStock = window.allLiveStockData;
-  }
-
-  // 2. Flatten stock if it's nested by salesman keys (RJ, CW, POT)
-  let flatStock = [];
-  if (Array.isArray(rawStock)) {
-    flatStock = rawStock;
-  } else if (typeof rawStock === 'object') {
-    Object.keys(rawStock).forEach(key => {
-      if (Array.isArray(rawStock[key])) {
-        flatStock = flatStock.concat(rawStock[key]);
-      } else if (typeof rawStock[key] === 'object') {
-        flatStock = flatStock.concat(Object.values(rawStock[key]));
+      if (matches.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No historical commodity matches found for current floor stock.</div>`;
+        return;
       }
-    });
-  }
 
-  // 3. Pass through filterBySalesman safely
-  let activeStock = flatStock;
-  if (typeof filterBySalesman === 'function') {
-    try {
-      activeStock = filterBySalesman(flatStock);
-    } catch (e) {
-      console.warn("filterBySalesman error, using flat stock instead:", e);
-    }
-  }
+      const contactedMap = window.contactedBuyers || {};
 
-  // 4. Safely get buyers list
-  const buyersList = (typeof store !== 'undefined' && store.buyers) ? store.buyers : (window.liveBuyerData || []);
+      container.innerHTML = matches.map((m) => {
+        const isContacted = !!contactedMap[m.buyerId];
+        const cardStyle = isContacted 
+          ? "opacity:0.55; background:#f1f5f9; border-left:4px solid #94a3b8; filter:grayscale(40%);" 
+          : "background:#ffffff; border-left:4px solid #15803d; box-shadow:0 2px 8px rgba(0,0,0,0.05);";
 
-  // 5. Run matching
-  let matches = [];
-  if (typeof runDeterministicMatch === 'function' && activeStock.length > 0 && buyersList.length > 0) {
-    matches = runDeterministicMatch(activeStock, buyersList, todayDow);
-  }
+        const nameStyle = isContacted 
+          ? "text-decoration:line-through; color:#64748b;" 
+          : "color:#0f172a;";
 
-  let filtered = matches.filter(p => 
-    (p.buyer && p.buyer.toLowerCase().includes(q)) || 
-    (p.commodity && p.commodity.toLowerCase().includes(q)) || 
-    (p.reason && p.reason.toLowerCase().includes(q))
-  );
+        return `
+          <div class="card-item" id="card-${m.buyerId}" style="${cardStyle}">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="font-weight:800; font-size:16px; ${nameStyle}">${m.buyerName}</span>
+                ${isContacted ? `<span style="margin-left:8px; background:#e2e8f0; color:#475569; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">CONTACTED TODAY</span>` : ''}
+              </div>
+              <span style="font-size:11px; background:#f0fdf4; color:#166534; font-weight:700; padding:4px 8px; border-radius:6px;">
+                ${m.matchedItems.length} Produce Match${m.matchedItems.length > 1 ? 'es' : ''}
+              </span>
+            </div>
 
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No matching buyers for available inventory</div>`;
-    return;
-  }
+            <!-- List of All Matching Stock Items for this Buyer -->
+            <div style="margin-top:12px;">
+              <label style="font-size:11px; font-weight:700; color:#475569; display:block; margin-bottom:6px;">MATCHED PRODUCE FOR TODAY:</label>
+              <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:8px 12px; font-size:13px;">
+                ${m.matchedItems.map(item => `
+                  <div style="padding:3px 0; color:#334155; font-weight:600; display:flex; align-items:center; gap:6px;">
+                    <span>📦</span> <span>${item.displayText}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
 
-  container.innerHTML = filtered.map(p => {
-    const badgeColor = p.priority === 'HIGH' ? '#15803d' : p.priority === 'MEDIUM' ? '#d97706' : '#64748b';
-    return `
-      <div class="card-item" style="border-left:4px solid ${badgeColor};">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div>
-            <div style="font-weight:800; font-size:15px; color:#0f172a;">${p.buyer}</div>
-            <div style="font-size:12px; color:#64748b; margin-top:2px;">${p.reason || ''}</div>
+            <!-- Call & WhatsApp Action Buttons -->
+            <div style="margin-top:14px; display:flex; gap:10px; align-items:center;">
+              <button class="btn-call" onclick="triggerPhoneCall('${m.buyerId}', '${m.phone}')">
+                📞 Call
+              </button>
+              
+              <button class="btn-wa" onclick="triggerWhatsApp('${m.buyerId}', '${m.buyerName}', '${m.phone}')">
+                💬 WhatsApp
+              </button>
+            </div>
           </div>
-          <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:800;">
-            ${p.score || 0} PTS (${p.priority || 'LOW'})
-          </span>
-        </div>
-        <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px; font-size:12px; color:#334155; display:flex; justify-content:space-between; align-items:center;">
-          <div><strong>📦 Stock:</strong> ${p.stockLine || ''}</div>
-          ${p.phone && p.phone !== 'No Contact' ? `<a href="tel:${p.phone}" style="font-size:12px; color:#ffffff; background:#1a4479; padding:6px 12px; border-radius:6px; text-decoration:none; font-weight:700; white-space:nowrap; margin-left:8px;">📞 Call</a>` : ''}
-        </div>
-        <div style="margin-top:8px; font-size:11px; color:#0369a1; font-weight:700;">💡 ${p.tip || ''}</div>
-      </div>
-    `;
-  }).join('');
-}
+        `;
+      }).join('');
+    }
 
-function renderFloor() {
-  const container = document.getElementById('list-floor');
-  if (!container) return;
-  const q = document.getElementById('search-floor')?.value || '';
+    // 5. Shared Contact Tracking System (Strikethrough Sync)
+    function markBuyerAsContacted(buyerId) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      if (!window.contactedBuyers) window.contactedBuyers = {};
+      window.contactedBuyers[buyerId] = true;
 
-  let activeFloor = filterBySalesman(store.floor);
-  let filtered = filterRecordsBySearch(activeFloor, q);
+      // Realtime Firebase DB update
+      if (typeof firebase !== 'undefined' && firebase.database) {
+        firebase.database().ref(`contacted_buyers/${todayStr}/${buyerId}`).set({
+          contactedAt: firebase.database.ServerValue.TIMESTAMP,
+          user: store?.userEmail || 'Salesman'
+        });
+      }
 
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No floor balance records found</div>`;
-    return;
-  }
+      // DOM fallback update
+      const card = document.getElementById(`card-${buyerId}`);
+      if (card) {
+        card.style.opacity = "0.55";
+        card.style.background = "#f1f5f9";
+        card.style.borderLeft = "4px solid #94a3b8";
+        card.style.filter = "grayscale(40%)";
+        const nameEl = card.querySelector('span');
+        if (nameEl) {
+          nameEl.style.textDecoration = "line-through";
+          nameEl.style.color = "#64748b";
+        }
+      }
+    }
 
-  container.innerHTML = filtered.map(f => `
-    <div class="card-item" style="border-left:4px solid #b91c1c;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${f.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${formatCommodityDetails(f)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#b91c1c;">${f.rawQtyDisplay}</div>
-          ${f.salesmanCode ? `<span class="badge">${f.salesmanCode}</span>` : ''}
-        </div>
-      </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${f.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${f.seq}</strong></span>
-        <span class="meta-tag">📅 ${f.date}</span>
-        ${f.loc ? `<span class="meta-tag">📍 LOC: <strong>${f.loc}</strong></span>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
+    // 6. Direct Action Handlers
+    function triggerPhoneCall(buyerId, phone) {
+      markBuyerAsContacted(buyerId);
+      if (phone && phone !== 'No Contact') {
+        window.location.href = `tel:${phone}`;
+      } else {
+        alert("No contact phone number recorded for this buyer.");
+      }
+    }
 
-function renderStock() {
-  const container = document.getElementById('list-stock');
-  if (!container) return;
-  const q = document.getElementById('search-stock')?.value || '';
+    function triggerWhatsApp(buyerId, buyerName, phone) {
+      const matchObj = window.lastPipelineMatches.find(m => m.buyerId === buyerId);
+      if (!matchObj || !matchObj.matchedItems.length) return;
 
-  let activeStock = filterBySalesman(store.stock);
-  let filtered = filterRecordsBySearch(activeStock, q);
+      // Compile ALL matched produce lines into one WhatsApp message body
+      const produceLines = matchObj.matchedItems
+        .map(item => `• ${item.commodity} (${item.pack || ''} Size:${item.size || '*'}) - ${item.qty} available`)
+        .join('\n');
 
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No stock records found</div>`;
-    return;
-  }
+      const msg = `Hello ${buyerName},\n\nWe have the following produce available for you today:\n${produceLines}\n\nAre you interested?`;
 
-  container.innerHTML = filtered.map(s => `
-    <div class="card-item" style="border-left:4px solid #1e4d2b;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#0f172a;">${s.producer}</div>
-          <div style="font-size:13px; font-weight:600; color:#1e4d2b; margin-top:2px;">🌿 ${formatCommodityDetails(s)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; font-size:16px; color:#1e4d2b;">${s.rawQtyDisplay}</div>
-          ${s.salesmanCode ? `<span class="badge">${s.salesmanCode}</span>` : ''}
-        </div>
-      </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${s.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${s.seq}</strong></span>
-        <span class="meta-tag">📅 ${s.date}</span>
-      </div>
-    </div>
-  `).join('');
-}
+      markBuyerAsContacted(buyerId);
 
-function renderColdstore() {
-  const container = document.getElementById('list-coldstore');
-  if (!container) return;
-  const q = (document.getElementById('search-coldstore')?.value || '').toLowerCase();
+      // Clean phone number format for WhatsApp web/app
+      let cleanPhone = String(phone).replace(/[^0-9]/g, '');
+      if (cleanPhone.startsWith('0')) cleanPhone = '27' + cleanPhone.slice(1);
 
-  let activeCold = filterBySalesman(store.coldstore);
-  let filtered = activeCold.filter(c => JSON.stringify(c).toLowerCase().includes(q));
+      const waUrl = cleanPhone 
+        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` 
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
 
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No coldstore records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(c => `
-    <div class="card-item" style="border-left:4px solid #0284c7;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-          <div style="font-weight:800;">${c.producer}</div>
-          <div style="font-size:12px; color:#0284c7; font-weight:700;">🌿 ${c.commodity || 'Coldstore Batch'}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-weight:800; color:#0284c7;">${c.rawQtyDisplay}</div>
-          ${c.salesmanCode ? `<span class="badge">${c.salesmanCode}</span>` : ''}
-        </div>
-      </div>
-      <div style="margin-top:8px;">
-        <span class="meta-tag">📄 GRN: <strong>${c.grn}</strong></span>
-        <span class="meta-tag">🔢 SEQ: <strong>${c.seq}</strong></span>
-        <span class="meta-tag">📅 ${c.date}</span>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderBuyers() {
-  const container = document.getElementById('list-buyers');
-  if (!container) return;
-  const q = (document.getElementById('search-buyers')?.value || '').toLowerCase();
-
-  let filtered = store.buyers.filter(b => (b.name || '').toLowerCase().includes(q) || String(b.phone || '').includes(q));
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No buyers found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(b => `
-    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center; border-left:4px solid #2563eb;">
-      <div>
-        <div style="font-weight:700;">${b.name}</div>
-        ${b.turnover ? `<div style="font-size:12px; color:#16a34a; font-weight:700;">R ${Number(b.turnover).toLocaleString('en-ZA')}</div>` : ''}
-      </div>
-      ${b.phone && b.phone !== 'No Contact' ? `<a href="tel:${b.phone}" style="font-weight:700; color:#2563eb; text-decoration:none;">📞 ${b.phone}</a>` : '<span style="color:#94a3b8; font-size:12px;">No Contact</span>'}
-    </div>
-  `).join('');
-}
-
-function renderOrders() {
-  const container = document.getElementById('list-orders');
-  if (!container) return;
-  if (store.orders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No active orders</div>`;
-    return;
-  }
-
-  container.innerHTML = store.orders.map(o => `
-    <div class="card-item" style="border-left:4px solid #334155;">
-      <div style="font-weight:700;">${o.buyer || o.client || o.name || 'Order Item'}</div>
-      <div style="font-size:12px; color:#64748b; margin-top:2px;">${o.details || o.commodity || 'Active Order'}</div>
-    </div>
-  `).join('');
-}
-
-function renderCommodities() {
-  const container = document.getElementById('list-commodities');
-  if (!container) return;
-
-  let set = new Set();
-  store.stock.concat(store.floor).forEach(i => {
-    if (i.commodity) set.add(i.commodity);
-  });
-
-  if (set.size === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8">No commodities found</div>`;
-    return;
-  }
-
-  container.innerHTML = Array.from(set).map(c => `
-    <div class="card-item" style="font-weight:700; border-left:4px solid #16a34a;">
-      🌿 ${c}
-    </div>
-  `).join('');
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  const user = localStorage.getItem(SK);
-  if (user) initApp(user);
-});
-</script>
+      window.open(waUrl, '_blank');
+    }
+  </script>
 </body>
 </html>
