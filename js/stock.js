@@ -5,9 +5,8 @@ let liveStockData = [];
 
 async function loadStockFromFirebase(user) {
   try {
-    const r = await fetch(FB_DB + '/stock/' + user + '.json?auth=' + FB_SECRET);
-    if (!r.ok) throw new Error('failed');
-    const d = await r.json();
+    const snapshot = await firebase.database().ref('stock/' + user).once('value');
+    const d = snapshot.val();
     liveStockData = Object.values(d || {}).map(firebaseToItem);
     filterStock();
   } catch (e) {
@@ -107,9 +106,8 @@ function renderStock(data) {
 
 async function loadAllStockForMatcher() {
   try {
-    const r = await fetch(FB_DB + '/stock.json?auth=' + FB_SECRET);
-    if (!r.ok) throw new Error();
-    const d = await r.json();
+    const snapshot = await firebase.database().ref('stock').once('value');
+    const d = snapshot.val();
     const all = [];
     for (const u in d || {}) {
       for (const e in d[u] || {}) {
