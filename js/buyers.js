@@ -29,13 +29,14 @@ function buildBuyerProfiles(history) {
   for (const h of history) {
     if (!h.buyer || h.buyer === 'UNKNOWN') continue;
     const nm = h.buyer;
-    if (!map[nm]) map[nm] = { name: nm, acc: h.account || '', txns: 0, spend: 0, prefs: {}, lastDate: '', dates: [] };
+    if (!map[nm]) map[nm] = { name: nm, acc: h.account || '', phone: h.phone || 'No Contact', txns: 0, spend: 0, prefs: {}, lastDate: '', dates: [] };
     const b = map[nm];
     const lt = Number(h.total) || (Number(h.price || 0) * Number(h.qty || 0)) || 0;
     b.txns++;
     b.spend += lt;
     if (h.date) b.dates.push(h.date);
     if (!b.acc && h.account) b.acc = h.account;
+    if (!b.phone && h.phone) b.phone = h.phone;
     if (!b.lastDate || h.date > b.lastDate) b.lastDate = h.date;
     const comm = h.commodity || 'UNK';
     if (!b.prefs[comm]) b.prefs[comm] = { comm: CN[comm] || comm, pack: PG[comm] || '', cls: 'CL ' + (h.cls || '1'), sizes: new Set(), txns: 0, totalQty: 0, revenue: 0 };
@@ -49,6 +50,7 @@ function buildBuyerProfiles(history) {
   return Object.values(map).map(b => ({
     name: b.name,
     acc: b.acc,
+    phone: b.phone,
     txns: b.txns,
     spend: Math.round(b.spend),
     lastDate: b.lastDate,
@@ -62,7 +64,7 @@ function buildBuyerProfiles(history) {
       revenue: Math.round(p.revenue),
       note: p.txns + ' txn' + (p.txns > 1 ? 's' : '') + ' · avg ' + Math.round(p.totalQty / p.txns) + ' units'
     }))
-  })).sort((a, b) => b.spend - a.spend);
+  })).sort((a, b) => b.spend - a.spend); // Sorted strictly highest revenue to lowest
 }
 
 function renderBuyers(data) {
@@ -88,9 +90,18 @@ function renderBuyers(data) {
     }).join('');
 
     return `<div style="background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden">
-      <div onclick="toggleSection('${bid}')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--moss);cursor:pointer">
-        <div><div style="font-weight:800;font-size:15px;color:#fff">${b.name}</div><div style="font-size:11px;color:rgba(255,255,255,0.65);margin-top:2px">Acc ${b.acc || '—'} · ${b.txns} txn${b.txns > 1 ? 's' : ''}${b.lastDate ? ' · ' + b.lastDate : ''}</div></div>
-        <div style="display:flex;align-items:center;gap:10px"><div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:6px 12px;text-align:center"><div style="font-size:18px;font-weight:800;color:#fff;line-height:1">R ${(b.spend || 0).toLocaleString()}</div><div style="font-size:9px;color:rgba(255,255,255,0.7);text-transform:uppercase">total spend</div></div><div id="arr-${bid}" style="color:#fff;font-size:14px;transition:transform .2s">▼</div></div>
+      <div onclick="toggleSection('${bid}')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#fff;border-bottom:1px solid var(--border);cursor:pointer">
+        <div>
+          <div style="font-weight:800;font-size:15px;color:var(--text)">${b.name}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Phone: ${b.phone} · ${b.txns} txn${b.txns > 1 ? 's' : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="background:var(--moss);border-radius:10px;padding:6px 12px;text-align:center">
+            <div style="font-size:15px;font-weight:800;color:#fff;line-height:1">R ${(b.spend || 0).toLocaleString()}</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.8);text-transform:uppercase">total spend</div>
+          </div>
+          <div id="arr-${bid}" style="color:var(--text);font-size:14px;transition:transform .2s">▼</div>
+        </div>
       </div>
       <div id="${bid}" style="display:none;padding:10px">${b.buyingDays ? renderDayBadges(b.buyingDays) : ''}${bt ? '<div style="margin:6px 0 10px">' + bt + '</div>' : ''}${ph}</div>
     </div>`;
@@ -99,5 +110,5 @@ function renderBuyers(data) {
 
 function filterBuyers() {
   const q = document.getElementById('buyer-search').value.toLowerCase();
-  renderBuyers(liveBuyerData.filter(b => b.name.toLowerCase().includes(q) || (b.acc && b.acc.includes(q))));
+  renderBuyers(liveBuyerData.filter(b => b.name.toLowerCase().includes(q) || (b.acc && b.acc.includes(q)) || (b.phone && b.phone.toLowerCase().includes(q))));
 }
