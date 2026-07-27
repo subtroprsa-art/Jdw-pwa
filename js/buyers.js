@@ -29,14 +29,13 @@ function buildBuyerProfiles(history) {
   for (const h of history) {
     if (!h.buyer || h.buyer === 'UNKNOWN') continue;
     const nm = h.buyer;
-    if (!map[nm]) map[nm] = { name: nm, acc: h.account || '', phone: h.phone || 'No Contact', txns: 0, spend: 0, prefs: {}, lastDate: '', dates: [] };
+    if (!map[nm]) map[nm] = { name: nm, acc: h.account || '', txns: 0, turnover: 0, prefs: {}, lastDate: '', dates: [] };
     const b = map[nm];
     const lt = Number(h.total) || (Number(h.price || 0) * Number(h.qty || 0)) || 0;
     b.txns++;
-    b.spend += lt;
+    b.turnover += lt;
     if (h.date) b.dates.push(h.date);
     if (!b.acc && h.account) b.acc = h.account;
-    if (!b.phone && h.phone) b.phone = h.phone;
     if (!b.lastDate || h.date > b.lastDate) b.lastDate = h.date;
     const comm = h.commodity || 'UNK';
     if (!b.prefs[comm]) b.prefs[comm] = { comm: CN[comm] || comm, pack: PG[comm] || '', cls: 'CL ' + (h.cls || '1'), sizes: new Set(), txns: 0, totalQty: 0, revenue: 0 };
@@ -50,9 +49,8 @@ function buildBuyerProfiles(history) {
   return Object.values(map).map(b => ({
     name: b.name,
     acc: b.acc,
-    phone: b.phone,
     txns: b.txns,
-    spend: Math.round(b.spend),
+    turnover: Math.round(b.turnover),
     lastDate: b.lastDate,
     avgFreq: calcAvgFreq(b.dates),
     buyingDays: calcBuyingDays(b.dates),
@@ -64,7 +62,7 @@ function buildBuyerProfiles(history) {
       revenue: Math.round(p.revenue),
       note: p.txns + ' txn' + (p.txns > 1 ? 's' : '') + ' · avg ' + Math.round(p.totalQty / p.txns) + ' units'
     }))
-  })).sort((a, b) => b.spend - a.spend); // Sorted strictly highest revenue to lowest
+  })).sort((a, b) => b.turnover - a.turnover); // Sorted strictly by highest turnover to lowest
 }
 
 function renderBuyers(data) {
@@ -93,12 +91,12 @@ function renderBuyers(data) {
       <div onclick="toggleSection('${bid}')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#fff;border-bottom:1px solid var(--border);cursor:pointer">
         <div>
           <div style="font-weight:800;font-size:15px;color:var(--text)">${b.name}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Phone: ${b.phone} · ${b.txns} txn${b.txns > 1 ? 's' : ''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Account: ${b.acc || '—'} · ${b.txns} txn${b.txns > 1 ? 's' : ''}${b.lastDate ? ' · Last: ' + b.lastDate : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <div style="background:var(--moss);border-radius:10px;padding:6px 12px;text-align:center">
-            <div style="font-size:15px;font-weight:800;color:#fff;line-height:1">R ${(b.spend || 0).toLocaleString()}</div>
-            <div style="font-size:9px;color:rgba(255,255,255,0.8);text-transform:uppercase">total spend</div>
+            <div style="font-size:15px;font-weight:800;color:#fff;line-height:1">R ${(b.turnover || 0).toLocaleString()}</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.8);text-transform:uppercase">total turnover</div>
           </div>
           <div id="arr-${bid}" style="color:var(--text);font-size:14px;transition:transform .2s">▼</div>
         </div>
@@ -110,5 +108,5 @@ function renderBuyers(data) {
 
 function filterBuyers() {
   const q = document.getElementById('buyer-search').value.toLowerCase();
-  renderBuyers(liveBuyerData.filter(b => b.name.toLowerCase().includes(q) || (b.acc && b.acc.includes(q)) || (b.phone && b.phone.toLowerCase().includes(q))));
+  renderBuyers(liveBuyerData.filter(b => b.name.toLowerCase().includes(q) || (b.acc && b.acc.toLowerCase().includes(q))));
 }
