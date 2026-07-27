@@ -158,7 +158,7 @@ try {
     <!-- SUB-PAGES -->
     <div class="page" id="page-buyers">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers or phone numbers..." oninput="renderBuyers()"/>
+      <input type="text" class="search-input" id="search-buyers" placeholder="🔍 Search buyers..." oninput="renderBuyers()"/>
       <div class="list-container" id="list-buyers">Loading buyers...</div>
     </div>
 
@@ -216,7 +216,6 @@ try {
 </div>
 
 <script>
-// ===== DICTIONARIES & LOOKUPS =====
 const COMM_MAP = {
   'AVOCADOS': 'AVOCADO', 'AVOS': 'AVOCADO', 'LEMONS': 'LEMONS', 'LEMS': 'LEMONS', 
   'FIGS': 'FIGS', 'KIWIFRUIT': 'KIWI', 'KIWI': 'KIWI', 'ORANGES': 'ORGS', 
@@ -266,13 +265,11 @@ function formatCommodityDetails(r) {
 function filterRecordsBySearch(records, query) {
   if (!query || !query.trim()) return records;
   const terms = query.toLowerCase().trim().split(/\s+/);
-
   return records.filter(r => {
     const searchableText = [
       r.producer, r.buyer, r.grn, r.seq, r.commodity, 
       r.variety, r.pack, r.size, r.salesmanCode
     ].join(' ').toLowerCase();
-
     return terms.every(term => searchableText.includes(term));
   });
 }
@@ -289,12 +286,8 @@ function extractRecords(node, defaultSalesman = '') {
 
     if (typeof obj === 'object' && obj !== null) {
       let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.user || obj._user || pathSalesman;
-
-      const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.quantity ?? obj.units ?? 
-                     obj.flr ?? obj.bags ?? obj.cartons ?? obj.count ?? obj.total;
-
+      const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.quantity ?? obj.units ?? obj.flr ?? obj.bags ?? obj.cartons ?? obj.count ?? obj.total;
       const rawAmount = obj.amount ?? obj.revenue ?? obj.price ?? obj.totalPrice ?? obj.randVal ?? 0;
-
       const commodity = obj.commodity || obj.product || obj.variety || obj.item || parentKeys.commodity || '';
       const producer = obj.producer || obj.producerName || obj.grower || obj.farmer || parentKeys.producer;
       const buyer = obj.buyer || obj.buyerName || parentKeys.buyer || '';
@@ -345,17 +338,14 @@ function extractRecords(node, defaultSalesman = '') {
   return records;
 }
 
-// ===== TOP 30 REVENUE MATCHING ENGINE =====
 function runPipelineMatching(stock, buyers, slips) {
   if (!stock || !stock.length) return [];
-
   const buyerMap = {};
 
   const masterBuyerPhoneMap = {};
   (buyers || []).forEach(b => {
     if (b.name) {
-      const cleanK = String(b.name).trim().toUpperCase();
-      masterBuyerPhoneMap[cleanK] = b.phone;
+      masterBuyerPhoneMap[String(b.name).trim().toUpperCase()] = b.phone;
     }
   });
 
@@ -372,40 +362,25 @@ function runPipelineMatching(stock, buyers, slips) {
   slips.forEach(slip => {
     const bName = slip.buyer;
     if (!bName) return;
-
     const key = String(bName).trim().toUpperCase();
     if (!buyerMap[key]) {
-      buyerMap[key] = { 
-        name: bName, 
-        revenue: 0, 
-        items: {}, 
-        phone: resolvePhone(bName, slip.phone) 
-      };
+      buyerMap[key] = { name: bName, revenue: 0, items: {}, phone: resolvePhone(bName, slip.phone) };
     }
-
     const rev = slip.revenue || ((slip.qty || 0) * (slip.price || 0));
     buyerMap[key].revenue += rev;
 
     const comm = normalizeCommodity(slip.commodity);
     const pack = normalizePack(slip.pack);
-
     if (comm) {
-      const prodKey = `${comm}||${pack}`;
-      buyerMap[key].items[prodKey] = { comm, pack };
+      buyerMap[key].items[`${comm}||${pack}`] = { comm, pack };
     }
   });
 
   buyers.forEach(b => {
     const key = String(b.name).trim().toUpperCase();
     const resolvedPhone = resolvePhone(b.name, b.phone);
-
     if (!buyerMap[key]) {
-      buyerMap[key] = { 
-        name: b.name, 
-        revenue: b.turnover || 0, 
-        items: {}, 
-        phone: resolvedPhone 
-      };
+      buyerMap[key] = { name: b.name, revenue: b.turnover || 0, items: {}, phone: resolvedPhone };
     } else {
       if (!buyerMap[key].revenue && b.turnover) buyerMap[key].revenue = b.turnover;
       buyerMap[key].phone = resolvedPhone;
@@ -416,8 +391,7 @@ function runPipelineMatching(stock, buyers, slips) {
         const comm = normalizeCommodity(typeof p === 'string' ? p : p.commodity);
         const pack = normalizePack(typeof p === 'object' ? p.pack : '');
         if (comm) {
-          const prodKey = `${comm}||${pack}`;
-          buyerMap[key].items[prodKey] = { comm, pack };
+          buyerMap[key].items[`${comm}||${pack}`] = { comm, pack };
         }
       });
     }
@@ -428,20 +402,16 @@ function runPipelineMatching(stock, buyers, slips) {
     .slice(0, 30);
 
   const pipelineMatches = [];
-
   sortedBuyers.forEach(buyer => {
     const distinctLines = new Set();
-
     stock.forEach(stockItem => {
       if ((stockItem.qty || 0) <= 0) return;
-
       const stockComm = normalizeCommodity(stockItem.commodity);
       const stockPack = normalizePack(stockItem.pack);
 
       Object.values(buyer.items).forEach(pref => {
         const commMatch = stockComm && (stockComm.includes(pref.comm) || pref.comm.includes(stockComm));
         const packMatch = !pref.pack || (stockPack === pref.pack);
-
         if (commMatch && packMatch) {
           let cleanLine = stockComm;
           if (stockPack) cleanLine += ` ${stockPack}`;
@@ -464,7 +434,6 @@ function runPipelineMatching(stock, buyers, slips) {
   return pipelineMatches;
 }
 
-// ===== CRM APP STATE & LOGIC =====
 let currentSalesman = 'ALL';
 let store = { stock: [], floor: [], coldstore: [], buyers: [], orders: [] };
 window.contactedBuyers = window.contactedBuyers || {};
@@ -559,38 +528,24 @@ function startFirebaseListener() {
     Object.keys(rawPhones).forEach(key => {
       const val = rawPhones[key];
       if (val) {
-        const cleanK = String(key).toUpperCase().replace(/[^A-Z0-9]/g, '');
-        window.phoneMap[cleanK] = String(val).trim();
+        window.phoneMap[String(key).toUpperCase().replace(/[^A-Z0-9]/g, '')] = String(val).trim();
       }
     });
 
-   window.getBuyerPhone = (name) => {
+    window.getBuyerPhone = (name) => {
       if (!name) return 'No Contact';
       const cleanTarget = String(name).toUpperCase().replace(/[^A-Z0-9]/g, '');
-
       if (window.phoneMap[cleanTarget]) return window.phoneMap[cleanTarget];
-
       const keys = Object.keys(window.phoneMap);
-      
-      // 1. Check if any database key contains the target or vice versa
       const matchedKey = keys.find(k => k.includes(cleanTarget) || cleanTarget.includes(k));
       if (matchedKey) return window.phoneMap[matchedKey];
-
-      // 2. Check individual words (e.g. if buyer is "ACHMAT" and phone key is "MUSTAFA AGMAT")
-      const words = cleanTarget.split(/[^A-Z0-9]+/).filter(w => w.length > 3);
-      for (let word of words) {
-        const wordMatch = keys.find(k => k.includes(word));
-        if (wordMatch) return window.phoneMap[wordMatch];
-      }
-
       return 'No Contact';
     };
 
     const buyersMap = {};
 
     Object.keys(rawPrefs).forEach(k => {
-      const cleanKey = String(k).trim().toUpperCase();
-      buyersMap[cleanKey] = { 
+      buyersMap[String(k).trim().toUpperCase()] = { 
         name: k, 
         phone: window.getBuyerPhone(k), 
         prefs: rawPrefs[k], 
@@ -598,7 +553,8 @@ function startFirebaseListener() {
       };
     });
 
-    (store.orders || []).forEach(o => {
+    // Compute turnover entirely from orders/slips regardless of contact info
+    store.orders.forEach(o => {
       if (o.buyer) {
         const cleanKey = String(o.buyer).trim().toUpperCase();
         if (!buyersMap[cleanKey]) {
@@ -609,10 +565,11 @@ function startFirebaseListener() {
             turnover: 0
           };
         }
+        buyersMap[cleanKey].turnover += (o.revenue || (o.qty * o.price) || 0);
       }
     });
 
-    store.buyers = Object.values(buyersMap);
+    store.buyers = Object.values(buyersMap).sort((a, b) => b.turnover - a.turnover);
 
     updateDashboardKPIs();
     renderBuyers();
@@ -716,14 +673,12 @@ function triggerPhoneCall(buyerId, phone) {
 
 function triggerWhatsApp(buyerId, buyerName, phone) {
   const matchObj = (window.lastPipelineMatches || []).find(m => m.buyerId === buyerId);
-  
   let produceList = '';
   if (matchObj && matchObj.matchedLines && matchObj.matchedLines.length > 0) {
     produceList = matchObj.matchedLines.map(line => `• ${line}`).join('\n');
   }
 
   let msg = `Good day ${buyerName}, we have fresh produce available for you today:\n\n${produceList}\n\nAre you interested?`;
-
   markBuyerAsContacted(buyerId);
 
   let cleanPhone = String(phone).replace(/[^0-9]/g, '');
@@ -750,14 +705,14 @@ function updateDashboardKPIs() {
   if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '38%' : '0%';
 }
 
+// Render buyers sorted strictly by turnover and showing revenue
 function renderBuyers() {
   const container = document.getElementById('list-buyers');
   if (!container) return;
   const q = (document.getElementById('search-buyers')?.value || '').toLowerCase();
 
   const filtered = (store.buyers || []).filter(b => 
-    String(b.name).toLowerCase().includes(q) || 
-    String(b.phone).toLowerCase().includes(q)
+    String(b.name).toLowerCase().includes(q)
   );
 
   if (filtered.length === 0) {
@@ -766,9 +721,15 @@ function renderBuyers() {
   }
 
   container.innerHTML = filtered.map(b => `
-    <div class="card-item">
-      <div style="font-weight:700; font-size:15px; color:#0f172a;">${b.name}</div>
-      <div style="font-size:13px; color:#64748b; margin-top:2px;">Phone: ${b.phone || 'No Contact'}</div>
+    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-weight:700; font-size:15px; color:#0f172a;">${b.name}</div>
+        <div style="font-size:12px; color:#64748b; margin-top:2px;">Phone: ${b.phone || 'No Contact'}</div>
+      </div>
+      <div style="background:#1e4d2b; color:#fff; padding:6px 12px; border-radius:8px; text-align:right;">
+        <div style="font-size:14px; font-weight:800;">R ${(b.turnover || 0).toLocaleString('en-ZA')}</div>
+        <div style="font-size:9px; color:#86efac; text-transform:uppercase;">Turnover</div>
+      </div>
     </div>
   `).join('');
 }
@@ -777,7 +738,6 @@ function renderStock() {
   const container = document.getElementById('list-stock');
   if (!container) return;
   const q = (document.getElementById('search-stock')?.value || '');
-
   const active = filterBySalesman(store.stock);
   const filtered = filterRecordsBySearch(active, q);
 
@@ -802,7 +762,6 @@ function renderFloor() {
   const container = document.getElementById('list-floor');
   if (!container) return;
   const q = (document.getElementById('search-floor')?.value || '');
-
   const active = filterBySalesman(store.floor);
   const filtered = filterRecordsBySearch(active, q);
 
@@ -818,9 +777,7 @@ function renderFloor() {
         <span>${r.rawQtyDisplay}</span>
       </div>
       <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
-        GRN: ${r.grn || '---'} | Seq: <strong>${r.seq || '---'}</strong> | Aging: <strong>${r.days !== undefined ? r.days + ' days' : '---'}</strong> | Salesman: ${r.salesmanCode || 'ALL'}
-      </div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
     </div>
   `).join('');
 }
@@ -829,12 +786,11 @@ function renderColdstore() {
   const container = document.getElementById('list-coldstore');
   if (!container) return;
   const q = (document.getElementById('search-coldstore')?.value || '');
-
   const active = filterBySalesman(store.coldstore);
   const filtered = filterRecordsBySearch(active, q);
 
   if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No coldstore inventory found</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No coldstore records found</div>`;
     return;
   }
 
@@ -845,6 +801,7 @@ function renderColdstore() {
         <span>${r.rawQtyDisplay}</span>
       </div>
       <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
     </div>
   `).join('');
 }
@@ -852,21 +809,21 @@ function renderColdstore() {
 function renderOrders() {
   const container = document.getElementById('list-orders');
   if (!container) return;
-
   const active = filterBySalesman(store.orders);
+
   if (active.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No orders or slips recorded</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No recent orders or sales slips found</div>`;
     return;
   }
 
-  container.innerHTML = active.slice(0, 50).map(o => `
+  container.innerHTML = active.slice(0, 50).map(r => `
     <div class="card-item">
       <div style="display:flex; justify-content:space-between; font-weight:700;">
-        <span>Buyer: ${o.buyer || 'Unknown'}</span>
-        <span>R ${parseNumber(o.revenue).toLocaleString()}</span>
+        <span>Buyer: ${r.buyer || 'Walking Customer'}</span>
+        <span>R ${(r.revenue || 0).toLocaleString('en-ZA')}</span>
       </div>
-      <div style="font-size:13px; color:#475569; margin-top:4px;">${o.commodity || 'Item'} (${o.qty || 0} units)</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Date: ${o.date || '—'}</div>
+      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)} — Qty: ${r.qty}</div>
+      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Date: ${r.date} | Salesman: ${r.salesmanCode || 'ALL'}</div>
     </div>
   `).join('');
 }
@@ -874,28 +831,44 @@ function renderOrders() {
 function renderCommodities() {
   const container = document.getElementById('list-commodities');
   if (!container) return;
+  const commMap = {};
 
-  const active = filterBySalesman(store.stock.concat(store.floor));
-  const comms = {};
-  active.forEach(item => {
-    const c = normalizeCommodity(item.commodity);
-    if (c) comms[c] = (comms[c] || 0) + (item.qty || 0);
+  (store.stock || []).concat(store.floor || []).forEach(item => {
+    const c = normalizeCommodity(item.commodity) || 'OTHER';
+    if (!commMap[c]) commMap[c] = { totalUnits: 0, varieties: new Set() };
+    commMap[c].totalUnits += (item.qty || 0);
+    if (item.variety && item.variety !== '*') commMap[c].varieties.add(item.variety);
   });
 
-  const keys = Object.keys(comms);
+  const keys = Object.keys(commMap);
   if (keys.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No commodities found</div>`;
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No commodities data available</div>`;
     return;
   }
 
   container.innerHTML = keys.map(c => `
-    <div class="card-item" style="display:flex; justify-content:space-between; font-weight:700;">
-      <span>🌿 ${c}</span>
-      <span style="color:#16a34a;">${comms[c].toLocaleString()} units</span>
+    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-weight:700; font-size:15px; color:#0f172a;">${c}</div>
+        <div style="font-size:12px; color:#64748b; margin-top:2px;">Varieties: ${Array.from(commMap[c].varieties).join(', ') || 'Standard'}</div>
+      </div>
+      <div style="font-weight:800; font-size:16px; color:#1e4d2b;">
+        ${commMap[c].totalUnits.toLocaleString('en-ZA')} units
+      </div>
     </div>
   `).join('');
 }
-</script>
 
+window.addEventListener('DOMContentLoaded', () => {
+  const savedUser = localStorage.getItem(SK);
+  if (savedUser) {
+    const foundUserEntry = Object.entries(USERS).find(([k, v]) => v.display === savedUser);
+    if (foundUserEntry) {
+      currentSalesman = foundUserEntry[1].code;
+    }
+    initApp(savedUser);
+  }
+});
+</script>
 </body>
 </html>
