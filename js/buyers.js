@@ -31,7 +31,10 @@ function buildBuyerProfiles(history) {
     const nm = h.buyer;
     if (!map[nm]) map[nm] = { name: nm, acc: h.account || '', txns: 0, turnover: 0, prefs: {}, lastDate: '', dates: [] };
     const b = map[nm];
-    const lt = Number(h.total) || (Number(h.price || 0) * Number(h.qty || 0)) || 0;
+    
+    // Fallback chain to catch total, priceSum, revenue, or compute from price * qty
+    const lt = Number(h.pricesSum) || Number(h.total) || Number(h.revenue) || (Number(h.price || 0) * Number(h.qty || 0)) || 0;
+    
     b.txns++;
     b.turnover += lt;
     if (h.date) b.dates.push(h.date);
@@ -62,7 +65,7 @@ function buildBuyerProfiles(history) {
       revenue: Math.round(p.revenue),
       note: p.txns + ' txn' + (p.txns > 1 ? 's' : '') + ' · avg ' + Math.round(p.totalQty / p.txns) + ' units'
     }))
-  })).sort((a, b) => b.turnover - a.turnover); // Sorted strictly by highest turnover to lowest
+  })).sort((a, b) => b.turnover - a.turnover);
 }
 
 function renderBuyers(data) {
