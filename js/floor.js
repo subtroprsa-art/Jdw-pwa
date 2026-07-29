@@ -6,16 +6,9 @@ let allLiveFloorData = [];
 async function loadFloorFromFirebase(user) {
   const el = document.getElementById('floor-list');
   if (el) el.innerHTML = '<div class="empty">Loading...</div>';
-  
-  const dbKeyMap = {
-    'CDW': 'christoff.dewet',
-    'RJ': 'riaan.joubert',
-    'POT': 'POT'
-  };
-  const targetUser = dbKeyMap[user] || user;
 
   try {
-    const snapshot = await firebase.database().ref('floorBalance/' + targetUser).once('value');
+    const snapshot = await firebase.database().ref('floorBalance/' + user).once('value');
     const d = snapshot.val();
     if (!d) { el.innerHTML = '<div class="empty">No floor balance data for ' + user + '.</div>'; return; }
     liveFloorData = Object.values(d);
