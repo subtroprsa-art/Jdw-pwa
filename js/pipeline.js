@@ -280,21 +280,26 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock (Checking multiple global references safely)
+  // 1. Gather Stock - explicitly checking all potential global arrays and window properties
   let rawStock = [];
-  if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
+  if (window.allStockData && window.allStockData.length) {
     rawStock = window.allStockData;
   } else if (window.allLiveStockData && window.allLiveStockData.length) {
     rawStock = window.allLiveStockData;
+  } else if (typeof allStockData !== 'undefined' && allStockData.length) {
+    rawStock = allStockData;
   }
+  
   let stock = rawStock.filter(s => getStockQty(s) > 0);
 
   // 2. Gather Buyers
   let buyers = [];
-  if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
+  if (window.allBuyers && window.allBuyers.length) {
     buyers = window.allBuyers;
   } else if (window.liveBuyerData && window.liveBuyerData.length) {
     buyers = window.liveBuyerData;
+  } else if (typeof allBuyers !== 'undefined' && allBuyers.length) {
+    buyers = allBuyers;
   }
 
   // Fallback direct Firebase fetch if arrays are still empty
@@ -310,6 +315,7 @@ async function runAIMatch() {
       });
       stock = items.filter(s => getStockQty(s) > 0);
       window.allStockData = stock;
+      window.allLiveStockData = stock;
     } catch (e) {
       console.error('Fallback stock fetch error:', e);
     }
@@ -321,6 +327,7 @@ async function runAIMatch() {
       const rawB = buyerSnap.val() || {};
       buyers = Array.isArray(rawB) ? rawB : Object.values(rawB);
       window.allBuyers = buyers;
+      window.liveBuyerData = buyers;
     } catch (e) {
       console.error('Fallback buyer fetch error:', e);
     }
