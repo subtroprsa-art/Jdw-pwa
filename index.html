@@ -12,12 +12,12 @@
 <script>
 const USERS = {
   'riaan.joubert': { display: 'Riaan Joubert', code: 'RJ', pw: 'rsasubtrop2026' },
-  'christoff.dewet': { display: 'Christoff de Wet', code: 'CW', pw: 'rsasubtrop2026' }
+  'christoff.dewet': { display: 'Christoff de Wet', code: 'CDW', pw: 'rsasubtrop2026' }
 };
 const SALESMEN = [
   { code: 'ALL', name: 'All Salesmen' },
   { code: 'RJ', name: 'Riaan Joubert (RJ)' },
-  { code: 'CW', name: 'Christoff de Wet (CW)' },
+  { code: 'CDW', name: 'Christoff de Wet (CDW)' },
   { code: 'POT', name: 'Potgieter (POT)' }
 ];
 const SK = 'st_sess';
@@ -224,7 +224,7 @@ try {
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div class="sub-tabs">
         <button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ', this)">RJ</button>
-        <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW', this)">CW</button>
+        <button class="stock-tab" id="tab-CDW" onclick="switchStockTab('CDW', this)">CDW</button>
         <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT', this)">POT</button>
       </div>
       <div style="display:flex; gap:8px; margin-bottom:12px;">
@@ -252,9 +252,9 @@ try {
     <div class="page" id="page-floor">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div class="sub-tabs">
-        <button class="floor-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ')">RJ</button>
-        <button class="floor-tab" id="ftab-CW" onclick="switchFloorTab('CW')">CW</button>
-        <button class="floor-tab" id="ftab-POT" onclick="switchFloorTab('POT')">POT</button>
+        <button class="floor-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ', this)">RJ</button>
+        <button class="floor-tab" id="ftab-CDW" onclick="switchFloorTab('CDW', this)">CDW</button>
+        <button class="floor-tab" id="ftab-POT" onclick="switchFloorTab('POT', this)">POT</button>
       </div>
       <div style="display:flex; gap:8px; margin-bottom:12px;">
         <select id="floor-filter" class="search-input" style="margin-bottom:0;" onchange="filterFloor()">
