@@ -156,7 +156,7 @@ function renderPipelineBuyers() {
   
   const todayKey = 'pipeline-calls-' + new Date().toISOString().slice(0, 10);
   const called = JSON.parse(localStorage.getItem(todayKey) || '{}');
-  const buyers = window.liveBuyerData || [];
+  const buyers = (window.allBuyers && window.allBuyers.length) ? window.allBuyers : (window.liveBuyerData || []);
   const todayDow = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
 
   if (!buyers.length) {
@@ -164,7 +164,7 @@ function renderPipelineBuyers() {
     return;
   }
 
-  const stock = window.allLiveStockData || [];
+  const stock = (window.allStockData && window.allStockData.length) ? window.allStockData : (window.allLiveStockData || []);
   const scored = buyers.map(b => {
     let he = 0;
     if (b.prefs) b.prefs.forEach(p => {
@@ -277,50 +277,45 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock (Prioritize window variables loaded by stock.js, then pipeline fallback)
-  let stock = [];
+  // 1. Gather Stock (Prioritize window.allStockData from stock.js, then window.allLiveStockData)
+  let rawStock = [];
   if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
-    stock = window.allStockData.filter(s => getStockQty(s) > 0);
+    rawStock = window.allStockData;
+  } else if (window.allLiveStockData && window.allLiveStockData.length) {
+    rawStock = window.allLiveStockData;
   }
-  if (!stock.length && window.allLiveStockData && window.allLiveStockData.length) {
-    stock = window.allLiveStockData.filter(s => getStockQty(s) > 0);
+  let stock = rawStock.filter(s => getStockQty(s) > 0);
+
+  // 2. Gather Buyers (Prioritize window.allBuyers from buyers.js, then window.liveBuyerData)
+  let buyers = [];
+  if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
+    buyers = window.allBuyers;
+  } else if (window.liveBuyerData && window.liveBuyerData.length) {
+    buyers = window.liveBuyerData;
   }
 
+  // Fallback direct Firebase fetch if data hasn't populated globally yet
   if (!stock.length && typeof firebase !== 'undefined') {
     try {
       const stockSnap = await firebase.database().ref('stock').once('value');
-      const rawStock = stockSnap.val() || {};
+      const raw = stockSnap.val() || {};
       let items = [];
-      if (Array.isArray(rawStock)) {
-        items = rawStock;
-      } else {
-        Object.keys(rawStock).forEach(key => {
-          if (Array.isArray(rawStock[key])) items = items.concat(rawStock[key]);
-          else if (typeof rawStock[key] === 'object') items = items.concat(Object.values(rawStock[key]));
-        });
-      }
-      window.allLiveStockData = items;
+      if (Array.isArray(raw)) items = raw;
+      else Object.keys(raw).forEach(key => {
+        if (Array.isArray(raw[key])) items = items.concat(raw[key]);
+        else if (typeof raw[key] === 'object') items = items.concat(Object.values(raw[key]));
+      });
       stock = items.filter(s => getStockQty(s) > 0);
     } catch (e) {
       console.error('Fallback stock fetch error:', e);
     }
   }
 
-  // 2. Gather Buyers (Prioritize window variables loaded by buyers.js, then pipeline fallback)
-  let buyers = [];
-  if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
-    buyers = window.allBuyers;
-  }
-  if (!buyers.length && window.liveBuyerData && window.liveBuyerData.length) {
-    buyers = window.liveBuyerData;
-  }
-
   if (!buyers.length && typeof firebase !== 'undefined') {
     try {
       const buyerSnap = await firebase.database().ref('buyers').once('value');
-      const rawBuyers = buyerSnap.val() || {};
-      buyers = Array.isArray(rawBuyers) ? rawBuyers : Object.values(rawBuyers);
-      window.liveBuyerData = buyers;
+      const rawB = buyerSnap.val() || {};
+      buyers = Array.isArray(rawB) ? rawB : Object.values(rawB);
     } catch (e) {
       console.error('Fallback buyer fetch error:', e);
     }
