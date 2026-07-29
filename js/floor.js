@@ -6,8 +6,16 @@ let allLiveFloorData = [];
 async function loadFloorFromFirebase(user) {
   const el = document.getElementById('floor-list');
   if (el) el.innerHTML = '<div class="empty">Loading...</div>';
+  
+  const dbKeyMap = {
+    'CDW': 'christoff.dewet',
+    'RJ': 'riaan.joubert',
+    'POT': 'POT'
+  };
+  const targetUser = dbKeyMap[user] || user;
+
   try {
-    const snapshot = await firebase.database().ref('floorBalance/' + user).once('value');
+    const snapshot = await firebase.database().ref('floorBalance/' + targetUser).once('value');
     const d = snapshot.val();
     if (!d) { el.innerHTML = '<div class="empty">No floor balance data for ' + user + '.</div>'; return; }
     liveFloorData = Object.values(d);
@@ -87,7 +95,7 @@ function renderFloor(data) {
     byProd[p].push(s);
   });
 
-  const CN = { AVOS: 'Avocados', LEMS: 'Lemons', ORGS: 'Oranges', KIWI: 'Kiwifruit', FIGS: 'Figs', GVS: 'Guavas', CLTM: 'Clementines', NAAR: 'Naartjies', STRS: 'Strawberries', MANG: 'Mangoes', DRAG: 'Dragon Fruit', GFT: 'Grapefruit', SATS: 'Satsumas', NOVA: 'Nova', POME: 'Pomegranate' };
+  const CN = { AVOS: 'Avocados', LEMS: 'Lemons', ORGS: 'Oranges', KIWI: 'Kiwifruit', FIGS: 'Figs', GVS: 'Guavas', CLTM: 'Clementines', NAAR: 'Naartjies', STRS: 'Strawberries', MANG: 'Mangoes', DRAG: 'Dragon Fruit', GFT: 'Grapefruit', SATS: 'Satsumas', NOVA: 'Nova', POME: 'Pomegranate', PAPO: 'Papino' };
   const PN = { TR040: '4KG Tray', BG150: '15KG Bag', CTT150: '15KG Carton', PTB005: '500G Punnet', PTB002: '160G Punnet', DL076: 'DL076', PC030: '3KG Pocket', PC060: '6KG Pocket', CO100: '10KG Carton' };
   const VN = { AF: 'Fuerte', AH: 'Hass', AK: 'Pinkerton', MA: 'Maluma', MAH: 'Maluma', AX: 'Mixed', NV: 'Navel', CN: 'Cara Cara', MD: 'Mendez' };
 
