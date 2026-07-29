@@ -73,7 +73,6 @@ try {
   .list-container { display: flex; flex-direction: column; gap: 8px; }
   .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease; }
 
-  /* Sub-tab navigation bars for stock/floor */
   .sub-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
   .stock-tab, .floor-tab { background: #fff; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: #475569; }
   .stock-tab.active, .floor-tab.active { background: #1e4d2b; color: #fff; border-color: #1e4d2b; }
@@ -147,6 +146,18 @@ try {
         <div class="kpi-card" style="border-top: 4px solid #d97706;">
           <div class="kpi-lbl">ACTIVE BUYERS</div>
           <div class="kpi-val" id="kpi-buyers">0</div>
+        </div>
+      </div>
+
+      <!-- Extra dashboard metrics targets often read by dashboard.js -->
+      <div class="kpi-grid" style="margin-bottom: 12px;">
+        <div class="kpi-card" style="border-top: 4px solid #0d9488;">
+          <div class="kpi-lbl">TOTAL REVENUE</div>
+          <div class="kpi-val" id="kpi-revenue">R0</div>
+        </div>
+        <div class="kpi-card" style="border-top: 4px solid #7c3aed;">
+          <div class="kpi-lbl">TOTAL STOCK</div>
+          <div class="kpi-val" id="kpi-total-stock">0</div>
         </div>
       </div>
 
