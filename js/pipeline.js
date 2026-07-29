@@ -40,11 +40,18 @@ function createMatcher(stockLines, historicalTrends = {}) {
         matchBuyerPreferences(buyer) {
             const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
             const buyerTurnover = Number(buyer.turnover) || 0;
-            const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || [];
+            
+            // Combine explicit preferences AND keys from historical trends for this buyer
+            const explicitPrefs = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || [];
+            const buyerHistory = historicalTrends[buyerName] || {};
+            const historyKeys = Object.keys(buyerHistory);
+            
+            // Merge both lists uniquely
+            const allPrefsSet = new Set([...explicitPrefs, ...historyKeys]);
             const matchedResults = [];
             const matchedCommoditiesThisBuyer = new Set();
 
-            preferences.forEach(pref => {
+            allPrefsSet.forEach(pref => {
                 const rawComm = typeof pref === 'object' ? (pref.comm || pref.commodity || pref.name || '') : pref;
                 const mappedComm = normalizeString(rawComm);
                 
@@ -53,12 +60,10 @@ function createMatcher(stockLines, historicalTrends = {}) {
 
                 let candidates = exactStockIndex.get(exactSearchKey) || [];
 
-                // Fallback 1: Base stock index
                 if (candidates.length === 0) {
                     candidates = baseStockIndex.get(baseSearchKey) || [];
                 }
 
-                // Fallback 2: Substring / Fuzzy match across all stock lines
                 if (candidates.length === 0 && exactSearchKey.length > 2) {
                     stockArray.forEach(stock => {
                         const stockComm = normalizeString(stock.commodity || stock.comm || stock.name || '');
@@ -69,7 +74,6 @@ function createMatcher(stockLines, historicalTrends = {}) {
                     });
                 }
 
-                const buyerHistory = historicalTrends[buyerName] || {};
                 const itemHistoryScore = buyerHistory[rawComm] || 1.0;
 
                 if (candidates.length > 0 && !matchedCommoditiesThisBuyer.has(rawComm)) {
