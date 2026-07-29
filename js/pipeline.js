@@ -32,28 +32,33 @@ function syncPipelineData() {
     }
 
     window.allLiveStockData = items;
-    window.allStockData = items; // Keep both global stock trackers synced
+    window.allStockData = items;
     console.log("✅ Pipeline Live Stock Synced:", window.allLiveStockData.length, "lines");
   }, err => console.error("Stock sync error:", err));
 
-  // Synchronize Live Buyer Data
+  // Synchronize Live Buyer Data (Robust object/array conversion)
   firebase.database().ref('buyers').on('value', snapshot => {
     const raw = snapshot.val() || {};
-    let buyers = Array.isArray(raw) ? raw : Object.values(raw);
+    let buyers = [];
+    
+    if (Array.isArray(raw)) {
+      buyers = raw;
+    } else if (raw && typeof raw === 'object') {
+      buyers = Object.values(raw).map(val => {
+        // If values are nested objects wrapping the buyer profile
+        if (val && typeof val === 'object' && !val.name && !val.prefs) {
+          const innerVals = Object.values(val);
+          if (innerVals.length && typeof innerVals[0] === 'object') return innerVals[0];
+        }
+        return val;
+      }).filter(Boolean);
+    }
     
     window.liveBuyerData = buyers;
     window.allBuyers = buyers;
     console.log("✅ Pipeline Live Buyers Synced:", window.liveBuyerData.length, "buyers");
   }, err => console.error("Buyer sync error:", err));
 }
-
-// Start watching Firebase
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  syncPipelineData();
-} else {
-  document.addEventListener('DOMContentLoaded', syncPipelineData);
-}
-
 // Helper function to safely read available quantity across different payload structures
 function getStockQty(s) {
   if (!s) return 0;
