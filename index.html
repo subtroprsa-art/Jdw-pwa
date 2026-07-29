@@ -78,6 +78,11 @@ try {
   .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
   .login-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
   .login-submit { background: #1e4d2b; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  
+  /* Support for auth.js error display toggle */
+  #login-error { display: none; color: #b91c1c; font-size: 12px; font-weight: 600; }
+  #login-error.show { display: block; }
+
   .page { display: none; }
   .page.active { display: block; }
 </style>
@@ -95,6 +100,10 @@ try {
       <label style="font-size: 12px; font-weight: 700;">Password</label>
       <input type="password" id="login-pass" class="login-input" autocomplete="current-password"/>
     </div>
+    
+    <!-- Added error element expected by auth.js -->
+    <div id="login-error"></div>
+
     <button type="submit" class="login-submit">Sign In</button>
   </form>
 </div>
