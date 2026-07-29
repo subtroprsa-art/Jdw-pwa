@@ -261,7 +261,7 @@ function togglePipelineOrderState(el) {
   if (stateKey.includes('packed')) renderPipelineOrders('pipeline-packers', 'packers');
 }
 
-function runAIMatch() {
+async function runAIMatch() {
   console.log('Running match...');
   const btn = document.getElementById('ai-match-btn');
   const ld = document.getElementById('ai-loading');
@@ -277,8 +277,40 @@ function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  const stock = window.allLiveStockData ? window.allLiveStockData.filter(s => getStockQty(s) > 0) : [];
-  const buyers = window.liveBuyerData || [];
+  // 1. Gather Stock (with direct Firebase fallback if window global is empty)
+  let stock = window.allLiveStockData ? window.allLiveStockData.filter(s => getStockQty(s) > 0) : [];
+  if (!stock.length && typeof firebase !== 'undefined') {
+    try {
+      const stockSnap = await firebase.database().ref('stock').once('value');
+      const rawStock = stockSnap.val() || {};
+      let items = [];
+      if (Array.isArray(rawStock)) {
+        items = rawStock;
+      } else {
+        Object.keys(rawStock).forEach(key => {
+          if (Array.isArray(rawStock[key])) items = items.concat(rawStock[key]);
+          else if (typeof rawStock[key] === 'object') items = items.concat(Object.values(rawStock[key]));
+        });
+      }
+      window.allLiveStockData = items;
+      stock = items.filter(s => getStockQty(s) > 0);
+    } catch (e) {
+      console.error('Fallback stock fetch error:', e);
+    }
+  }
+
+  // 2. Gather Buyers (with direct Firebase fallback if window global is empty)
+  let buyers = window.liveBuyerData || [];
+  if (!buyers.length && typeof firebase !== 'undefined') {
+    try {
+      const buyerSnap = await firebase.database().ref('buyers').once('value');
+      const rawBuyers = buyerSnap.val() || {};
+      buyers = Array.isArray(rawBuyers) ? rawBuyers : Object.values(rawBuyers);
+      window.liveBuyerData = buyers;
+    } catch (e) {
+      console.error('Fallback buyer fetch error:', e);
+    }
+  }
 
   console.log('Stock lines for matching:', stock.length);
   console.log('Buyers for matching:', buyers.length);
