@@ -15,6 +15,11 @@ function getBaseCommodity(str) {
     return norm;
 }
 
+// Global bridge function to catch the button click error: "runAIFromPipeline is not defined"
+function runAIFromPipeline(stockLines, buyers, historicalTrends = {}) {
+    return runComprehensiveMatching(stockLines, buyers, historicalTrends);
+}
+
 function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
     console.log(`Running match...`);
     console.log(`Stock lines for matching: ${stockLines ? stockLines.length : 0}`);
@@ -25,18 +30,15 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
         return [];
     }
 
-    // Inspect the first item so you can see what keys your database is actually using in the console
     console.log("--- DEBUG INSPECT ---");
     console.log("First stock line sample:", stockLines[0]);
     console.log("First buyer sample:", buyers[0]);
     console.log("---------------------");
 
-    // Build lookup indexes supporting multiple common property names
     const exactStockIndex = new Map();
     const baseStockIndex = new Map();
 
     stockLines.forEach(stock => {
-        // Checking all potential field names where the commodity name might be stored
         const rawComm = stock.commodity || stock.comm || stock.name || stock.item || stock.description || stock.produce || '';
         const exactKey = normalizeString(rawComm);
         const baseKey = getBaseCommodity(rawComm);
@@ -59,7 +61,6 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
     const matchResults = [];
     let totalMatchesFound = 0;
 
-    // Evaluate buyer preferences against stock indexes
     buyers.forEach(buyer => {
         const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
         const preferences = buyer.preferences || buyer.commPreferences || buyer.items || [];
@@ -73,15 +74,12 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
 
             console.log(`Checking preference for ${buyerName}: comm="${rawComm}" -> mapped="${mappedComm}"`);
 
-            // Tier 1: Exact match
             let candidates = exactStockIndex.get(exactSearchKey) || [];
 
-            // Tier 2: Singular/plural base match (e.g., Oranges vs ORANGE)
             if (candidates.length === 0) {
                 candidates = baseStockIndex.get(baseSearchKey) || [];
             }
 
-            // Tier 3: Substring fallback search
             if (candidates.length === 0) {
                 exactStockIndex.forEach((stockArray, stockKey) => {
                     if (stockKey && exactSearchKey && (stockKey.includes(exactSearchKey) || exactSearchKey.includes(stockKey))) {
