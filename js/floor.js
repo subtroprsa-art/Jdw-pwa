@@ -9,7 +9,7 @@ async function loadFloorFromFirebase(user) {
   try {
     const snapshot = await firebase.database().ref('floorBalance/' + user).once('value');
     const d = snapshot.val();
-    if (!d) { el.innerHTML = '<div class="empty">No floor balance data.</div>'; return; }
+    if (!d) { el.innerHTML = '<div class="empty">No floor balance data for ' + user + '.</div>'; return; }
     liveFloorData = Object.values(d);
     allLiveFloorData = [];
     populateFloorFilter(liveFloorData);
@@ -20,10 +20,10 @@ async function loadFloorFromFirebase(user) {
 }
 
 function switchFloorTab(user, btn) {
-  document.querySelectorAll('.stock-tab').forEach(b => {
+  document.querySelectorAll('.floor-tab').forEach(b => {
     if (b.id && b.id.startsWith('ftab-')) b.classList.remove('active');
   });
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   liveFloorData = [];
   const el = document.getElementById('floor-list');
   if (el) el.innerHTML = '<div class="empty">Loading...</div>';
