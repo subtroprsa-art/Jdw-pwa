@@ -107,7 +107,6 @@ try {
   .page { display: none; }
   .page.active { display: block; }
 
-  /* Pipeline Specific Styling */
   .pipeline-step-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); border-left: 4px solid var(--border); }
   .pipeline-step-card.done { border-left-color: var(--sage); background: #fafdfa; }
   .pipeline-step-hdr { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
@@ -252,9 +251,9 @@ try {
     <div class="page" id="page-floor">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
       <div class="sub-tabs">
-        <button class="floor-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ', this)">RJ</button>
-        <button class="floor-tab" id="ftab-CDW" onclick="switchFloorTab('CDW', this)">CDW</button>
-        <button class="floor-tab" id="ftab-POT" onclick="switchFloorTab('POT', this)">POT</button>
+        <button class="floor-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ', document.getElementById('ftab-RJ'))">RJ</button>
+        <button class="floor-tab" id="ftab-CDW" onclick="switchFloorTab('CDW', document.getElementById('ftab-CDW'))">CDW</button>
+        <button class="floor-tab" id="ftab-POT" onclick="switchFloorTab('POT', document.getElementById('ftab-POT'))">POT</button>
       </div>
       <div style="display:flex; gap:8px; margin-bottom:12px;">
         <select id="floor-filter" class="search-input" style="margin-bottom:0;" onchange="filterFloor()">
