@@ -34,13 +34,13 @@ function syncPipelineData() {
     console.log("✅ Pipeline Live Stock Synced:", window.allLiveStockData.length, "lines");
   }, err => console.error("Stock sync error:", err));
 
-  // Synchronize Live Buyer Data and populate all global reference keys
+  // Synchronize Live Buyer Data
   firebase.database().ref('buyers').on('value', snapshot => {
     const raw = snapshot.val() || {};
     let buyers = Array.isArray(raw) ? raw : Object.values(raw);
     
     window.liveBuyerData = buyers;
-    window.allBuyers = buyers; // Ensure window.allBuyers is populated directly from Firebase here
+    window.allBuyers = buyers;
     console.log("✅ Pipeline Live Buyers Synced:", window.liveBuyerData.length, "buyers");
   }, err => console.error("Buyer sync error:", err));
 }
@@ -278,18 +278,7 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // Brief safety pause loop to ensure modular global variables have fully bound
-  let attempts = 0;
-  while (
-    ((!window.allStockData || !window.allStockData.length) && (!window.allLiveStockData || !window.allLiveStockData.length)) ||
-    ((!window.allBuyers || !window.allBuyers.length) && (!window.liveBuyerData || !window.liveBuyerData.length))
-  ) {
-    if (attempts > 10) break;
-    attempts++;
-    await new Promise(r => setTimeout(r, 100));
-  }
-
-  // 1. Gather Stock (Prioritize modular window.allStockData, then fallback to window.allLiveStockData)
+  // 1. Gather Stock
   let rawStock = [];
   if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
     rawStock = window.allStockData;
@@ -298,7 +287,7 @@ async function runAIMatch() {
   }
   let stock = rawStock.filter(s => getStockQty(s) > 0);
 
-  // 2. Gather Buyers (Prioritize modular window.allBuyers, then fallback to window.liveBuyerData)
+  // 2. Gather Buyers (Checking window.allBuyers first, then fallbacks)
   let buyers = [];
   if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
     buyers = window.allBuyers;
@@ -328,7 +317,7 @@ async function runAIMatch() {
       const buyerSnap = await firebase.database().ref('buyers').once('value');
       const rawB = buyerSnap.val() || {};
       buyers = Array.isArray(rawB) ? rawB : Object.values(rawB);
-      window.allBuyers = buyers; // Safe update back to window.allBuyers
+      window.allBuyers = buyers;
     } catch (e) {
       console.error('Fallback buyer fetch error:', e);
     }
