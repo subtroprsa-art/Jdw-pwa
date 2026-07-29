@@ -39,15 +39,16 @@ function createMatcher(stockLines, historicalTrends = {}) {
     return {
         matchBuyerPreferences(buyer) {
             const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
-            const preferences = buyer.preferences || buyer.commPreferences || buyer.items || [];
+            // Target b.prefs which is what buyers.js actually outputs[cite: 2]
+            const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || [];
             const matchedResults = [];
 
             preferences.forEach(pref => {
-                const rawComm = pref.comm || pref.commodity || pref.name || '';
-                const mappedComm = pref.mapped || pref.mappedCommodity || rawComm;
+                const rawComm = typeof pref === 'object' ? (pref.comm || pref.commodity || pref.name || '') : pref;
+                const mappedComm = normalizeString(rawComm);
                 
-                const exactSearchKey = normalizeString(mappedComm);
-                const baseSearchKey = getBaseCommodity(mappedComm);
+                const exactSearchKey = mappedComm;
+                const baseSearchKey = getBaseCommodity(rawComm);
 
                 let candidates = exactStockIndex.get(exactSearchKey) || [];
 
@@ -64,12 +65,12 @@ function createMatcher(stockLines, historicalTrends = {}) {
                 }
 
                 const buyerHistory = historicalTrends[buyerName] || {};
-                const itemHistoryScore = buyerHistory[mappedComm] || buyerHistory[rawComm] || 1.0;
+                const itemHistoryScore = buyerHistory[rawComm] || 1.0;
 
                 if (candidates.length > 0) {
                     matchedResults.push({
                         buyer: buyerName,
-                        commodity: mappedComm,
+                        commodity: rawComm,
                         candidates: candidates,
                         trendScore: itemHistoryScore
                     });
@@ -89,9 +90,8 @@ function runAIFromPipeline(stockLines, buyers, historicalTrends = {}) {
 function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
     console.log(`Running match...`);
 
-    // Safely grab stock from arguments or the global window variable exposed by stock.js
     const activeStock = (Array.isArray(stockLines) && stockLines.length > 0) ? stockLines : (window.stockLines || []);
-    const activeBuyers = (Array.isArray(buyers) && buyers.length > 0) ? buyers : (window.buyers || window.allBuyers || []);
+    const activeBuyers = (Array.isArray(buyers) && buyers.length > 0) ? buyers : (window.allBuyers || window.liveBuyerData || []);
 
     console.log(`Stock lines for matching: ${activeStock.length}`);
     console.log(`Buyers for matching: ${activeBuyers.length}`);
