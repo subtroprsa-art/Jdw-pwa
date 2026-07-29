@@ -1,19 +1,14 @@
 // ===== PIPELINE MATCHING FUNCTIONS =====
 
 async function runComprehensiveMatching() {
-  console.log("Running match...");
+  console.log("Running comprehensive pipeline match...");
 
   let pipelineStock = [];
   let pipelineBuyers = [];
 
   try {
-    // 1. Pull stock and history data simultaneously from Firebase
-    const [stockSnap, historySnap] = await Promise.all([
-      firebase.database().ref('stock').once('value'),
-      firebase.database().ref('jdw/history').once('value') //[cite: 1]
-    ]);
-
-    // Process Stock
+    // 1. Pull stock directly from Firebase
+    const stockSnap = await firebase.database().ref('stock').once('value');
     const stockVal = stockSnap.val();
     if (stockVal) {
       for (const u in stockVal) {
@@ -30,13 +25,11 @@ async function runComprehensiveMatching() {
       pipelineStock = allLiveStockData;
     }
 
-    // Process Buyers using the exact history path and builder logic from buyers.js[cite: 1]
-    const rawHistory = historySnap.val();
-    if (rawHistory) {
-      const hist = Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory);
-      pipelineBuyers = buildPipelineBuyerProfiles(hist);
-    } else if (typeof liveBuyerData !== 'undefined' && liveBuyerData.length > 0) {
+    // 2. Grab the buyers directly from the global array buyers.js already loaded
+    if (typeof liveBuyerData !== 'undefined' && liveBuyerData.length > 0) {
       pipelineBuyers = liveBuyerData;
+    } else if (typeof allBuyers !== 'undefined' && allBuyers.length > 0) {
+      pipelineBuyers = allBuyers;
     }
 
   } catch (e) {
@@ -45,11 +38,12 @@ async function runComprehensiveMatching() {
 
   console.log("Pipeline Loaded -> Stock count:", pipelineStock.length, "Buyers count:", pipelineBuyers.length);
 
+  const el = document.getElementById('pipeline-results');
+
   if (!pipelineStock.length || !pipelineBuyers.length) {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
-    const el = document.getElementById('pipeline-results');
     if (el) {
-      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty.</div>';
+      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty. Please ensure buyers are loaded.</div>';
     }
     return;
   }
@@ -63,7 +57,6 @@ async function runComprehensiveMatching() {
     const stockComm = String(stockItem.commodity || stockItem.item || '').toLowerCase().trim();
 
     pipelineBuyers.forEach(buyer => {
-      // Check buyer preferences mapped from history
       const buyerPrefs = buyer.prefs || [];
       
       let isMatch = false;
@@ -84,43 +77,9 @@ async function runComprehensiveMatching() {
   renderPipelineMatches(matches);
 }
 
-// Helper mirroring buildBuyerProfiles from buyers.js to format history into buyer profiles[cite: 1]
-function buildPipelineBuyerProfiles(history) {
-  const map = {};
-  const CN = { AVOS: 'Avocados', LEMS: 'Lemons', NAAR: 'Naartjies', ORGS: 'Oranges', CLTM: 'Clementines', KIWI: 'Kiwifruit', STRS: 'Strawberries', FIGS: 'Figs', GVS: 'Guavas', DRAG: 'Dragon Fruit', MANG: 'Mangoes', GFT: 'Grapefruit', UNK: 'Unknown', SATS: 'Satsumas', PAPO: 'Papino', BERS: 'Berries' };
-
-  for (const h of history) {
-    if (!h.buyer || h.buyer === 'UNKNOWN') continue;
-    const nm = h.buyer;
-    if (!map[nm]) map[nm] = { name: nm, acc: h.account || '', txns: 0, turnover: 0, prefs: {} };
-    const b = map[nm];
-    
-    const lt = Number(h.pricesSum) || Number(h.total) || Number(h.revenue) || (Number(h.price || 0) * Number(h.qty || 0)) || 0;
-    
-    b.txns++;
-    b.turnover += lt;
-    if (!b.acc && h.account) b.acc = h.account;
-    const comm = h.commodity || 'UNK';
-    if (!b.prefs[comm]) b.prefs[comm] = { comm: CN[comm] || comm, revenue: 0 };
-    b.prefs[comm].revenue += lt;
-  }
-
-  return Object.values(map).map(b => ({
-    name: b.name,
-    acc: b.acc,
-    txns: b.txns,
-    turnover: Math.round(b.turnover),
-    prefs: Object.values(b.prefs)
-  }));
-}
-
 function runAIFromPipeline() {
   console.log("runAIFromPipeline invoked");
-  if (typeof runComprehensiveMatching === 'function') {
-    runComprehensiveMatching();
-  } else {
-    console.warn("runComprehensiveMatching is not available.");
-  }
+  runComprehensiveMatching();
 }
 
 function renderPipelineMatches(matches) {
