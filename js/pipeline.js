@@ -125,7 +125,7 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
     return matchResults;
 }
 
-// RENDER MATCH RESULTS TO DASHBOARD UI
+// RENDER MATCH RESULTS TO PIPELINE UI
 function renderMatchResults(matchResults) {
     const buyerMap = {};
     matchResults.forEach(res => {
@@ -141,10 +141,17 @@ function renderMatchResults(matchResults) {
 
     const sortedBuyers = Object.values(buyerMap).sort((a, b) => b.turnover - a.turnover);
 
-    let container = document.getElementById('match-results-container');
+    // Target the correct container inside your HTML (pipeline-buyers)
+    let container = document.getElementById('pipeline-buyers') || document.getElementById('match-results-container');
     if (!container) {
-        console.warn("⚠️ Element with id 'match-results-container' not found in DOM.");
+        console.warn("⚠️ Element with id 'pipeline-buyers' not found in DOM.");
         return;
+    }
+
+    // Automatically expand Step 2 call list container so results are immediately visible
+    const callListSection = document.getElementById('pipeline-call-list');
+    if (callListSection) {
+        callListSection.style.display = 'block';
     }
 
     if (sortedBuyers.length === 0) {
@@ -168,7 +175,7 @@ function renderMatchResults(matchResults) {
 
         return `
             <div style="background:#fff; border-radius:12px; box-shadow:var(--shadow, 0 1px 3px rgba(0,0,0,0.05)); margin-bottom:10px; overflow:hidden; border:1.5px solid var(--border, #e2e8f0);">
-                <div onclick="toggleSection('${dropdownId}')" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; cursor:pointer; background:#fff;">
+                <div onclick="const el=document.getElementById('${dropdownId}'); el.style.display = el.style.display==='none'?'block':'none';" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; cursor:pointer; background:#fff;">
                     <div>
                         <div style="font-weight:800; font-size:15px; color:#0f172a;">${group.buyer}</div>
                         <div style="font-size:11px; color:var(--muted, #64748b); margin-top:2px;">${group.matches.length} matching commodity category(ies)</div>
@@ -178,7 +185,7 @@ function renderMatchResults(matchResults) {
                             <div style="font-size:14px; font-weight:800; color:#fff;">R ${group.turnover.toLocaleString()}</div>
                             <div style="font-size:8px; color:rgba(255,255,255,0.8); text-transform:uppercase;">historical value</div>
                         </div>
-                        <div id="arr-${dropdownId}" style="color:var(--muted, #64748b); font-size:14px; transition:transform .2s;">▼</div>
+                        <div style="color:var(--muted, #64748b); font-size:14px;">▼</div>
                     </div>
                 </div>
                 <div id="${dropdownId}" style="display:none; padding:12px; background:var(--card, #fff); border-top:1px solid var(--border, #e2e8f0);">
