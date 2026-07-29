@@ -4,7 +4,7 @@ window.liveBuyerData = window.liveBuyerData || [];
 window.allBuyers = window.allBuyers || [];
 window.allStockData = window.allStockData || [];
 
-// ===== LIVE FIREBASE DATA SYNC =====
+// ===== LIVE FIREBASE DATA SYNC (SALESMAN-AWARE FLATTENING) =====
 function syncPipelineData() {
   if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
     console.warn("⏳ Waiting for Firebase initialization...");
@@ -14,26 +14,41 @@ function syncPipelineData() {
 
   console.log("🔄 Initializing Pipeline Data Listeners...");
 
-  // Synchronize Live Stock Data
+  // Synchronize Live Stock Data (Handles salesman keys like CW, POT, RJ and nested inventory items)
   firebase.database().ref('stock').on('value', snapshot => {
     const raw = snapshot.val() || {};
     let items = [];
     
-    if (Array.isArray(raw)) {
-      items = raw;
-    } else if (typeof raw === 'object') {
-      Object.keys(raw).forEach(key => {
-        if (Array.isArray(raw[key])) {
-          items = items.concat(raw[key]);
-        } else if (typeof raw[key] === 'object') {
-          items = items.concat(Object.values(raw[key]));
-        }
-      });
+    function extractItems(data) {
+      if (!data) return;
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          if (item && typeof item === 'object') {
+            if (item.commodity || item.flr || item.qty || item.variety) {
+              items.push(item);
+            } else {
+              extractItems(item);
+            }
+          }
+        });
+      } else if (typeof data === 'object') {
+        Object.values(data).forEach(val => {
+          if (val && typeof val === 'object') {
+            if (val.commodity || val.flr || val.qty || val.variety) {
+              items.push(val);
+            } else {
+              extractItems(val);
+            }
+          }
+        });
+      }
     }
+
+    extractItems(raw);
 
     window.allLiveStockData = items;
     window.allStockData = items;
-    console.log("✅ Pipeline Live Stock Synced:", window.allLiveStockData.length, "lines");
+    console.log("✅ Pipeline Live Stock Synced & Flattened:", window.allLiveStockData.length, "lines");
   }, err => console.error("Stock sync error:", err));
 
   // Synchronize Live Buyer Data (Robust object/array conversion)
@@ -45,7 +60,6 @@ function syncPipelineData() {
       buyers = raw;
     } else if (raw && typeof raw === 'object') {
       buyers = Object.values(raw).map(val => {
-        // If values are nested objects wrapping the buyer profile
         if (val && typeof val === 'object' && !val.name && !val.prefs) {
           const innerVals = Object.values(val);
           if (innerVals.length && typeof innerVals[0] === 'object') return innerVals[0];
@@ -59,6 +73,7 @@ function syncPipelineData() {
     console.log("✅ Pipeline Live Buyers Synced:", window.liveBuyerData.length, "buyers");
   }, err => console.error("Buyer sync error:", err));
 }
+
 // Helper function to safely read available quantity across different payload structures
 function getStockQty(s) {
   if (!s) return 0;
@@ -316,8 +331,27 @@ async function runAIMatch() {
 
       const rawStock = stockSnap.val();
       if (rawStock) {
-        let items = Array.isArray(rawStock) ? rawStock : Object.values(rawStock).flatMap(v => Array.isArray(v) ? v : Object.values(v || {}));
-        stock = items.filter(s => s && getStockQty(s) > 0);
+        let extracted = [];
+        function extractFallback(data) {
+          if (!data) return;
+          if (Array.isArray(data)) {
+            data.forEach(item => {
+              if (item && typeof item === 'object') {
+                if (item.commodity || item.flr || item.qty || item.variety) extracted.push(item);
+                else extractFallback(item);
+              }
+            });
+          } else if (typeof data === 'object') {
+            Object.values(data).forEach(val => {
+              if (val && typeof val === 'object') {
+                if (val.commodity || val.flr || val.qty || val.variety) extracted.push(val);
+                else extractFallback(val);
+              }
+            });
+          }
+        }
+        extractFallback(rawStock);
+        stock = extracted.filter(s => s && getStockQty(s) > 0);
       }
 
       const rawBuyers = buyerSnap.val();
@@ -387,6 +421,7 @@ async function runAIMatch() {
 
   resetMatchButton();
 }
+
 function resetMatchButton() {
   const btn = document.getElementById('ai-match-btn');
   const ld = document.getElementById('ai-loading');
