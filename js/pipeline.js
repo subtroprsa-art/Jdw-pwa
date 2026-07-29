@@ -1,52 +1,86 @@
 // ===== PIPELINE MATCHING FUNCTIONS =====
 
+let livePipelineStock = [];
+let livePipelineBuyers = [];
+
 async function runComprehensiveMatching() {
   console.log("Running match...");
   
-  // Ensure we have stock data loaded, mapping CDW to CW for Firebase
-  let stockSource = typeof liveStockData !== 'undefined' ? liveStockData : [];
+  let currentUser = 'CW';
+  const activeTabBtn = document.querySelector('.floor-tab.active, .stock-tab.active, [id^="ftab-"].active, [id^="stab-"].active');
+  if (activeTabBtn) {
+    const text = activeTabBtn.textContent || activeTabBtn.innerText || '';
+    if (text.trim()) currentUser = text.trim();
+  }
+  if (typeof currentLoginUser !== 'undefined' && currentLoginUser) {
+    currentUser = currentLoginUser;
+  }
   
-  if (!stockSource.length && typeof firebase !== 'undefined') {
-    try {
-      let currentUser = typeof currentLoginUser !== 'undefined' ? currentLoginUser : 'CW';
-      let dbKey = (currentUser === 'CDW') ? 'CW' : currentUser;
-      
-      const snapshot = await firebase.database().ref('stock/' + dbKey).once('value');
-      const d = snapshot.val();
-      if (d) {
-        stockSource = Object.values(d);
+  let dbKey = (currentUser === 'CDW') ? 'CW' : currentUser;
+
+  try {
+    const stockSnap = await firebase.database().ref('stock/' + dbKey).once('value');
+    const stockVal = stockSnap.val();
+    
+    if (stockVal) {
+      livePipelineStock = Object.values(stockVal);
+    } else if (typeof liveStockData !== 'undefined' && liveStockData.length) {
+      livePipelineStock = liveStockData;
+    } else {
+      const allStockSnap = await firebase.database().ref('stock').once('value');
+      const allStockVal = allStockSnap.val();
+      if (allStockVal) {
+        livePipelineStock = [];
+        for (const u in allStockVal) {
+          for (const k in allStockVal[u]) {
+            livePipelineStock.push(allStockVal[u][k]);
+          }
+        }
       }
-    } catch (e) {
-      console.warn("Pipeline stock fetch error:", e.message);
     }
+
+    const buyersSnap = await firebase.database().ref('buyers').once('value');
+    const buyersVal = buyersSnap.val();
+    if (buyersVal) {
+      livePipelineBuyers = Object.values(buyersVal);
+    } else if (typeof liveBuyersData !== 'undefined' && liveBuyersData.length) {
+      livePipelineBuyers = liveBuyersData;
+    } else if (typeof allBuyers !== 'undefined' && allBuyers.length) {
+      livePipelineBuyers = allBuyers;
+    }
+
+  } catch (e) {
+    console.warn("Pipeline fetch error:", e.message);
   }
 
-  let buyersSource = typeof liveBuyersData !== 'undefined' ? liveBuyersData : [];
-  if (!buyersSource.length && typeof allBuyers !== 'undefined') {
-    buyersSource = allBuyers;
-  }
-
-  if (!stockSource.length || !buyersSource.length) {
+  if (!livePipelineStock.length || !livePipelineBuyers.length) {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
     const el = document.getElementById('pipeline-results');
     if (el) {
-      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty! Check data loading for ' + (typeof currentLoginUser !== 'undefined' ? currentLoginUser : 'active user') + '.</div>';
+      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty for user key: ' + dbKey + '.</div>';
     }
     return;
   }
 
-  // Run matching logic against valid sources
   const matches = [];
-  stockSource.forEach(stockItem => {
-    buyersSource.forEach(buyer => {
-      // Basic matching criteria evaluation
-      if (stockItem.commodity && buyer.commodities && buyer.commodities.includes(stockItem.commodity)) {
+  livePipelineStock.forEach(stockItem => {
+    livePipelineBuyers.forEach(buyer => {
+      if (stockItem.balance && Number(stockItem.balance) > 0) {
         matches.push({ stock: stockItem, buyer: buyer });
       }
     });
   });
 
   renderPipelineMatches(matches);
+}
+
+function runAIFromPipeline() {
+  console.log("runAIFromPipeline invoked");
+  if (typeof runComprehensiveMatching === 'function') {
+    runComprehensiveMatching();
+  } else {
+    console.warn("runComprehensiveMatching is not available.");
+  }
 }
 
 function renderPipelineMatches(matches) {
@@ -60,8 +94,8 @@ function renderPipelineMatches(matches) {
 
   el.innerHTML = matches.map((m, idx) => {
     return `<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1.5px solid var(--border)">
-      <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.stock.producer || 'Unknown'} (${m.stock.commodity}) -> ${m.buyer.name || 'Buyer'}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: ${m.stock.balance || 0} | Pack: ${m.stock.pack || '-'}</div>
+      <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.stock.producer || 'Unknown'} (${m.stock.commodity || 'Item'}) -> ${m.buyer.name || m.buyer.company || 'Buyer'}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: ${m.stock.balance || 0} | Pack: ${m.stock.pack || '-'} | GRN: ${m.stock.grn || '-'}</div>
     </div>`;
   }).join('');
 }
