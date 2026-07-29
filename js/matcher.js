@@ -62,13 +62,11 @@ function runDeterministicMatch(stock, buyers, todayDow) {
     const buysToday = !!(buyer.buyingDays && buyer.buyingDays[todayDow]);
 
     for (const pref of buyer.prefs) {
-      // Normalize values to upper case for robust matching
       const rawComm = pref.comm || '';
       const targetComm = (COMM_MAP[rawComm] || rawComm).toUpperCase();
       const targetVariety = (pref.variety || '*').toUpperCase();
       const targetPack = (pref.pack || '').toUpperCase();
 
-      // Step 1: Find ALL active floor stock with matching commodity (with fallback to partial match)
       let candidates = stock.filter(s => {
         if (!s.commodity || (s.flr || 0) <= 0) return false;
         const sComm = s.commodity.toUpperCase();
@@ -77,7 +75,6 @@ function runDeterministicMatch(stock, buyers, todayDow) {
 
       if (!candidates.length) continue;
 
-      // Score each candidate line item
       let best = null;
       let bestScore = -1;
 
@@ -85,36 +82,29 @@ function runDeterministicMatch(stock, buyers, todayDow) {
         const stockVariety = (s.variety || '*').toUpperCase();
         const stockPack = (s.pack || '').toUpperCase();
 
-        let score = 40; // Base score for commodity match
+        let score = 40;
         
-        // Bonus: Variety matching logic
         if (targetVariety !== '*' && stockVariety === targetVariety) {
           score += 25;
         } else if (targetVariety === '*' || stockVariety === '*') {
-          score += 10; // Partial variety match
+          score += 10;
         }
         
-        // Bonus: Pack format matching logic
         if (targetPack && stockPack === targetPack) {
           score += 25;
         } else if (!targetPack) {
-          score += 5; // No pack preference constraint
+          score += 5;
         }
         
-        // Volume Bonus (Max 15 points)
         score += Math.min(15, Math.round((s.flr || 0) / 50));
         
-        // Buyer Day Schedule Bonus
         if (buysToday) score += 10;
         
-        // Buyer Turnover Weight (Max 10 points) - FIXED from buyer.spend to buyer.turnover
         const buyerTurnover = buyer.turnover || buyer.spend || 0;
         score += Math.min(10, Math.round(buyerTurnover / 100000));
         
-        // Penalty: Coldstore accessibility friction
         if (s.inColdstore) score -= 5;
         
-        // Clamp overall score between 1 and 100
         score = Math.max(1, Math.min(100, score));
 
         if (score > bestScore) {
@@ -127,7 +117,6 @@ function runDeterministicMatch(stock, buyers, todayDow) {
 
       const priority = bestScore >= 65 ? 'HIGH' : bestScore >= 45 ? 'MEDIUM' : 'LOW';
       
-      // Build display strings safely
       const bestVarKey = (best.variety || '').toUpperCase();
       const bestPackKey = (best.pack || '').toUpperCase();
 
@@ -142,7 +131,6 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       if (packDisplay) stockLine += ' (' + packDisplay + ')';
       stockLine += ' | ' + best.flr + ' units | ' + (best.producer || 'Unknown');
 
-      // Build reason narrative
       const reasonParts = [];
       let matchDesc = commDisplay;
       const varietyMatch = targetVariety !== '*' && bestVarKey === targetVariety;
@@ -154,9 +142,9 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       if (packMatch) matchDesc += ' (' + packDisplay + ')';
       else if (packDisplay) matchDesc += ' (' + packDisplay + ' - close)';
       
-      reasonParts.push(`Matches ${matchDesc}.`);
-      if (buysToday) reasonParts.push(`${buyer.name} typically buys today.`);
-      reasonParts.push(`${best.flr} units available from ${best.producer || 'Unknown'}.`);
+      reasonParts.push('Matches ' + matchDesc + '.');
+      if (buysToday) reasonParts.push(buyer.name + ' typically buys today.');
+      reasonParts.push(best.flr + ' units available from ' + (best.producer || 'Unknown') + '.');
 
       results.push({
         buyer: buyer.name,
@@ -168,7 +156,7 @@ function runDeterministicMatch(stock, buyers, todayDow) {
         reason: reasonParts.join(' '),
         tip: best.inColdstore 
           ? 'Stock is in coldstore - arrange removal first.' 
-          : `Contact ${buyer.name} about ${commDisplay} available.`,
+          : 'Contact ' + buyer.name + ' about ' + commDisplay + ' available.',
         buysToday: buysToday,
         priority: priority,
         inColdstore: !!best.inColdstore,
@@ -178,13 +166,11 @@ function runDeterministicMatch(stock, buyers, todayDow) {
     }
   }
 
-  // Sort candidates by score in descending order
   results.sort((a, b) => b.score - a.score);
   
-  // Deduplicate: retain only the highest-scoring match per buyer + commodity combination
   const seen = new Set();
   const deduped = results.filter(r => {
-    const key = `${r.buyer}|${r.commodity}`;
+    const key = r.buyer + '|' + r.commodity;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -193,5 +179,3 @@ function runDeterministicMatch(stock, buyers, todayDow) {
   return deduped.slice(0, 20);
 }
 ```[cite: 3]
-
-Replace your `matcher.js` code with this snippet, refresh your app, and test the matcher again. You will see different buyers matching appropriate stock items based on their individual histories and buying preferences!
