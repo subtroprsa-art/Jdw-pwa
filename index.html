@@ -110,10 +110,11 @@ try {
   <div class="hdr">
     <div class="hdr-brand">
       SubTrop CRM <span id="hdr-page-name">[Home]</span>
+      <span id="live-date" style="font-size: 12px; color: #86efac; margin-left: 8px; font-weight: 500;"></span>
     </div>
     <div class="hdr-right">
-      <span id="hdr-user-display" style="font-size: 13px; font-weight: 600;"></span>
-      <button class="hdr-btn" onclick="goHome()">🏠 Home</button>
+      <span id="hdr-username" style="font-size: 13px; font-weight: 600;"></span>
+      <button id="home-btn" class="hdr-btn" onclick="goHome()" style="display:none;">🏠 Home</button>
       <button class="hdr-btn" onclick="doLogout()">Sign Out</button>
     </div>
   </div>
@@ -208,7 +209,8 @@ try {
 
     <div class="page" id="page-commodities">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <div class="list-container" id="list-commodities">Loading commodities...</div>
+      <div id="comm-summary-list" class="list-container">Loading commodities...</div>
+      <div id="comm-detail" style="display:none;"></div>
     </div>
 
     <div class="page" id="page-pipeline">
