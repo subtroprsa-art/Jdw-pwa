@@ -7,32 +7,25 @@ async function runComprehensiveMatching() {
   let pipelineBuyers = [];
 
   try {
-    // Ensure we fetch all stock data using your app's global loader
-    if (typeof loadAllStockData === 'function') {
-      await loadAllStockData();
-    }
-
-    if (typeof allLiveStockData !== 'undefined' && allLiveStockData.length > 0) {
-      pipelineStock = allLiveStockData;
-    } else if (typeof liveStockData !== 'undefined' && liveStockData.length > 0) {
-      pipelineStock = liveStockData;
-    } else {
-      // Fallback direct fetch if globals aren't populated yet
-      const snapshot = await firebase.database().ref('stock').once('value');
-      const d = snapshot.val();
-      if (d) {
-        for (const u in d) {
-          for (const e in d[u]) {
-            const item = d[u][e];
-            if (item && typeof item === 'object') {
-              pipelineStock.push({ ...item, _nodeKey: u, _id: e });
-            }
+    // 1. Pull all stock using your app's global loader logic
+    const snapshot = await firebase.database().ref('stock').once('value');
+    const d = snapshot.val();
+    if (d) {
+      for (const u in d) {
+        for (const e in d[u]) {
+          const item = d[u][e];
+          if (item && typeof item === 'object') {
+            pipelineStock.push({ ...item, _nodeKey: u, _id: e });
           }
         }
       }
     }
 
-    // Pull buyers data
+    if (!pipelineStock.length && typeof allLiveStockData !== 'undefined' && allLiveStockData.length) {
+      pipelineStock = allLiveStockData;
+    }
+
+    // 2. Pull buyers data directly from Firebase to ensure it's never 0
     const buyersSnap = await firebase.database().ref('buyers').once('value');
     const buyersVal = buyersSnap.val();
     if (buyersVal) {
@@ -51,7 +44,7 @@ async function runComprehensiveMatching() {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
     const el = document.getElementById('pipeline-results');
     if (el) {
-      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty.</div>';
+      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty. Please wait for buyers to load.</div>';
     }
     return;
   }
