@@ -21,12 +21,12 @@ function runAIFromPipeline(stockLines, buyers, historicalTrends = {}) {
 }
 
 function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
-    // FIX: If stockLines or buyers aren't passed directly into this function, 
-    // grab them automatically from the global scope where stock.js and buyers.js load them.
-    const activeStock = (stockLines && stockLines.length > 0) ? stockLines : (window.stockLines || window.stock || window.allStock || []);
-    const activeBuyers = (buyers && buyers.length > 0) ? buyers : (window.buyers || window.allBuyers || []);
-
     console.log(`Running match...`);
+
+    // FIX: Fallback to global variables if parameters are passed as empty arrays or omitted
+    const activeStock = (stockLines && stockLines.length > 0) ? stockLines : (window.stockLines || window.stock || window.allStock || window.floorStock || []);
+    const activeBuyers = (buyers && buyers.length > 0) ? buyers : (window.buyers || window.allBuyers || window.loadedBuyers || []);
+
     console.log(`Stock lines for matching: ${activeStock.length}`);
     console.log(`Buyers for matching: ${activeBuyers.length}`);
 
