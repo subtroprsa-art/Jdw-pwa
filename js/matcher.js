@@ -1,158 +1,71 @@
-// ===== ADVANCED HISTORICAL AFFINITY MATCHING ENGINE =====
+/**
+ * Comprehensive Matching Engine
+ * Matches all stock lines against buyer preferences and historical buying trends.
+ */
 
-const COMM_MAP = {
-  'Avocados': 'AVOS',
-  'Lemons': 'LEMS',
-  'Figs': 'FIGS',
-  'Kiwifruit': 'KIWI',
-  'Oranges': 'ORGS',
-  'Guavas': 'GVS',
-  'Clementines': 'CLTM',
-  'Naartjies': 'NAAR',
-  'Strawberries': 'BERS',
-  'Berries': 'BERS',
-  'Dragon Fruit': 'DRAG',
-  'Mangoes': 'MANG',
-  'Grapefruit': 'GFT',
-  'Satsumas': 'SATS',
-  'Papino': 'PAPO'
-};
+function normalizeString(str) {
+    if (!str) return '';
+    return str.toString().trim().toUpperCase();
+}
 
-const VARIETY_NAMES = {
-  'AF': 'Fuerte', 'AH': 'Hass', 'AK': 'Pinkerton', 'MA': 'Maluma', 'MAH': 'Maluma',
-  'MD': 'Mendez', 'NV': 'Navel', 'CN': 'Cara Cara', 'AX': 'Mixed', 'LR': 'Leanri',
-  'HM': 'Honey Murcott', 'M1': 'Mandarin', 'NAR': 'Nardocott', '*': 'Any'
-};
+function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
+    console.log(`--- Starting Comprehensive Match ---`);
+    console.log(`Stock lines loaded: ${stockLines.length}`);
+    console.log(`Buyers loaded: ${buyers.length}`);
 
-const PACK_NAMES = {
-  'TR040': '4KG Tray', 'TR060': '6KG Tray', 'BG150': '15KG Bag', 'BG160': '16KG Bag',
-  'CTT150': '15KG Carton', 'PTB005': '500G Punnet', 'PTB025': '250G Punnet',
-  'PTB002': '160G Punnet', 'DL076': 'DL076 Carton', 'PC030': '3KG Pocket',
-  'PC060': '6KG Pocket', 'CO100': '10KG Carton', 'CO150': '15KG Carton',
-  'SP170': '17KG Sack', 'EC020': '20KG Box'
-};
-
-function runDeterministicMatch(stock, buyers, todayDow) {
-  const results = [];
-  const REVERSE_COMM_MAP = Object.fromEntries(Object.entries(COMM_MAP).map(([k, v]) => [v, k.toUpperCase()]));
-  const today = new Date();
-
-  for (const buyer of buyers) {
-    if (!buyer.prefs || !buyer.prefs.length) continue;
-    
-    // Check buying day schedule & calculate recency/activity penalty
-    const buysToday = !!(buyer.buyingDays && buyer.buyingDays[todayDow]);
-    let recencyPenalty = 0;
-    if (buyer.lastDate) {
-      const lastTxnDate = new Date(buyer.lastDate);
-      const daysSinceLast = Math.floor((today - lastTxnDate) / (1000 * 60 * 60 * 24));
-      if (daysSinceLast > 30) recencyPenalty = Math.min(25, Math.floor((daysSinceLast - 30) / 5));
-    }
-
-    for (const pref of buyer.prefs) {
-      const rawComm = pref.comm || '';
-      const targetComm = (COMM_MAP[rawComm] || rawComm).toUpperCase();
-      const targetCommName = (REVERSE_COMM_MAP[targetComm] || rawComm).toUpperCase();
-      const targetPack = (pref.pack || '').toUpperCase();
-      const targetSizes = pref.sizes || ['*'];
-
-      console.log(`Checking preference for ${buyer.name}: comm="${pref.comm}" -> mapped="${targetComm}"`);
-
-      // Find all active floor stock candidates matching commodity
-      let candidates = stock.filter(s => {
-        if (!s.commodity || (s.flr || 0) <= 0) return false;
-        const sComm = String(s.commodity).trim().toUpperCase();
-        const tComm = String(targetComm).trim().toUpperCase();
-        const tName = String(targetCommName).trim().toUpperCase();
-
-        return sComm === tComm || 
-               sComm === tName || 
-               tComm.includes(sComm) || 
-               sComm.includes(tComm) || 
-               tName.includes(sComm);
-      });
-
-      console.log(`Candidates found for ${pref.comm}:`, candidates.length);
-
-      if (!candidates.length) continue;
-
-      let best = null;
-      let bestScore = -1;
-
-      for (const s of candidates) {
-        const stockVariety = (s.variety || '*').toUpperCase();
-        const stockPack = (s.pack || '').toUpperCase();
-        const stockSize = (s.size || '*').toUpperCase();
-
-        let score = 30;
-        
-        if (targetPack && stockPack === targetPack) {
-          score += 35;
-        } else if (!targetPack) {
-          score += 10;
+    // 1. Build a robust lookup index for all stock lines by normalized commodity name
+    const stockIndex = new Map();
+    stockLines.forEach(stock => {
+        const commKey = normalizeString(stock.commodity || stock.comm || stock.name);
+        if (!stockIndex.has(commKey)) {
+            stockIndex.set(commKey, []);
         }
+        stockIndex.get(commKey).push(stock);
+    });
 
-        if (targetSizes.includes('*') || targetSizes.includes(stockSize)) {
-          score += 15;
-        }
+    const matchResults = [];
 
-        score += Math.min(15, Math.round((s.flr || 0) / 40));
-        const buyerTurnover = buyer.turnover || buyer.spend || 0;
-        score += Math.min(15, Math.round(buyerTurnover / 75000));
+    // 2. Iterate through every buyer and evaluate preferences and historical trends
+    buyers.forEach(buyer => {
+        const buyerName = buyer.name || buyer.buyerName;
+        const preferences = buyer.preferences || [];
 
-        if (buysToday) score += 15;
-        score -= recencyPenalty;
+        preferences.forEach(pref => {
+            const rawComm = pref.comm || pref.commodity;
+            const mappedComm = pref.mapped || rawComm;
+            const searchKey = normalizeString(mappedComm);
 
-        if (s.inColdstore) score -= 5;
-        
-        score = Math.max(1, Math.min(100, score));
+            console.log(`Checking preference for ${buyerName}: comm="${rawComm}" -> mapped="${mappedComm}"`);
 
-        if (score > bestScore) {
-          bestScore = score;
-          best = s;
-        }
-      }
+            // Direct lookup from stock index
+            let candidates = stockIndex.get(searchKey) || [];
 
-      if (!best) continue;
+            // Fallback: Fuzzy or partial match if exact key lookup yields nothing (handling plurals/variations like "Oranges" vs "ORANGES")
+            if (candidates.length === 0) {
+                stockIndex.forEach((stockArray, stockKey) => {
+                    if (stockKey.includes(searchKey) || searchKey.includes(stockKey)) {
+                        candidates = candidates.concat(stockArray);
+                    }
+                });
+            }
 
-      const priority = bestScore >= 70 ? 'HIGH' : bestScore >= 45 ? 'MEDIUM' : 'LOW';
-      const bestVarKey = (best.variety || '').toUpperCase();
-      const bestPackKey = (best.pack || '').toUpperCase();
-      const varietyDisplay = best.variety && best.variety !== '*' ? (VARIETY_NAMES[bestVarKey] || best.variety) : '';
-      const packDisplay = PACK_NAMES[bestPackKey] || best.pack || '';
-      const commDisplay = pref.comm || best.commodity;
-      
-      let stockLine = commDisplay;
-      if (varietyDisplay) stockLine += ' ' + varietyDisplay;
-      if (packDisplay) stockLine += ' (' + packDisplay + ')';
-      stockLine += ' | ' + best.flr + ' units | ' + (best.producer || 'Unknown');
+            // 3. Incorporate historical trend weighting if available
+            const buyerHistory = historicalTrends[buyerName] || {};
+            const itemHistoryScore = buyerHistory[mappedComm] || buyerHistory[rawComm] || 1.0;
 
-      results.push({
-        buyer: buyer.name,
-        score: bestScore,
-        commodity: best.commodity,
-        variety: best.variety,
-        pack: best.pack,
-        stockLine: stockLine,
-        reason: `Historical match for ${commDisplay}${packDisplay ? ' (' + packDisplay + ')' : ''}. ${buysToday ? buyer.name + ' buys on this day.' : ''}`,
-        tip: best.inColdstore ? 'Stock is in coldstore.' : `Contact ${buyer.name} about available stock.`,
-        buysToday: buysToday,
-        priority: priority,
-        inColdstore: !!best.inColdstore,
-        producer: best.producer || 'Unknown',
-        flr: best.flr
-      });
-    }
-  }
+            console.log(`Candidates found for ${mappedComm}: ${candidates.length} (Historical Weight: ${itemHistoryScore})`);
 
-  results.sort((a, b) => b.score - a.score);
-  
-  const seenBuyers = new Set();
-  const deduped = results.filter(r => {
-    if (seenBuyers.has(r.buyer)) return false;
-    seenBuyers.add(r.buyer);
-    return true;
-  });
+            if (candidates.length > 0) {
+                matchResults.push({
+                    buyer: buyerName,
+                    commodity: mappedComm,
+                    candidates: candidates,
+                    trendScore: itemHistoryScore
+                });
+            }
+        });
+    });
 
-  return deduped.slice(0, 20);
+    console.log(`--- Matching Complete. Total successful match groups: ${matchResults.length} ---`);
+    return matchResults;
 }
