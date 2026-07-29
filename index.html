@@ -25,6 +25,9 @@ const SK = 'st_sess';
 
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<!-- html2pdf for exporting pipeline matches -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
 try {
   firebase.initializeApp({
@@ -46,6 +49,9 @@ try {
     --card: #ffffff;
     --blue: #2563eb;
     --sage: #16a34a;
+    --sage-light: #dcfce7;
+    --blue-light: #dbeafe;
+    --gold-light: #fef3c7;
     --red: #dc2626;
     --gold: #d97706;
     --shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -84,14 +90,7 @@ try {
   .search-input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; font-size: 14px; outline: none; }
   .list-container { display: flex; flex-direction: column; gap: 8px; }
   
-  /* Badge styling */
   .b { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-  .bg { background: #dcfce7; color: #166534; }
-  .br { background: #fee2e2; color: #991b1b; }
-  .bb { background: #dbeafe; color: #1e40af; }
-  .ba { background: #fef3c7; color: #92400e; }
-  .bt { background: #f3e8ff; color: #6b21a8; }
-  .empty { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; background: #fff; border-radius: 10px; }
 
   .sub-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
   .stock-tab, .floor-tab { background: #fff; border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: #475569; }
@@ -107,6 +106,12 @@ try {
 
   .page { display: none; }
   .page.active { display: block; }
+
+  /* Pipeline Specific Styling */
+  .pipeline-step-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow); border-left: 4px solid var(--border); }
+  .pipeline-step-card.done { border-left-color: var(--sage); background: #fafdfa; }
+  .pipeline-step-hdr { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+  .pipeline-step-title { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
 </style>
 </head>
 <body>
@@ -284,10 +289,100 @@ try {
       <div id="comm-detail" style="display:none;"></div>
     </div>
 
+    <!-- PIPELINE PAGE -->
     <div class="page" id="page-pipeline">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches..." oninput="renderPipeline()"/>
-      <div class="list-container" id="list-pipeline">Loading pipeline matches...</div>
+      <div class="nav-bar-sub">
+        <button onclick="goHome()">🏠 Home</button>
+        <div style="display:flex; gap:8px;">
+          <button onclick="exportPipelineMatchesToPDF()" style="background:var(--blue); color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer;">📥 Export PDF</button>
+          <button onclick="resetPipeline()" style="background:#b91c1c; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer;">🔄 Reset Pipeline</button>
+        </div>
+      </div>
+
+      <!-- Step 1: Match Stock to Buyers -->
+      <div class="pipeline-step-card" id="ps1">
+        <div class="pipeline-step-hdr" onclick="togglePipelineStep(1)">
+          <div class="pipeline-step-title">
+            <span id="psc1" style="width:20px; height:20px; border-radius:50%; background:#e2e8f0; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">o</span>
+            Step 1: Match Floor Stock to Buyers
+          </div>
+          <span id="ai-status-inline" style="font-size:12px; color:var(--muted); font-weight:600;"></span>
+        </div>
+        <div style="margin-top:12px;">
+          <button id="ai-match-btn" onclick="runAIFromPipeline()" style="padding:10px 16px; background:var(--moss); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">Run Match</button>
+          <div id="ai-loading" style="display:none; font-size:12px; color:var(--muted); margin-top:8px;">Analyzing inventory and buyer preferences...</div>
+          <div id="ai-error" style="display:none; font-size:12px; color:var(--red); margin-top:8px;"></div>
+          <div id="ai-summary" style="display:none; margin-top:8px;">
+            <div id="ai-summary-text" style="font-size:12px; background:var(--paper); padding:8px; border-radius:6px; border-left:3px solid var(--moss);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Call List -->
+      <div class="pipeline-step-card" id="ps2">
+        <div class="pipeline-step-hdr" onclick="togglePipelineCallList()">
+          <div class="pipeline-step-title">
+            <span id="psc2" style="width:20px; height:20px; border-radius:50%; background:#e2e8f0; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">o</span>
+            Step 2: Buyer Call List & WhatsApp Outreach
+          </div>
+          <span style="font-size:12px; font-weight:700; color:var(--moss);">Toggle View</span>
+        </div>
+        <div id="pipeline-call-list" style="display:none; margin-top:12px;">
+          <div id="pipeline-buyers" class="list-container">Loading buyer matches...</div>
+        </div>
+      </div>
+
+      <!-- Step 3: Orders -->
+      <div class="pipeline-step-card" id="ps3">
+        <div class="pipeline-step-hdr" onclick="goToOrders()">
+          <div class="pipeline-step-title">
+            <span id="psc3" style="width:20px; height:20px; border-radius:50%; background:#e2e8f0; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">o</span>
+            Step 3: Process & Capture Orders
+          </div>
+          <span style="font-size:12px; font-weight:700; color:var(--moss);">Go to Orders ➔</span>
+        </div>
+      </div>
+
+      <!-- Step 4: Reserve Stock -->
+      <div class="pipeline-step-card" id="ps4">
+        <div class="pipeline-step-hdr" onclick="togglePipelineStep(4)">
+          <div class="pipeline-step-title">
+            <span id="psc4" style="width:20px; height:20px; border-radius:50%; background:#e2e8f0; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">o</span>
+            Step 4: Stock Reservation & Hold Confirmation
+          </div>
+        </div>
+        <div id="pipeline-reserve-banner" style="display:none; margin-top:10px; font-size:12px; background:#fffbeb; color:#92400e; padding:8px; border-radius:6px; border-left:3px solid var(--gold);">
+          🔒 Stock successfully marked as reserved for confirmed orders.
+        </div>
+      </div>
+
+      <!-- Step 5: Payment Check -->
+      <div class="pipeline-step-card" id="ps5">
+        <div class="pipeline-step-hdr" onclick="togglePipelinePayment()">
+          <div class="pipeline-step-title">
+            <span id="psc5" style="width:20px; height:20px; border-radius:50%; background:#e2e8f0; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">o</span>
+            Step 5: Payment Verification & Account Clearance
+          </div>
+          <span style="font-size:12px; font-weight:700; color:var(--moss);">Toggle View</span>
+        </div>
+        <div id="pipeline-payment-list" style="display:none; margin-top:12px;">
+          <div id="pipeline-orders" class="list-container">Loading orders for payment verification...</div>
+        </div>
+      </div>
+
+      <!-- Step 6: Packers & Dispatch -->
+      <div class="pipeline-step-card" id="ps6">
+        <div class="pipeline-step-hdr" onclick="togglePipelinePackers()">
+          <div class="pipeline-step-title">
+            <span id="psc6" style="width:20px; height:20px; border-radius:50%; background:#e2e8f0; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">o</span>
+            Step 6: Floor Packers & Collection Dispatch
+          </div>
+          <span style="font-size:12px; font-weight:700; color:var(--moss);">Toggle View</span>
+        </div>
+        <div id="pipeline-packers-list" style="display:none; margin-top:12px;">
+          <div id="pipeline-packers" class="list-container">Loading packing list...</div>
+        </div>
+      </div>
     </div>
 
     <div class="page" id="page-analytics">
