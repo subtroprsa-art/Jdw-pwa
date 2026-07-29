@@ -1,22 +1,47 @@
 // ===== PIPELINE MATCHING FUNCTIONS =====
 
-function runComprehensiveMatching() {
+let livePipelineStock = [];
+let livePipelineBuyers = [];
+
+async function runComprehensiveMatching() {
   console.log("Running match...");
 
-  // Pull directly from the global data arrays already loaded in your app
-  const livePipelineStock = (typeof liveStockData !== 'undefined' && liveStockData.length) ? liveStockData : 
-                            (typeof allStock !== 'undefined' && allStock.length) ? allStock : [];
+  try {
+    // Pull the entire stock tree across all user nodes, matching your app's loadAllStockData()
+    const snapshot = await firebase.database().ref('stock').once('value');
+    const d = snapshot.val();
+    
+    livePipelineStock = [];
+    if (d) {
+      for (const u in d) {
+        for (const e in d[u]) {
+          const item = d[u][e];
+          if (item && typeof item === 'object') {
+            livePipelineStock.push({ ...item, _nodeKey: u, _id: e });
+          }
+        }
+      }
+    }
 
-  const livePipelineBuyers = (typeof liveBuyersData !== 'undefined' && liveBuyersData.length) ? liveBuyersData : 
-                             (typeof allBuyers !== 'undefined' && allBuyers.length) ? allBuyers : [];
+    const buyersSnap = await firebase.database().ref('buyers').once('value');
+    const buyersVal = buyersSnap.val();
+    if (buyersVal) {
+      livePipelineBuyers = Object.values(buyersVal);
+    } else if (typeof liveBuyersData !== 'undefined' && liveBuyersData.length) {
+      livePipelineBuyers = liveBuyersData;
+    }
 
-  console.log("Pipeline Loaded -> Stock count:", livePipelineStock.length, "Buyers count:", livePipelineBuyers.length);
+  } catch (e) {
+    console.warn("Pipeline fetch error:", e.message);
+  }
+
+  console.log("Pipeline Loaded -> Total Stock count across all nodes:", livePipelineStock.length, "Buyers count:", livePipelineBuyers.length);
 
   if (!livePipelineStock.length || !livePipelineBuyers.length) {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
     const el = document.getElementById('pipeline-results');
     if (el) {
-      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty. Please ensure data is loaded.</div>';
+      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty.</div>';
     }
     return;
   }
