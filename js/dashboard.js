@@ -1,18 +1,18 @@
 // ==========================================
-// UPDATED DASHBOARD MODULE (CUSTOM METRICS)
+// COMPLETE dashboard.js FILE
 // ==========================================
 
 async function loadDashboard() {
   try {
     console.log("Loading dashboard stats...");
 
-    // Retrieve active arrays or default safely from global scope / localStorage
-    const stock = window.allStockData || window.stockLines || JSON.parse(localStorage.getItem('stockLines') || '[]');
+    // Retrieve active arrays checking floor balance and stock data sources
+    const floorStock = window.floorStock || window.allFloorData || window.stockLines || JSON.parse(localStorage.getItem('floorStock') || localStorage.getItem('stockLines') || '[]');
     const buyers = window.allBuyers || window.liveBuyerData || JSON.parse(localStorage.getItem('buyers') || '[]');
     const orders = window.orders || window.allOrders || JSON.parse(localStorage.getItem('orders') || '[]');
 
     // Calculate total physical units on the floor
-    const totalFloorUnits = stock.reduce((sum, item) => {
+    const totalFloorUnits = floorStock.reduce((sum, item) => {
       const q = Number(item.qty || item.quantity || item.pallets || item.cartons || item.units || 0);
       return sum + q;
     }, 0);
@@ -27,7 +27,7 @@ async function loadDashboard() {
     setElemText('kpi-buyers', totalBuyersCount);
     setElemText('kpi-revenue', 'R ' + totalRevenue.toLocaleString());
 
-    console.log("✅ Dashboard loaded successfully with custom metrics.");
+    console.log("✅ Dashboard loaded successfully.");
   } catch (error) {
     console.error("Dashboard error:", error);
   }
