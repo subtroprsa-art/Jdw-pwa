@@ -280,7 +280,7 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock - explicitly checking all potential global arrays and window properties
+  // 1. Gather Stock
   let rawStock = [];
   if (window.allStockData && window.allStockData.length) {
     rawStock = window.allStockData;
@@ -303,33 +303,34 @@ async function runAIMatch() {
   }
 
   // Fallback direct Firebase fetch if arrays are still empty
-  if (!stock.length && typeof firebase !== 'undefined') {
+  if ((!stock.length || !buyers.length) && typeof firebase !== 'undefined') {
+    console.log('Fetching fresh data from Firebase for matcher...');
     try {
-      const stockSnap = await firebase.database().ref('stock').once('value');
-      const raw = stockSnap.val() || {};
+      const [stockSnap, buyerSnap] = await Promise.all([
+        firebase.database().ref('stock').once('value'),
+        firebase.database().ref('buyers').once('value')
+      ]);
+
+      const rawStockData = stockSnap.val() || {};
       let items = [];
-      if (Array.isArray(raw)) items = raw;
-      else Object.keys(raw).forEach(key => {
-        if (Array.isArray(raw[key])) items = items.concat(raw[key]);
-        else if (typeof raw[key] === 'object') items = items.concat(Object.values(raw[key]));
-      });
+      if (Array.isArray(rawStockData)) {
+        items = rawStockData;
+      } else {
+        Object.keys(rawStockData).forEach(key => {
+          if (Array.isArray(rawStockData[key])) items = items.concat(rawStockData[key]);
+          else if (typeof rawStockData[key] === 'object') items = items.concat(Object.values(rawStockData[key]));
+        });
+      }
       stock = items.filter(s => getStockQty(s) > 0);
       window.allStockData = stock;
       window.allLiveStockData = stock;
-    } catch (e) {
-      console.error('Fallback stock fetch error:', e);
-    }
-  }
 
-  if (!buyers.length && typeof firebase !== 'undefined') {
-    try {
-      const buyerSnap = await firebase.database().ref('buyers').once('value');
-      const rawB = buyerSnap.val() || {};
-      buyers = Array.isArray(rawB) ? rawB : Object.values(rawB);
+      const rawBuyerData = buyerSnap.val() || {};
+      buyers = Array.isArray(rawBuyerData) ? rawBuyerData : Object.values(rawBuyerData);
       window.allBuyers = buyers;
       window.liveBuyerData = buyers;
     } catch (e) {
-      console.error('Fallback buyer fetch error:', e);
+      console.error('Fallback fetch error:', e);
     }
   }
 
@@ -391,7 +392,6 @@ async function runAIMatch() {
 
   resetMatchButton();
 }
-
 function resetMatchButton() {
   const btn = document.getElementById('ai-match-btn');
   const ld = document.getElementById('ai-loading');
