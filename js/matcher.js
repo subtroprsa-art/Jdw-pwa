@@ -60,6 +60,11 @@ function runDeterministicMatch(stock, buyers, todayDow) {
   // Create reverse map lookup for bidirectional commodity matching
   const REVERSE_COMM_MAP = Object.fromEntries(Object.entries(COMM_MAP).map(([k, v]) => [v, k.toUpperCase()]));
 
+  // DEBUG: Print sample stock commodities and buyer preference commodities to see the mismatch
+  if (stock.length && buyers.length && buyers[0].prefs && buyers[0].prefs.length) {
+    console.log("SAMPLE STOCK COMMODITIES:", stock.slice(0, 5).map(s => s.commodity));
+    console.log("SAMPLE BUYER PREF COMMODITIES:", buyers[0].prefs.map(p => p.comm));
+  }
   for (const buyer of buyers) {
     if (!buyer.prefs || !buyer.prefs.length) continue;
     const buysToday = !!(buyer.buyingDays && buyer.buyingDays[todayDow]);
