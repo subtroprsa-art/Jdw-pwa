@@ -1,6 +1,7 @@
 // ===== GLOBAL WINDOW ATTACHMENT =====
 window.allLiveStockData = window.allLiveStockData || [];
 window.liveBuyerData = window.liveBuyerData || [];
+window.allBuyers = window.allBuyers || [];
 
 // ===== LIVE FIREBASE DATA SYNC =====
 function syncPipelineData() {
@@ -33,12 +34,13 @@ function syncPipelineData() {
     console.log("✅ Pipeline Live Stock Synced:", window.allLiveStockData.length, "lines");
   }, err => console.error("Stock sync error:", err));
 
-  // Synchronize Live Buyer Data
+  // Synchronize Live Buyer Data and populate all global reference keys
   firebase.database().ref('buyers').on('value', snapshot => {
     const raw = snapshot.val() || {};
     let buyers = Array.isArray(raw) ? raw : Object.values(raw);
     
     window.liveBuyerData = buyers;
+    window.allBuyers = buyers; // Ensure window.allBuyers is populated directly from Firebase here
     console.log("✅ Pipeline Live Buyers Synced:", window.liveBuyerData.length, "buyers");
   }, err => console.error("Buyer sync error:", err));
 }
@@ -326,6 +328,7 @@ async function runAIMatch() {
       const buyerSnap = await firebase.database().ref('buyers').once('value');
       const rawB = buyerSnap.val() || {};
       buyers = Array.isArray(rawB) ? rawB : Object.values(rawB);
+      window.allBuyers = buyers; // Safe update back to window.allBuyers
     } catch (e) {
       console.error('Fallback buyer fetch error:', e);
     }
