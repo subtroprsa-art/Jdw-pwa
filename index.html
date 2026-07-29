@@ -71,8 +71,12 @@ try {
 
   .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; font-size: 14px; outline: none; }
   .list-container { display: flex; flex-direction: column; gap: 8px; }
-
   .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease; }
+
+  /* Sub-tab navigation bars for stock/floor */
+  .sub-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stock-tab, .floor-tab { background: #fff; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; color: #475569; }
+  .stock-tab.active, .floor-tab.active { background: #1e4d2b; color: #fff; border-color: #1e4d2b; }
   
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
   .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
@@ -135,7 +139,6 @@ try {
         </div>
       </div>
 
-      <!-- Additional standard dashboard metrics often looked up by dashboard.js -->
       <div class="kpi-grid" style="margin-bottom: 12px;">
         <div class="kpi-card" style="border-top: 4px solid #2563eb;">
           <div class="kpi-lbl">TOTAL ORDERS</div>
@@ -195,13 +198,21 @@ try {
 
     <div class="page" id="page-stock">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
+      <div class="sub-tabs">
+        <button class="stock-tab active" id="tab-RJ" onclick="switchStockTab('RJ')">RJ</button>
+        <button class="stock-tab" id="tab-CW" onclick="switchStockTab('CW')">CW</button>
+        <button class="stock-tab" id="tab-POT" onclick="switchStockTab('POT')">POT</button>
+      </div>
       <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock..." oninput="filterStock()"/>
       <div class="list-container" id="list-stock">Loading stock...</div>
     </div>
 
     <div class="page" id="page-floor">
-      <div class="nav-bar-sub">
-        <button onclick="goHome()">🏠 Home</button>
+      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
+      <div class="sub-tabs">
+        <button class="floor-tab active" id="ftab-RJ" onclick="switchFloorTab('RJ')">RJ</button>
+        <button class="floor-tab" id="ftab-CW" onclick="switchFloorTab('CW')">CW</button>
+        <button class="floor-tab" id="ftab-POT" onclick="switchFloorTab('POT')">POT</button>
       </div>
       <div style="display:flex; gap:8px; margin-bottom:12px;">
         <select id="floor-filter" class="search-input" style="margin-bottom:0;" onchange="filterFloor()">
