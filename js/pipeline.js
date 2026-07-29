@@ -1,57 +1,14 @@
 // ===== PIPELINE MATCHING FUNCTIONS =====
 
-let livePipelineStock = [];
-let livePipelineBuyers = [];
-
-async function runComprehensiveMatching() {
+function runComprehensiveMatching() {
   console.log("Running match...");
-  
-  let currentUser = 'CW';
-  const activeTabBtn = document.querySelector('.floor-tab.active, .stock-tab.active, [id^="ftab-"].active, [id^="stab-"].active');
-  if (activeTabBtn) {
-    const text = activeTabBtn.textContent || activeTabBtn.innerText || '';
-    if (text.trim()) currentUser = text.trim();
-  }
-  if (typeof currentLoginUser !== 'undefined' && currentLoginUser) {
-    currentUser = currentLoginUser;
-  }
-  
-  let dbKey = (currentUser === 'CDW') ? 'CW' : currentUser;
 
-  try {
-    const stockSnap = await firebase.database().ref('stock/' + dbKey).once('value');
-    const stockVal = stockSnap.val();
-    
-    if (stockVal) {
-      livePipelineStock = Object.values(stockVal);
-    } else if (typeof liveStockData !== 'undefined' && liveStockData.length) {
-      livePipelineStock = liveStockData;
-    } else {
-      const allStockSnap = await firebase.database().ref('stock').once('value');
-      const allStockVal = allStockSnap.val();
-      if (allStockVal) {
-        livePipelineStock = [];
-        for (const u in allStockVal) {
-          for (const k in allStockVal[u]) {
-            livePipelineStock.push(allStockVal[u][k]);
-          }
-        }
-      }
-    }
+  // Pull directly from the global data arrays already loaded in your app
+  const livePipelineStock = (typeof liveStockData !== 'undefined' && liveStockData.length) ? liveStockData : 
+                            (typeof allStock !== 'undefined' && allStock.length) ? allStock : [];
 
-    const buyersSnap = await firebase.database().ref('buyers').once('value');
-    const buyersVal = buyersSnap.val();
-    if (buyersVal) {
-      livePipelineBuyers = Object.values(buyersVal);
-    } else if (typeof liveBuyersData !== 'undefined' && liveBuyersData.length) {
-      livePipelineBuyers = liveBuyersData;
-    } else if (typeof allBuyers !== 'undefined' && allBuyers.length) {
-      livePipelineBuyers = allBuyers;
-    }
-
-  } catch (e) {
-    console.warn("Pipeline fetch error:", e.message);
-  }
+  const livePipelineBuyers = (typeof liveBuyersData !== 'undefined' && liveBuyersData.length) ? liveBuyersData : 
+                             (typeof allBuyers !== 'undefined' && allBuyers.length) ? allBuyers : [];
 
   console.log("Pipeline Loaded -> Stock count:", livePipelineStock.length, "Buyers count:", livePipelineBuyers.length);
 
@@ -59,24 +16,42 @@ async function runComprehensiveMatching() {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
     const el = document.getElementById('pipeline-results');
     if (el) {
-      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty for user key: ' + dbKey + '. Stock: ' + livePipelineStock.length + ', Buyers: ' + livePipelineBuyers.length + '</div>';
+      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty. Please ensure data is loaded.</div>';
     }
     return;
   }
 
   const matches = [];
   
-  // Temporary relaxed matching: pair available stock with buyers to guarantee UI output
   livePipelineStock.forEach(stockItem => {
     const stockBal = Number(stockItem.balance !== undefined ? stockItem.balance : 1);
-    if (stockBal < 0) return;
+    if (stockBal <= 0) return; // Skip zero or negative stock
+
+    const stockComm = String(stockItem.commodity || stockItem.item || '').toLowerCase().trim();
 
     livePipelineBuyers.forEach(buyer => {
-      matches.push({ stock: stockItem, buyer: buyer });
+      const buyerComms = buyer.commodities || buyer.commodity || buyer.products || [];
+      
+      let isMatch = false;
+      if (Array.isArray(buyerComms)) {
+        isMatch = buyerComms.some(c => {
+          const bc = String(c).toLowerCase().trim();
+          return bc && (stockComm.includes(bc) || bc.includes(stockComm));
+        });
+      } else if (typeof buyerComms === 'string') {
+        const bc = buyerComms.toLowerCase().trim();
+        isMatch = bc && (stockComm.includes(bc) || bc.includes(stockComm));
+      } else {
+        isMatch = true;
+      }
+
+      if (isMatch) {
+        matches.push({ stock: stockItem, buyer: buyer });
+      }
     });
   });
 
-  console.log("Total generated matches:", matches.length);
+  console.log("Filtered pipeline matches:", matches.length);
   renderPipelineMatches(matches);
 }
 
@@ -94,7 +69,7 @@ function renderPipelineMatches(matches) {
   if (!el) return;
 
   if (!matches || !matches.length) {
-    el.innerHTML = '<div class="empty">No matching pipeline results found.</div>';
+    el.innerHTML = '<div class="empty">No matching pipeline results found based on commodity filters.</div>';
     return;
   }
 
