@@ -276,18 +276,18 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // Brief safety pause loop to ensure modular global variables from stock.js/buyers.js have fully bound
+  // Brief safety pause loop to ensure modular global variables have fully bound
   let attempts = 0;
   while (
     ((!window.allStockData || !window.allStockData.length) && (!window.allLiveStockData || !window.allLiveStockData.length)) ||
     ((!window.allBuyers || !window.allBuyers.length) && (!window.liveBuyerData || !window.liveBuyerData.length))
   ) {
-    if (attempts > 10) break; // give up after 1 second and fall back to firebase direct fetch
+    if (attempts > 10) break;
     attempts++;
     await new Promise(r => setTimeout(r, 100));
   }
 
-  // 1. Gather Stock
+  // 1. Gather Stock (Prioritize modular window.allStockData)
   let rawStock = [];
   if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
     rawStock = window.allStockData;
@@ -296,7 +296,7 @@ async function runAIMatch() {
   }
   let stock = rawStock.filter(s => getStockQty(s) > 0);
 
-  // 2. Gather Buyers
+  // 2. Gather Buyers (Prioritize modular window.allBuyers from buyers.js first!)
   let buyers = [];
   if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
     buyers = window.allBuyers;
