@@ -277,10 +277,13 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock (with window fallbacks and direct Firebase fallback)
-  let stock = window.allLiveStockData ? window.allLiveStockData.filter(s => getStockQty(s) > 0) : [];
-  if (!stock.length && typeof window.allStockData !== 'undefined' && window.allStockData.length) {
+  // 1. Gather Stock (Prioritize window variables loaded by stock.js, then pipeline fallback)
+  let stock = [];
+  if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
     stock = window.allStockData.filter(s => getStockQty(s) > 0);
+  }
+  if (!stock.length && window.allLiveStockData && window.allLiveStockData.length) {
+    stock = window.allLiveStockData.filter(s => getStockQty(s) > 0);
   }
 
   if (!stock.length && typeof firebase !== 'undefined') {
@@ -303,10 +306,13 @@ async function runAIMatch() {
     }
   }
 
-  // 2. Gather Buyers (with window alternative fallbacks and direct Firebase fallback)
-  let buyers = window.liveBuyerData || [];
-  if (!buyers.length && typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
+  // 2. Gather Buyers (Prioritize window variables loaded by buyers.js, then pipeline fallback)
+  let buyers = [];
+  if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
     buyers = window.allBuyers;
+  }
+  if (!buyers.length && window.liveBuyerData && window.liveBuyerData.length) {
+    buyers = window.liveBuyerData;
   }
 
   if (!buyers.length && typeof firebase !== 'undefined') {
@@ -665,3 +671,25 @@ function exportPipelineMatchesToPDF() {
     alert("html2pdf library is not loaded.");
   }
 }
+
+// ===== GLOBAL EXPOSURE FOR HTML ONCLICK HANDLERS =====
+window.syncPipelineData = syncPipelineData;
+window.getStockQty = getStockQty;
+window.loadPipelineState = loadPipelineState;
+window.resetPipeline = resetPipeline;
+window.runAIFromPipeline = runAIFromPipeline;
+window.goToOrders = goToOrders;
+window.togglePipelineStep = togglePipelineStep;
+window.togglePipelineCallList = togglePipelineCallList;
+window.togglePipelinePayment = togglePipelinePayment;
+window.togglePipelinePackers = togglePipelinePackers;
+window.renderPipelineBuyers = renderPipelineBuyers;
+window.togglePipelineCall = togglePipelineCall;
+window.renderPipelineOrders = renderPipelineOrders;
+window.togglePipelineOrderState = togglePipelineOrderState;
+window.runAIMatch = runAIMatch;
+window.resetMatchButton = resetMatchButton;
+window.renderAICallList = renderAICallList;
+window.sendWhatsAppToBuyer = sendWhatsAppToBuyer;
+window.sendWhatsAppToAllMatches = sendWhatsAppToAllMatches;
+window.exportPipelineMatchesToPDF = exportPipelineMatchesToPDF;
