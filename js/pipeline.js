@@ -7,7 +7,7 @@ async function runComprehensiveMatching() {
   let pipelineBuyers = [];
 
   try {
-    // 1. Pull all stock using your app's global loader logic
+    // 1. Pull all stock nodes
     const snapshot = await firebase.database().ref('stock').once('value');
     const d = snapshot.val();
     if (d) {
@@ -25,13 +25,15 @@ async function runComprehensiveMatching() {
       pipelineStock = allLiveStockData;
     }
 
-    // 2. Pull buyers data directly from Firebase to ensure it's never 0
-    const buyersSnap = await firebase.database().ref('buyers').once('value');
-    const buyersVal = buyersSnap.val();
-    if (buyersVal) {
-      pipelineBuyers = Object.values(buyersVal);
-    } else if (typeof liveBuyersData !== 'undefined' && liveBuyersData.length) {
+    // 2. Safely grab buyers from the global array loaded by buyers.js, or fetch directly if needed
+    if (typeof liveBuyersData !== 'undefined' && Array.isArray(liveBuyersData) && liveBuyersData.length > 0) {
       pipelineBuyers = liveBuyersData;
+    } else {
+      const buyersSnap = await firebase.database().ref('buyers').once('value');
+      const buyersVal = buyersSnap.val();
+      if (buyersVal) {
+        pipelineBuyers = Array.isArray(buyersVal) ? buyersVal : Object.values(buyersVal);
+      }
     }
 
   } catch (e) {
@@ -44,7 +46,7 @@ async function runComprehensiveMatching() {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
     const el = document.getElementById('pipeline-results');
     if (el) {
-      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty. Please wait for buyers to load.</div>';
+      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty.</div>';
     }
     return;
   }
