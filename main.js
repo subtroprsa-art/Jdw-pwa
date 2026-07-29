@@ -1,6 +1,6 @@
 // ===== MAIN INITIALIZATION & EVENT LISTENERS =====
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 JDW CRM Initialized');
   
   // Initialize Firebase connection check or listeners
@@ -24,12 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelBtn.addEventListener('click', cancelCamera);
   }
 
-  // Load initial stock or buyer data if functions are available
-  if (typeof loadAllStockForMatcher === 'function') {
-    loadAllStockForMatcher();
+  // Load initial stock and buyer data, then load the dashboard stats
+  try {
+    await Promise.all([
+      typeof loadAllStockForMatcher === 'function' ? loadAllStockForMatcher() : Promise.resolve(),
+      typeof loadBuyersFromFirebase === 'function' ? loadBuyersFromFirebase() : Promise.resolve(),
+      typeof loadFloorFromFirebase === 'function' ? loadFloorFromFirebase('default_user') : Promise.resolve()
+    ]);
+  } catch (e) {
+    console.error('Error loading initial data:', e);
   }
-  
-  if (typeof loadBuyersFromFirebase === 'function') {
-    loadBuyersFromFirebase();
+
+  // Finally, render the dashboard stats with the newly populated global arrays
+  if (typeof loadDashboard === 'function') {
+    loadDashboard();
   }
 });
