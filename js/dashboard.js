@@ -48,3 +48,31 @@ function renderStockChart(src) {
     return `<div class="prog-wrap"><div class="prog-row"><span class="prog-name">${commName[c] || c}</span><span class="prog-meta">${pct}% · ${flr.toLocaleString()} left</span></div><div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div></div>`;
   }).join('') || '<div class="empty">No stock data</div>';
 }
+// ===== PIPELINE SEARCH & FILTER =====
+
+function renderPipeline() {
+  const searchInput = document.getElementById('search-pipeline');
+  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  
+  // If you have a specific list element or container for pipeline items:
+  const pipelineContainer = document.getElementById('pipeline-buyers');
+  if (!pipelineContainer) return;
+
+  // If there are cached or live matches, filter them based on the search query
+  const todayKey = 'ai-results-' + new Date().toISOString().slice(0, 10);
+  const saved = JSON.parse(localStorage.getItem(todayKey) || '{}');
+  const matches = saved.matches || [];
+
+  if (!query) {
+    renderAICallList(matches, saved.summary || '');
+    return;
+  }
+
+  const filteredMatches = matches.filter(m => 
+    (m.buyer && m.buyer.toLowerCase().includes(query)) ||
+    (m.stockLine && m.stockLine.toLowerCase().includes(query)) ||
+    (m.commodity && m.commodity.toLowerCase().includes(query))
+  );
+
+  renderAICallList(filteredMatches, saved.summary || '');
+}
