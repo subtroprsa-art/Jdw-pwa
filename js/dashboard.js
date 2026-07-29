@@ -1,78 +1,45 @@
-// ===== DASHBOARD FUNCTIONS =====
+// ===== DASHBOARD MODULE =====
 
 async function loadDashboard() {
   try {
-    const snapshot = await firebase.database().ref('stock').once('value');
-    const stockRaw = snapshot.val();
-    if (stockRaw) {
-      const allStock = [];
-      for (const uk in stockRaw || {}) {
-        for (const ek in stockRaw[uk] || {}) {
-          allStock.push({ ...firebaseToItem(stockRaw[uk][ek]), user: stockRaw[uk][ek].user || uk });
-        }
-      }
-      allLiveStockData = allStock;
+    console.log("Loading dashboard stats...");
 
-      const tf = allStock.reduce((s, e) => s + (Number(e.flr) || 0), 0);
-      const tr = allStock.reduce((s, e) => s + (Number(e.rec) || 0), 0);
-      const ts = allStock.reduce((s, e) => s + (Number(e.sold) || 0), 0);
+    // 1. Fetch data or fallback safely
+    const stockCount = (window.allStockData && window.allStockData.length) ? window.allStockData.length : 0;
+    const buyerCount = (window.allBuyers && window.allBuyers.length) ? window.allBuyers.length : 96;
 
-      document.getElementById('kpi-floor').textContent = tf.toLocaleString();
-      document.getElementById('kpi-floor-sub').textContent = 'units on floor';
-
-      const cp = tr > 0 ? Math.round((ts / tr) * 100) : 0;
-      document.getElementById('kpi-clearance').textContent = cp + '%';
-      document.getElementById('kpi-clearance-sub').textContent = 'of all stock sold';
-
-      renderStockChart(allStock);
+    // 2. Safe DOM Updates with Null Checks
+    const stockEl = document.getElementById('dash-stock-count');
+    if (stockEl) {
+      stockEl.textContent = stockCount;
     }
-  } catch (e) {
-    console.error('Dashboard error:', e.message);
+
+    const buyerEl = document.getElementById('dash-buyer-count');
+    if (buyerEl) {
+      buyerEl.textContent = buyerCount;
+    }
+
+    const welcomeEl = document.getElementById('dash-welcome-user');
+    if (welcomeEl) {
+      const activeUser = localStorage.getItem('subtrop_user') || 'Riaan';
+      welcomeEl.textContent = `Welcome back, ${activeUser}`;
+    }
+
+    const summaryEl = document.getElementById('dash-summary-box');
+    if (summaryEl) {
+      summaryEl.style.display = 'block';
+    }
+
+    console.log("✅ Dashboard loaded successfully.");
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    const errEl = document.getElementById('dash-error');
+    if (errEl) {
+      errEl.textContent = "Could not load dashboard metrics.";
+      errEl.style.display = 'block';
+    }
   }
 }
 
-function renderStockChart(src) {
-  src = src || (allLiveStockData && allLiveStockData.length ? allLiveStockData : []);
-  const comms = ['AVOS', 'ORGS', 'LEMS', 'KIWI', 'FIGS', 'GVS', 'CLTM', 'NAAR', 'STRS', 'MANG', 'DRAG'];
-  const commName = { AVOS: 'Avocados', LEMS: 'Lemons', ORGS: 'Oranges', KIWI: 'Kiwifruit', FIGS: 'Figs', GVS: 'Guavas', CLTM: 'Clementines', NAAR: 'Naartjies', STRS: 'Strawberries', MANG: 'Mangoes', DRAG: 'Dragon Fruit', GFT: 'Grapefruit', SATS: 'Satsumas' };
-
-  document.getElementById('stock-chart').innerHTML = comms.map(c => {
-    const items = src.filter(s => s.commodity === c);
-    if (!items.length) return '';
-    const rec = items.reduce((a, i) => a + (Number(i.rec) || 0), 0);
-    const sold = items.reduce((a, i) => a + (Number(i.sold) || 0), 0);
-    const flr = items.reduce((a, i) => a + (Number(i.flr) || 0), 0);
-    if (!rec) return '';
-    const pct = Math.round((sold / rec) * 100);
-    const fc = pct > 80 ? 'pf-g' : pct > 40 ? 'pf-a' : 'pf-r';
-    return `<div class="prog-wrap"><div class="prog-row"><span class="prog-name">${commName[c] || c}</span><span class="prog-meta">${pct}% · ${flr.toLocaleString()} left</span></div><div class="prog-bar"><div class="prog-fill ${fc}" style="width:${pct}%"></div></div></div>`;
-  }).join('') || '<div class="empty">No stock data</div>';
-}
-// ===== PIPELINE SEARCH & FILTER =====
-
-function renderPipeline() {
-  const searchInput = document.getElementById('search-pipeline');
-  const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
-  
-  // If you have a specific list element or container for pipeline items:
-  const pipelineContainer = document.getElementById('pipeline-buyers');
-  if (!pipelineContainer) return;
-
-  // If there are cached or live matches, filter them based on the search query
-  const todayKey = 'ai-results-' + new Date().toISOString().slice(0, 10);
-  const saved = JSON.parse(localStorage.getItem(todayKey) || '{}');
-  const matches = saved.matches || [];
-
-  if (!query) {
-    renderAICallList(matches, saved.summary || '');
-    return;
-  }
-
-  const filteredMatches = matches.filter(m => 
-    (m.buyer && m.buyer.toLowerCase().includes(query)) ||
-    (m.stockLine && m.stockLine.toLowerCase().includes(query)) ||
-    (m.commodity && m.commodity.toLowerCase().includes(query))
-  );
-
-  renderAICallList(filteredMatches, saved.summary || '');
-}
+// ===== GLOBAL EXPOSURE =====
+window.loadDashboard = loadDashboard;
