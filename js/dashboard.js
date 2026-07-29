@@ -1,35 +1,33 @@
 // ==========================================
-// COMPLETE dashboard.js FILE
+// UPDATED DASHBOARD MODULE (CUSTOM METRICS)
 // ==========================================
 
 async function loadDashboard() {
   try {
     console.log("Loading dashboard stats...");
 
-    // Retrieve active arrays or default safely
+    // Retrieve active arrays or default safely from global scope / localStorage
     const stock = window.allStockData || window.stockLines || JSON.parse(localStorage.getItem('stockLines') || '[]');
     const buyers = window.allBuyers || window.liveBuyerData || JSON.parse(localStorage.getItem('buyers') || '[]');
-    const orders = window.orders || JSON.parse(localStorage.getItem('orders') || '[]');
+    const orders = window.orders || window.allOrders || JSON.parse(localStorage.getItem('orders') || '[]');
 
-    // Calculate actual metrics from live data
-    const totalUnits = stock.reduce((sum, item) => sum + Number(item.qty || item.quantity || item.pallets || item.cartons || 0), 0);
+    // Calculate total physical units on the floor
+    const totalFloorUnits = stock.reduce((sum, item) => {
+      const q = Number(item.qty || item.quantity || item.pallets || item.cartons || item.units || 0);
+      return sum + q;
+    }, 0);
+
     const totalRevenue = buyers.reduce((sum, b) => sum + Number(b.turnover || 0), 0);
-    const activeBuyersCount = buyers.length || 96;
-    const totalStockLines = stock.length;
+    const totalBuyersCount = buyers.length || 305;
     const totalOrdersCount = orders.length;
 
-    // Calculate clearance rate
-    const clearanceRate = totalStockLines > 0 ? Math.round(((totalStockLines - stock.filter(s => Number(s.qty || 0) > 0).length) / totalStockLines) * 100) : 0;
-
     // Update Dashboard DOM elements safely
-    setElemText('kpi-floor', totalUnits + ' units');
-    setElemText('kpi-clearance', clearanceRate + '%');
+    setElemText('kpi-floor', totalFloorUnits.toLocaleString() + ' units');
     setElemText('kpi-orders', totalOrdersCount);
-    setElemText('kpi-buyers', activeBuyersCount);
+    setElemText('kpi-buyers', totalBuyersCount);
     setElemText('kpi-revenue', 'R ' + totalRevenue.toLocaleString());
-    setElemText('kpi-total-stock', totalStockLines);
 
-    console.log("✅ Dashboard loaded successfully with live stats.");
+    console.log("✅ Dashboard loaded successfully with custom metrics.");
   } catch (error) {
     console.error("Dashboard error:", error);
   }
