@@ -85,7 +85,9 @@ function createMatcher(stockLines, historicalTrends = {}) {
 
 // Bridge function called by your UI button
 function runAIFromPipeline(stockLines, buyers, historicalTrends = {}) {
-    return runComprehensiveMatching(stockLines, buyers, historicalTrends);
+    const results = runComprehensiveMatching(stockLines, buyers, historicalTrends);
+    renderMatchResults(results);
+    return results;
 }
 
 function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
@@ -121,4 +123,68 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
     console.log(`Matches found: ${totalMatchesFound}`);
     console.log(`--- Matching Complete. Total match groups: ${matchResults.length} (Sorted by Highest Value) ---`);
     return matchResults;
+}
+
+// RENDER MATCH RESULTS TO DASHBOARD UI
+function renderMatchResults(matchResults) {
+    const buyerMap = {};
+    matchResults.forEach(res => {
+        if (!buyerMap[res.buyer]) {
+            buyerMap[res.buyer] = {
+                buyer: res.buyer,
+                turnover: res.buyerTurnover || 0,
+                matches: []
+            };
+        }
+        buyerMap[res.buyer].matches.push(res);
+    });
+
+    const sortedBuyers = Object.values(buyerMap).sort((a, b) => b.turnover - a.turnover);
+
+    let container = document.getElementById('match-results-container');
+    if (!container) {
+        console.warn("⚠️ Element with id 'match-results-container' not found in DOM.");
+        return;
+    }
+
+    if (sortedBuyers.length === 0) {
+        container.innerHTML = '<div class="empty">No matches found.</div>';
+        return;
+    }
+
+    container.innerHTML = sortedBuyers.map((group, index) => {
+        const dropdownId = 'match-dropdown-' + index;
+        
+        const matchesHtml = group.matches.map(m => `
+            <div style="background:var(--paper, #f8fafc); border-radius:8px; padding:10px; margin-bottom:8px; border:1px solid var(--border, #e2e8f0);">
+                <div style="font-weight:700; font-size:13px; color:var(--moss, #1e4d2b); margin-bottom:6px;">
+                    Commodity Preference: ${m.commodity}
+                </div>
+                <div style="font-size:12px; color:var(--muted, #64748b);">
+                    ${m.candidates.length} stock candidate(s) available on floor.
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <div style="background:#fff; border-radius:12px; box-shadow:var(--shadow, 0 1px 3px rgba(0,0,0,0.05)); margin-bottom:10px; overflow:hidden; border:1.5px solid var(--border, #e2e8f0);">
+                <div onclick="toggleSection('${dropdownId}')" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; cursor:pointer; background:#fff;">
+                    <div>
+                        <div style="font-weight:800; font-size:15px; color:#0f172a;">${group.buyer}</div>
+                        <div style="font-size:11px; color:var(--muted, #64748b); margin-top:2px;">${group.matches.length} matching commodity category(ies)</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="background:var(--moss, #1e4d2b); border-radius:8px; padding:6px 12px; text-align:center;">
+                            <div style="font-size:14px; font-weight:800; color:#fff;">R ${group.turnover.toLocaleString()}</div>
+                            <div style="font-size:8px; color:rgba(255,255,255,0.8); text-transform:uppercase;">historical value</div>
+                        </div>
+                        <div id="arr-${dropdownId}" style="color:var(--muted, #64748b); font-size:14px; transition:transform .2s;">▼</div>
+                    </div>
+                </div>
+                <div id="${dropdownId}" style="display:none; padding:12px; background:var(--card, #fff); border-top:1px solid var(--border, #e2e8f0);">
+                    ${matchesHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
