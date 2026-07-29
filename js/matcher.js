@@ -1,6 +1,7 @@
 /**
- * Comprehensive Matching Engine
- * Matches all stock lines against buyer preferences and historical buying trends.
+ * Final Production Matching Engine
+ * Handles exact matching, case insensitivity, pluralization variations, 
+ * and fallback parsing for fresh produce commodities.
  */
 
 function normalizeString(str) {
@@ -8,54 +9,78 @@ function normalizeString(str) {
     return str.toString().trim().toUpperCase();
 }
 
+// Clean up commodity names to bridge singular/plural gaps (e.g., ORANGE vs ORANGES)
+function getBaseCommodity(str) {
+    let norm = normalizeString(str);
+    // Strip trailing 'S' if it exists to handle plurals vs singulars
+    if (norm.endsWith('S') && norm.length > 3) {
+        norm = norm.slice(0, -1);
+    }
+    return norm;
+}
+
 function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
-    console.log(`--- Starting Comprehensive Match ---`);
+    console.log(`--- Starting Production Match ---`);
     console.log(`Stock lines loaded: ${stockLines.length}`);
     console.log(`Buyers loaded: ${buyers.length}`);
 
-    // 1. Build a robust lookup index for all stock lines by normalized commodity name
-    const stockIndex = new Map();
+    // 1. Build a multi-tier lookup index for stock lines
+    const exactStockIndex = new Map();
+    const baseStockIndex = new Map();
+
     stockLines.forEach(stock => {
-        const commKey = normalizeString(stock.commodity || stock.comm || stock.name);
-        if (!stockIndex.has(commKey)) {
-            stockIndex.set(commKey, []);
+        const rawComm = stock.commodity || stock.comm || stock.name || '';
+        const exactKey = normalizeString(rawComm);
+        const baseKey = getBaseCommodity(rawComm);
+
+        if (!exactStockIndex.has(exactKey)) {
+            exactStockIndex.set(exactKey, []);
         }
-        stockIndex.get(commKey).push(stock);
+        exactStockIndex.get(exactKey).push(stock);
+
+        if (!baseStockIndex.has(baseKey)) {
+            baseStockIndex.set(baseKey, []);
+        }
+        baseStockIndex.get(baseKey).push(stock);
     });
 
     const matchResults = [];
+    let totalMatchesFound = 0;
 
-    // 2. Iterate through every buyer and evaluate preferences and historical trends
+    // 2. Iterate through buyers and evaluate preferences against the stock indices
     buyers.forEach(buyer => {
         const buyerName = buyer.name || buyer.buyerName;
         const preferences = buyer.preferences || [];
 
         preferences.forEach(pref => {
-            const rawComm = pref.comm || pref.commodity;
+            const rawComm = pref.comm || pref.commodity || '';
             const mappedComm = pref.mapped || rawComm;
-            const searchKey = normalizeString(mappedComm);
+            
+            const exactSearchKey = normalizeString(mappedComm);
+            const baseSearchKey = getBaseCommodity(mappedComm);
 
-            console.log(`Checking preference for ${buyerName}: comm="${rawComm}" -> mapped="${mappedComm}"`);
+            // Tier 1: Exact match on mapped/preferred name
+            let candidates = exactStockIndex.get(exactSearchKey) || [];
 
-            // Direct lookup from stock index
-            let candidates = stockIndex.get(searchKey) || [];
-
-            // Fallback: Fuzzy or partial match if exact key lookup yields nothing (handling plurals/variations like "Oranges" vs "ORANGES")
+            // Tier 2: Match using base commodity (handles singular/plural like Oranges vs ORANGE)
             if (candidates.length === 0) {
-                stockIndex.forEach((stockArray, stockKey) => {
-                    if (stockKey.includes(searchKey) || searchKey.includes(stockKey)) {
+                candidates = baseStockIndex.get(baseSearchKey) || [];
+            }
+
+            // Tier 3: Substring fallback search across all stock items
+            if (candidates.length === 0) {
+                exactStockIndex.forEach((stockArray, stockKey) => {
+                    if (stockKey.includes(exactSearchKey) || exactSearchKey.includes(stockKey)) {
                         candidates = candidates.concat(stockArray);
                     }
                 });
             }
 
-            // 3. Incorporate historical trend weighting if available
             const buyerHistory = historicalTrends[buyerName] || {};
             const itemHistoryScore = buyerHistory[mappedComm] || buyerHistory[rawComm] || 1.0;
 
-            console.log(`Candidates found for ${mappedComm}: ${candidates.length} (Historical Weight: ${itemHistoryScore})`);
-
             if (candidates.length > 0) {
+                totalMatchesFound += candidates.length;
                 matchResults.push({
                     buyer: buyerName,
                     commodity: mappedComm,
@@ -66,6 +91,7 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
         });
     });
 
-    console.log(`--- Matching Complete. Total successful match groups: ${matchResults.length} ---`);
+    console.log(`Matches found: ${totalMatchesFound}`);
+    console.log(`--- Matching Complete. Total match groups: ${matchResults.length} ---`);
     return matchResults;
 }
