@@ -15,30 +15,35 @@ function getBaseCommodity(str) {
     return norm;
 }
 
-// Global bridge function to catch the button click error: "runAIFromPipeline is not defined"
+// Global bridge function for your HTML button click
 function runAIFromPipeline(stockLines, buyers, historicalTrends = {}) {
     return runComprehensiveMatching(stockLines, buyers, historicalTrends);
 }
 
 function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
-    console.log(`Running match...`);
-    console.log(`Stock lines for matching: ${stockLines ? stockLines.length : 0}`);
-    console.log(`Buyers for matching: ${buyers ? buyers.length : 0}`);
+    // FIX: If stockLines or buyers aren't passed directly into this function, 
+    // grab them automatically from the global scope where stock.js and buyers.js load them.
+    const activeStock = (stockLines && stockLines.length > 0) ? stockLines : (window.stockLines || window.stock || window.allStock || []);
+    const activeBuyers = (buyers && buyers.length > 0) ? buyers : (window.buyers || window.allBuyers || []);
 
-    if (!stockLines || stockLines.length === 0 || !buyers || buyers.length === 0) {
+    console.log(`Running match...`);
+    console.log(`Stock lines for matching: ${activeStock.length}`);
+    console.log(`Buyers for matching: ${activeBuyers.length}`);
+
+    if (activeStock.length === 0 || activeBuyers.length === 0) {
         console.warn("⚠️ Stock lines or buyers data is missing or empty!");
         return [];
     }
 
     console.log("--- DEBUG INSPECT ---");
-    console.log("First stock line sample:", stockLines[0]);
-    console.log("First buyer sample:", buyers[0]);
+    console.log("First stock line sample:", activeStock[0]);
+    console.log("First buyer sample:", activeBuyers[0]);
     console.log("---------------------");
 
     const exactStockIndex = new Map();
     const baseStockIndex = new Map();
 
-    stockLines.forEach(stock => {
+    activeStock.forEach(stock => {
         const rawComm = stock.commodity || stock.comm || stock.name || stock.item || stock.description || stock.produce || '';
         const exactKey = normalizeString(rawComm);
         const baseKey = getBaseCommodity(rawComm);
@@ -61,7 +66,7 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
     const matchResults = [];
     let totalMatchesFound = 0;
 
-    buyers.forEach(buyer => {
+    activeBuyers.forEach(buyer => {
         const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
         const preferences = buyer.preferences || buyer.commPreferences || buyer.items || [];
 
@@ -71,8 +76,6 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
             
             const exactSearchKey = normalizeString(mappedComm);
             const baseSearchKey = getBaseCommodity(mappedComm);
-
-            console.log(`Checking preference for ${buyerName}: comm="${rawComm}" -> mapped="${mappedComm}"`);
 
             let candidates = exactStockIndex.get(exactSearchKey) || [];
 
@@ -87,8 +90,6 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
                     }
                 });
             }
-
-            console.log(`Candidates found for ${mappedComm}: ${candidates.length}`);
 
             const buyerHistory = historicalTrends[buyerName] || {};
             const itemHistoryScore = buyerHistory[mappedComm] || buyerHistory[rawComm] || 1.0;
