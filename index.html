@@ -74,8 +74,7 @@ try {
   .list-container { display: flex; flex-direction: column; gap: 8px; }
 
   .card-item { background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease; }
-  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; color: #334155; margin-left: 6px; }
-
+  
   #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #1e4d2b; color: white; }
   .login-box { background: white; padding: 24px; border-radius: 16px; color: #1e293b; width: 320px; display: flex; flex-direction: column; gap: 12px; }
   .login-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-top: 4px; }
@@ -144,7 +143,7 @@ try {
         <div class="col-sec">
           <div class="sec-title">INVENTORY & LOGISTICS</div>
           <button class="nav-btn" onclick="goToPage('stock')">📦 Stock</button>
-          <button class="nav-btn" onclick="goToPage('floor')">📊 Floor Balance</button>
+          <button class="nav-btn" onclick="goToPage('floor'); if(typeof loadFloorFromFirebase === 'function') loadFloorFromFirebase(currentSalesman);">📊 Floor Balance</button>
           <button class="nav-btn" onclick="goToPage('coldstore')">❄️ Coldstore</button>
           <button class="nav-btn" onclick="goToPage('commodities')">🌿 Commodities</button>
         </div>
@@ -177,19 +176,27 @@ try {
 
     <div class="page" id="page-stock">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock by producer, GRN, variety, pack, size..." oninput="renderStock()"/>
+      <input type="text" class="search-input" id="search-stock" placeholder="🔍 Search stock..." oninput="filterStock()"/>
       <div class="list-container" id="list-stock">Loading stock...</div>
     </div>
 
     <div class="page" id="page-floor">
-      <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-floor" placeholder="🔍 Search floor balance by producer, GRN, variety, pack, size..." oninput="renderFloor()"/>
-      <div class="list-container" id="list-floor">Loading floor balance...</div>
+      <div class="nav-bar-sub">
+        <button onclick="goHome()">🏠 Home</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <select id="floor-filter" class="search-input" style="margin-bottom:0;" onchange="filterFloor()">
+          <option value="">All commodities</option>
+        </select>
+      </div>
+      <input type="text" class="search-input" id="floor-search" placeholder="🔍 Search floor balance..." oninput="filterFloor()"/>
+      <div id="floor-summary" style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px;"></div>
+      <div class="list-container" id="floor-list">Loading floor balance...</div>
     </div>
 
     <div class="page" id="page-coldstore">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="renderColdstore()"/>
+      <input type="text" class="search-input" id="search-coldstore" placeholder="🔍 Search coldstore..." oninput="filterColdstore()"/>
       <div class="list-container" id="list-coldstore">Loading coldstore...</div>
     </div>
 
@@ -200,7 +207,7 @@ try {
 
     <div class="page" id="page-pipeline">
       <div class="nav-bar-sub"><button onclick="goHome()">🏠 Home</button></div>
-      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search top buyers or product lines..." oninput="renderPipeline()"/>
+      <input type="text" class="search-input" id="search-pipeline" placeholder="🔍 Search pipeline matches..." oninput="renderPipeline()"/>
       <div class="list-container" id="list-pipeline">Loading pipeline matches...</div>
     </div>
 
@@ -216,227 +223,7 @@ try {
 </div>
 
 <script>
-const COMM_MAP = {
-  'AVOCADOS': 'AVOCADO', 'AVOS': 'AVOCADO', 'LEMONS': 'LEMONS', 'LEMS': 'LEMONS', 
-  'FIGS': 'FIGS', 'KIWIFRUIT': 'KIWI', 'KIWI': 'KIWI', 'ORANGES': 'ORGS', 
-  'GUAVAS': 'GUAVAS', 'CLEMENTINES': 'CLEMENTINES', 'NAARTJIES': 'NAAR',
-  'STRAWBERRIES': 'BERS, STRAWBERRY', 'BERRIES': 'BERS, STRAWBERRY', 'DRAGON FRUIT': 'DRAGON FRUIT', 
-  'MANGOES': 'MANGOES', 'GRAPEFRUIT': 'GRAPEFRUIT', 'SATSUMAS': 'SATSUMAS', 'PAPINO': 'PAPINO'
-};
-
-const PACK_MAP = {
-  'TR040': '4KG', '4KG TRAY': '4KG', 'TR060': '6KG', '6KG TRAY': '6KG',
-  'BG150': '15KG', '15KG BAG': '15KG', 'BG160': '16KG', '16KG BAG': '16KG',
-  'BG200': '20KG', '20KG BAG': '20KG', 'CTT150': '15KG CARTON', '15KG CARTON': '15KG CARTON',
-  'PTB005': '500G', '500G PUNNET': '500G',
-  'PTB025': '250G', '250G PUNNET': '250G',
-  'PTB002': '160G', '160G PUNNET': '160G',
-  '300G PUNNET': '300G', '10KG CARTON': '10KG', '3KG POCKET': '3KG', '6KG POCKET': '6KG'
-};
-
-function normalizeCommodity(str) {
-  if (!str) return '';
-  const clean = String(str).trim().toUpperCase();
-  return COMM_MAP[clean] || clean;
-}
-
-function normalizePack(str) {
-  if (!str) return '';
-  const clean = String(str).trim().toUpperCase();
-  return PACK_MAP[clean] || clean;
-}
-
-function parseNumber(val) {
-  if (val === '*' || val === undefined || val === null) return 0;
-  if (typeof val === 'number') return val;
-  const parsed = parseFloat(String(val).replace(/[^0-9.]/g, ''));
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-function formatCommodityDetails(r) {
-  const parts = [];
-  if (r.commodity) parts.push(r.commodity);
-  if (r.variety && r.variety !== '*') parts.push(r.variety);
-  if (r.pack) parts.push(`(${r.pack})`);
-  if (r.size && r.size !== '*') parts.push(`• Sz ${r.size}`);
-  return parts.join(' ');
-}
-
-function filterRecordsBySearch(records, query) {
-  if (!query || !query.trim()) return records;
-  const terms = query.toLowerCase().trim().split(/\s+/);
-  return records.filter(r => {
-    const searchableText = [
-      r.producer, r.buyer, r.grn, r.seq, r.commodity, 
-      r.variety, r.pack, r.size, r.salesmanCode
-    ].join(' ').toLowerCase();
-    return terms.every(term => searchableText.includes(term));
-  });
-}
-
-function extractRecords(node, defaultSalesman = '') {
-  let records = [];
-  if (!node || typeof node !== 'object') return records;
-
-  function traverse(obj, pathSalesman = '', parentKeys = {}) {
-    if (Array.isArray(obj)) {
-      obj.forEach(item => traverse(item, pathSalesman, parentKeys));
-      return;
-    }
-
-    if (typeof obj === 'object' && obj !== null) {
-      let sm = obj.salesman || obj.rep || obj.agent || obj.trader || obj.user || obj._user || pathSalesman;
-      const rawQty = obj.qty_rec ?? obj.balance ?? obj.qty ?? obj.quantity ?? obj.units ?? obj.flr ?? obj.bags ?? obj.cartons ?? obj.count ?? obj.total;
-      const rawAmount = obj.amount ?? obj.revenue ?? obj.price ?? obj.totalPrice ?? obj.randVal ?? 0;
-      const commodity = obj.commodity || obj.product || obj.variety || obj.item || parentKeys.commodity || '';
-      const producer = obj.producer || obj.producerName || obj.grower || obj.farmer || parentKeys.producer;
-      const buyer = obj.buyer || obj.buyerName || parentKeys.buyer || '';
-
-      if (rawQty !== undefined || commodity || producer || obj.grn || buyer) {
-        let numericQty = parseNumber(rawQty);
-        let numericRevenue = parseNumber(rawAmount);
-
-        records.push({
-          salesmanCode: String(sm || '').toUpperCase(),
-          buyer: buyer,
-          grn: obj.grn || obj.grnNo || obj.docNo || parentKeys.grn || '—',
-          seq: obj.seq || parentKeys.seq || '—',
-          date: obj.date || parentKeys.date || '—',
-          producer: producer || 'Unknown Producer',
-          commodity: commodity || 'Commodity',
-          pack: obj.pack || parentKeys.pack || '',
-          variety: obj.variety || parentKeys.variety || '*',
-          size: obj.size || '*',
-          qty: numericQty,
-          revenue: numericRevenue,
-          rawQtyDisplay: `${numericQty} units`,
-          ...obj
-        });
-      }
-
-      const currentParentContext = {
-        grn: obj.grn || parentKeys.grn,
-        seq: obj.seq || parentKeys.seq,
-        date: obj.date || parentKeys.date,
-        producer: producer || parentKeys.producer,
-        commodity: commodity || parentKeys.commodity,
-        pack: obj.pack || parentKeys.pack,
-        buyer: buyer || parentKeys.buyer
-      };
-
-      Object.keys(obj).forEach(k => {
-        let childSm = sm;
-        if (['RJ', 'CW', 'POT'].includes(k.toUpperCase())) childSm = k.toUpperCase();
-        if (typeof obj[k] === 'object' && obj[k] !== null) {
-          traverse(obj[k], childSm, currentParentContext);
-        }
-      });
-    }
-  }
-
-  traverse(node, defaultSalesman);
-  return records;
-}
-
-function runPipelineMatching(stock, buyers, slips) {
-  if (!stock || !stock.length) return [];
-  const buyerMap = {};
-
-  const masterBuyerPhoneMap = {};
-  (buyers || []).forEach(b => {
-    if (b.name) {
-      masterBuyerPhoneMap[String(b.name).trim().toUpperCase()] = b.phone;
-    }
-  });
-
-  const resolvePhone = (bName, fallbackPhone = '') => {
-    if (!bName) return 'No Contact';
-    const cleanK = String(bName).trim().toUpperCase();
-    if (masterBuyerPhoneMap[cleanK] && masterBuyerPhoneMap[cleanK] !== 'No Contact') {
-      return masterBuyerPhoneMap[cleanK];
-    }
-    if (fallbackPhone && fallbackPhone !== 'No Contact') return fallbackPhone;
-    return 'No Contact';
-  };
-
-  slips.forEach(slip => {
-    const bName = slip.buyer;
-    if (!bName) return;
-    const key = String(bName).trim().toUpperCase();
-    if (!buyerMap[key]) {
-      buyerMap[key] = { name: bName, revenue: 0, items: {}, phone: resolvePhone(bName, slip.phone) };
-    }
-    const rev = slip.revenue || ((slip.qty || 0) * (slip.price || 0));
-    buyerMap[key].revenue += rev;
-
-    const comm = normalizeCommodity(slip.commodity);
-    const pack = normalizePack(slip.pack);
-    if (comm) {
-      buyerMap[key].items[`${comm}||${pack}`] = { comm, pack };
-    }
-  });
-
-  buyers.forEach(b => {
-    const key = String(b.name).trim().toUpperCase();
-    const resolvedPhone = resolvePhone(b.name, b.phone);
-    if (!buyerMap[key]) {
-      buyerMap[key] = { name: b.name, revenue: b.turnover || 0, items: {}, phone: resolvedPhone };
-    } else {
-      if (!buyerMap[key].revenue && b.turnover) buyerMap[key].revenue = b.turnover;
-      buyerMap[key].phone = resolvedPhone;
-    }
-
-    if (Array.isArray(b.prefs)) {
-      b.prefs.forEach(p => {
-        const comm = normalizeCommodity(typeof p === 'string' ? p : p.commodity);
-        const pack = normalizePack(typeof p === 'object' ? p.pack : '');
-        if (comm) {
-          buyerMap[key].items[`${comm}||${pack}`] = { comm, pack };
-        }
-      });
-    }
-  });
-
-  const sortedBuyers = Object.values(buyerMap)
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, 30);
-
-  const pipelineMatches = [];
-  sortedBuyers.forEach(buyer => {
-    const distinctLines = new Set();
-    stock.forEach(stockItem => {
-      if ((stockItem.qty || 0) <= 0) return;
-      const stockComm = normalizeCommodity(stockItem.commodity);
-      const stockPack = normalizePack(stockItem.pack);
-
-      Object.values(buyer.items).forEach(pref => {
-        const commMatch = stockComm && (stockComm.includes(pref.comm) || pref.comm.includes(stockComm));
-        const packMatch = !pref.pack || (stockPack === pref.pack);
-        if (commMatch && packMatch) {
-          let cleanLine = stockComm;
-          if (stockPack) cleanLine += ` ${stockPack}`;
-          distinctLines.add(cleanLine.trim().toLowerCase());
-        }
-      });
-    });
-
-    if (distinctLines.size > 0) {
-      pipelineMatches.push({
-        buyerId: String(buyer.name).replace(/[^a-zA-Z0-9]/g, '_'),
-        buyerName: buyer.name,
-        phone: buyer.phone,
-        totalRevenue: buyer.revenue,
-        matchedLines: Array.from(distinctLines)
-      });
-    }
-  });
-
-  return pipelineMatches;
-}
-
 let currentSalesman = 'ALL';
-let store = { stock: [], floor: [], coldstore: [], buyers: [], orders: [] };
-window.contactedBuyers = window.contactedBuyers || {};
 
 function doLogin() {
   const u = document.getElementById('login-user').value.toLowerCase().trim();
@@ -453,12 +240,17 @@ function initApp(name) {
   document.getElementById('app').style.display = 'block';
   document.getElementById('hdr-user-display').textContent = `(${name})`;
   renderSalesmanSelector();
-  startFirebaseListener();
   goToPage('dashboard');
+  
+  // Trigger initial data loads if modular functions exist
+  if (typeof loadFloorFromFirebase === 'function') {
+    loadFloorFromFirebase(currentSalesman);
+  }
 }
 
 function renderSalesmanSelector() {
   const container = document.getElementById('salesman-selector');
+  if (!container) return;
   container.innerHTML = SALESMEN.map(s => `
     <button class="sm-chip ${currentSalesman === s.code ? 'active' : ''}" onclick="setSalesman('${s.code}')">
       ${s.name}
@@ -469,12 +261,11 @@ function renderSalesmanSelector() {
 function setSalesman(code) {
   currentSalesman = code;
   renderSalesmanSelector();
-  updateDashboardKPIs();
-  renderStock();
-  renderFloor();
-  renderColdstore();
-  if (typeof renderBuyers === 'function') renderBuyers();
-  renderPipeline();
+  
+  // Refresh floor data for the selected salesman if function exists
+  if (typeof loadFloorFromFirebase === 'function') {
+    loadFloorFromFirebase(currentSalesman);
+  }
 }
 
 function goToPage(pageId) {
@@ -482,7 +273,10 @@ function goToPage(pageId) {
   const target = document.getElementById('page-' + pageId);
   if (target) target.classList.add('active');
   document.getElementById('hdr-page-name').textContent = pageId === 'dashboard' ? '[Home]' : `[${pageId}]`;
-  if (pageId === 'pipeline') renderPipeline();
+  
+  if (pageId === 'floor' && typeof loadFloorFromFirebase === 'function') {
+    loadFloorFromFirebase(currentSalesman);
+  }
   if (pageId === 'buyers' && typeof loadBuyersFromFirebase === 'function') {
     loadBuyersFromFirebase();
   }
@@ -496,316 +290,6 @@ function doLogout() {
   document.getElementById('login-screen').style.display = 'flex';
 }
 
-function filterBySalesman(list) {
-  if (currentSalesman === 'ALL') return list;
-  return list.filter(item => {
-    const sm = (item.salesmanCode || item.salesman || item.rep || '').toUpperCase();
-    return sm.includes(currentSalesman) || sm === '';
-  });
-}
-
-function startFirebaseListener() {
-  if (typeof firebase === 'undefined') return;
-  const db = firebase.database();
-  const todayStr = new Date().toISOString().split('T')[0];
-
-  db.ref(`contacted_buyers/${todayStr}`).on('value', (snapshot) => {
-    window.contactedBuyers = snapshot.val() || {};
-    if (document.getElementById('page-pipeline')?.classList.contains('active')) {
-      renderPipeline();
-    }
-  });
-
-  db.ref('/').on('value', (snapshot) => {
-    const raw = snapshot.val() || {};
-
-    store.floor = extractRecords(raw.floor);
-    store.stock = extractRecords(raw.stock);
-    store.coldstore = extractRecords(raw.coldstore || raw.coldStore);
-    store.orders = extractRecords(raw.orders || raw.cart || raw.slips || raw.salesHistory);
-
-    const rawPhones = raw.buyerPhones || {};
-
-    window.phoneMap = {};
-    Object.keys(rawPhones).forEach(key => {
-      const val = rawPhones[key];
-      if (val) {
-        window.phoneMap[String(key).toUpperCase().replace(/[^A-Z0-9]/g, '')] = String(val).trim();
-      }
-    });
-
-    window.getBuyerPhone = (name) => {
-      if (!name) return 'No Contact';
-      const cleanTarget = String(name).toUpperCase().replace(/[^A-Z0-9]/g, '');
-      if (window.phoneMap[cleanTarget]) return window.phoneMap[cleanTarget];
-      const keys = Object.keys(window.phoneMap);
-      const matchedKey = keys.find(k => k.includes(cleanTarget) || cleanTarget.includes(k));
-      if (matchedKey) return window.phoneMap[matchedKey];
-      return 'No Contact';
-    };
-
-    updateDashboardKPIs();
-    renderStock();
-    renderFloor();
-    renderColdstore();
-    renderOrders();
-    renderPipeline();
-    renderCommodities();
-    
-    if (typeof loadBuyersFromFirebase === 'function') {
-      loadBuyersFromFirebase();
-    }
-  });
-}
-
-function renderPipeline() {
-  const container = document.getElementById('list-pipeline');
-  if (!container) return;
-  const q = (document.getElementById('search-pipeline')?.value || '').toLowerCase();
-
-  let rawStock = (store.stock || []).concat(store.floor || []);
-  let activeStock = filterBySalesman(rawStock);
-
-  let matches = runPipelineMatching(activeStock, store.buyers || [], store.orders || []);
-  window.lastPipelineMatches = matches;
-
-  let filtered = matches.filter(p => 
-    p.buyerName.toLowerCase().includes(q) || 
-    p.matchedLines.some(line => line.toLowerCase().includes(q))
-  );
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-weight:600;">No top buyer matches found for active stock</div>`;
-    return;
-  }
-
-  const contactedMap = window.contactedBuyers || {};
-
-  container.innerHTML = filtered.map((p) => {
-    const isContacted = !!contactedMap[p.buyerId];
-    const phoneNum = window.getBuyerPhone ? window.getBuyerPhone(p.buyerName) : (p.phone || 'No Contact');
-
-    return `
-      <div class="card-item" id="card-${p.buyerId}" style="padding:16px; margin-bottom:12px; border-radius:10px; border-left:4px solid #1a4479; ${isContacted ? 'opacity:0.55; background:#f1f5f9; border-left:4px solid #94a3b8;' : 'background:#ffffff; box-shadow:0 2px 8px rgba(0,0,0,0.05);'}">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-          <div class="buyer-name" style="font-weight:800; font-size:18px; text-transform:lowercase; color:#0f172a; margin-bottom:4px; ${isContacted ? 'text-decoration:line-through; color:#64748b;' : ''}">
-            ${p.buyerName}:
-          </div>
-          <div style="font-size:12px; font-weight:700; color:${phoneNum !== 'No Contact' ? '#16a34a' : '#dc2626'};">
-            ${phoneNum}
-          </div>
-        </div>
-
-        <div style="font-size:15px; font-weight:600; color:#334155; line-height:1.6; text-transform:lowercase; margin-top:6px;">
-          ${p.matchedLines.map(line => `<div>${line} ,</div>`).join('')}
-        </div>
-
-        <div style="margin-top:14px; display:flex; gap:10px;">
-          <button onclick="triggerPhoneCall('${p.buyerId}', '${phoneNum}')" style="flex:1; background:#1a4479; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
-            📞 Call
-          </button>
-          <button onclick="triggerWhatsApp('${p.buyerId}', '${p.buyerName}', '${phoneNum}')" style="flex:1; background:#25D366; color:white; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
-            💬 WhatsApp
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function markBuyerAsContacted(buyerId) {
-  const todayStr = new Date().toISOString().split('T')[0];
-  if (!window.contactedBuyers) window.contactedBuyers = {};
-  window.contactedBuyers[buyerId] = true;
-
-  if (typeof firebase !== 'undefined' && firebase.database) {
-    firebase.database().ref(`contacted_buyers/${todayStr}/${buyerId}`).set({
-      contactedAt: firebase.database.ServerValue.TIMESTAMP,
-      user: localStorage.getItem(SK) || 'Salesman'
-    });
-  }
-
-  const card = document.getElementById(`card-${buyerId}`);
-  if (card) {
-    card.style.opacity = "0.55";
-    card.style.background = "#f1f5f9";
-    card.style.borderLeft = "4px solid #94a3b8";
-    const nameEl = card.querySelector('.buyer-name');
-    if (nameEl) {
-      nameEl.style.textDecoration = "line-through";
-      nameEl.style.color = "#64748b";
-    }
-  }
-}
-
-function triggerPhoneCall(buyerId, phone) {
-  markBuyerAsContacted(buyerId);
-  if (phone && phone !== 'No Contact' && phone.trim() !== '') {
-    window.location.href = `tel:${phone}`;
-  } else {
-    alert("No contact phone number recorded for this buyer.");
-  }
-}
-
-function triggerWhatsApp(buyerId, buyerName, phone) {
-  const matchObj = (window.lastPipelineMatches || []).find(m => m.buyerId === buyerId);
-  let produceList = '';
-  if (matchObj && matchObj.matchedLines && matchObj.matchedLines.length > 0) {
-    produceList = matchObj.matchedLines.map(line => `• ${line}`).join('\n');
-  }
-
-  let msg = `Good day ${buyerName}, we have fresh produce available for you today:\n\n${produceList}\n\nAre you interested?`;
-  markBuyerAsContacted(buyerId);
-
-  let cleanPhone = String(phone).replace(/[^0-9]/g, '');
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = '27' + cleanPhone.slice(1);
-  }
-
-  const waUrl = cleanPhone 
-    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` 
-    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-
-  window.open(waUrl, '_blank');
-}
-
-function updateDashboardKPIs() {
-  const activeFloor = filterBySalesman(store.floor);
-  let floorUnits = 0;
-  activeFloor.forEach(item => { floorUnits += (item.qty || 0); });
-
-  const floorEl = document.getElementById('kpi-floor');
-  if (floorEl) floorEl.textContent = `${floorUnits.toLocaleString('en-ZA')} units`;
-
-  const clearanceEl = document.getElementById('kpi-clearance');
-  if (clearanceEl) clearanceEl.textContent = store.orders.length > 0 ? '38%' : '0%';
-}
-
-function renderStock() {
-  const container = document.getElementById('list-stock');
-  if (!container) return;
-  const q = (document.getElementById('search-stock')?.value || '');
-  const active = filterBySalesman(store.stock);
-  const filtered = filterRecordsBySearch(active, q);
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No stock records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(r => `
-    <div class="card-item">
-      <div style="display:flex; justify-content:space-between; font-weight:700;">
-        <span>${r.producer}</span>
-        <span>${r.rawQtyDisplay}</span>
-      </div>
-      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
-    </div>
-  `).join('');
-}
-
-function renderFloor() {
-  const container = document.getElementById('list-floor');
-  if (!container) return;
-  const q = (document.getElementById('search-floor')?.value || '');
-  const active = filterBySalesman(store.floor);
-  const filtered = filterRecordsBySearch(active, q);
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No floor balance records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(r => `
-    <div class="card-item">
-      <div style="display:flex; justify-content:space-between; font-weight:700;">
-        <span>${r.producer}</span>
-        <span>${r.rawQtyDisplay}</span>
-      </div>
-      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
-    </div>
-  `).join('');
-}
-
-function renderColdstore() {
-  const container = document.getElementById('list-coldstore');
-  if (!container) return;
-  const q = (document.getElementById('search-coldstore')?.value || '');
-  const active = filterBySalesman(store.coldstore);
-  const filtered = filterRecordsBySearch(active, q);
-
-  if (filtered.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No coldstore records found</div>`;
-    return;
-  }
-
-  container.innerHTML = filtered.map(r => `
-    <div class="card-item">
-      <div style="display:flex; justify-content:space-between; font-weight:700;">
-        <span>${r.producer}</span>
-        <span>${r.rawQtyDisplay}</span>
-      </div>
-      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)}</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GRN: ${r.grn} | Salesman: ${r.salesmanCode || 'ALL'}</div>
-    </div>
-  `).join('');
-}
-
-function renderOrders() {
-  const container = document.getElementById('list-orders');
-  if (!container) return;
-  const active = filterBySalesman(store.orders);
-
-  if (active.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No recent orders or sales slips found</div>`;
-    return;
-  }
-
-  container.innerHTML = active.slice(0, 50).map(r => `
-    <div class="card-item">
-      <div style="display:flex; justify-content:space-between; font-weight:700;">
-        <span>Buyer: ${r.buyer || 'Walking Customer'}</span>
-        <span>R ${(r.revenue || 0).toLocaleString('en-ZA')}</span>
-      </div>
-      <div style="font-size:13px; color:#475569; margin-top:4px;">${formatCommodityDetails(r)} — Qty: ${r.qty}</div>
-      <div style="font-size:11px; color:#94a3b8; margin-top:2px;">Date: ${r.date} | Salesman: ${r.salesmanCode || 'ALL'}</div>
-    </div>
-  `).join('');
-}
-
-function renderCommodities() {
-  const container = document.getElementById('list-commodities');
-  if (!container) return;
-  const commMap = {};
-
-  (store.stock || []).concat(store.floor || []).forEach(item => {
-    const c = normalizeCommodity(item.commodity) || 'OTHER';
-    if (!commMap[c]) commMap[c] = { totalUnits: 0, varieties: new Set() };
-    commMap[c].totalUnits += (item.qty || 0);
-    if (item.variety && item.variety !== '*') commMap[c].varieties.add(item.variety);
-  });
-
-  const keys = Object.keys(commMap);
-  if (keys.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">No commodities data available</div>`;
-    return;
-  }
-
-  container.innerHTML = keys.map(c => `
-    <div class="card-item" style="display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <div style="font-weight:700; font-size:15px; color:#0f172a;">${c}</div>
-        <div style="font-size:12px; color:#64748b; margin-top:2px;">Varieties: ${Array.from(commMap[c].varieties).join(', ') || 'Standard'}</div>
-      </div>
-      <div style="font-weight:800; font-size:16px; color:#1e4d2b;">
-        ${commMap[c].totalUnits.toLocaleString('en-ZA')} units
-      </div>
-    </div>
-  `).join('');
-}
-
 window.addEventListener('DOMContentLoaded', () => {
   const savedUser = localStorage.getItem(SK);
   if (savedUser) {
@@ -816,9 +300,21 @@ window.addEventListener('DOMContentLoaded', () => {
     initApp(savedUser);
   }
 });
+
+// Helper for collapsing accordion sections used in floor balances
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById('arr-' + id);
+  if (el) {
+    const isHidden = el.style.display === 'none' || el.style.display === '';
+    el.style.display = isHidden ? 'block' : 'none';
+    if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  }
+}
 </script>
 
-<!-- Load modular JS scripts correctly before closing body -->
+<!-- Include all your modular JS files here so they hook up correctly without overrides -->
 <script src="js/buyers.js"></script>
+<script src="js/floor.js"></script>
 </body>
 </html>
