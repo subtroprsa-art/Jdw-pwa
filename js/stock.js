@@ -115,6 +115,11 @@ async function loadAllStockForMatcher() {
       }
     }
     allLiveStockData = all;
+    
+    // EXPOSE GLOBALLY FOR PIPELINE MATCHER
+    window.allLiveStockData = all;
+    window.allStockData = all;
+
     console.log('Stock loaded for matcher:', all.length);
   } catch (e) {
     console.error('loadAllStockForMatcher error:', e);
