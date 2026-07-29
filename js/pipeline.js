@@ -285,7 +285,7 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock
+  // 1. Gather Stock from global memory first
   let rawStock = [];
   if (window.allStockData && window.allStockData.length) {
     rawStock = window.allStockData;
@@ -297,7 +297,7 @@ async function runAIMatch() {
   
   let stock = rawStock.filter(s => getStockQty(s) > 0);
 
-  // 2. Gather Buyers
+  // 2. Gather Buyers from global memory first
   let buyers = [];
   if (window.allBuyers && window.allBuyers.length) {
     buyers = window.allBuyers;
@@ -307,7 +307,7 @@ async function runAIMatch() {
     buyers = allBuyers;
   }
 
-  // Fallback direct Firebase fetch if arrays are still empty
+  // 3. Fallback direct Firebase fetch if arrays are still empty
   if ((!stock.length || !buyers.length) && typeof firebase !== 'undefined') {
     console.log('Fetching fresh data from Firebase for matcher...');
     try {
@@ -316,22 +316,43 @@ async function runAIMatch() {
         firebase.database().ref('buyers').once('value')
       ]);
 
-      const rawStockData = stockSnap.val() || {};
+      // Unpack Stock safely
+      const rawStockData = stockSnap.val();
       let items = [];
-      if (Array.isArray(rawStockData)) {
-        items = rawStockData;
-      } else {
-        Object.keys(rawStockData).forEach(key => {
-          if (Array.isArray(rawStockData[key])) items = items.concat(rawStockData[key]);
-          else if (typeof rawStockData[key] === 'object') items = items.concat(Object.values(rawStockData[key]));
-        });
+      if (rawStockData) {
+        if (Array.isArray(rawStockData)) {
+          items = rawStockData.filter(Boolean);
+        } else if (typeof rawStockData === 'object') {
+          Object.values(rawStockData).forEach(val => {
+            if (Array.isArray(val)) {
+              items = items.concat(val.filter(Boolean));
+            } else if (val && typeof val === 'object') {
+              items = items.concat(Object.values(val).filter(Boolean));
+            }
+          });
+        }
       }
       stock = items.filter(s => getStockQty(s) > 0);
       window.allStockData = stock;
       window.allLiveStockData = stock;
 
-      const rawBuyerData = buyerSnap.val() || {};
-      buyers = Array.isArray(rawBuyerData) ? rawBuyerData : Object.values(rawBuyerData);
+      // Unpack Buyers safely
+      const rawBuyerData = buyerSnap.val();
+      let unpackedBuyers = [];
+      if (rawBuyerData) {
+        if (Array.isArray(rawBuyerData)) {
+          unpackedBuyers = rawBuyerData.filter(Boolean);
+        } else if (typeof rawBuyerData === 'object') {
+          unpackedBuyers = Object.values(rawBuyerData).map(val => {
+            if (val && typeof val === 'object' && !val.name && !val.prefs) {
+              const innerVals = Object.values(val);
+              if (innerVals.length && typeof innerVals[0] === 'object') return innerVals[0];
+            }
+            return val;
+          }).filter(Boolean);
+        }
+      }
+      buyers = unpackedBuyers;
       window.allBuyers = buyers;
       window.liveBuyerData = buyers;
     } catch (e) {
