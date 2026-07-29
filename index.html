@@ -6,8 +6,10 @@
 <meta name="theme-color" content="#1e4d2b"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
 
-<script>
+<!-- Load config.js first so CONFIG is globally available -->
+<script src="js/config.js"></script>
 
+<script>
 const USERS = {
   'riaan.joubert': { display: 'Riaan Joubert', code: 'RJ', pw: 'rsasubtrop2026' },
   'christoff.dewet': { display: 'Christoff de Wet', code: 'CW', pw: 'rsasubtrop2026' }
@@ -132,7 +134,7 @@ try {
       <div class="cols-grid">
         <div class="col-sec">
           <div class="sec-title">OPERATIONS & SALES</div>
-          <button class="nav-btn" onclick="goToPage('buyers'); if(typeof loadBuyersFromFirebase === 'function') loadBuyersFromFirebase();">👥 Buyers</button>
+          <button class="nav-btn" onclick="goToPage('buyers')">👥 Buyers</button>
           <button class="nav-btn" onclick="goToPage('orders')">📋 Orders & Slips</button>
           <button class="nav-btn" onclick="goToPage('scanslip')">☁️ Google Drive Sync</button>
         </div>
@@ -140,7 +142,7 @@ try {
         <div class="col-sec">
           <div class="sec-title">INVENTORY & LOGISTICS</div>
           <button class="nav-btn" onclick="goToPage('stock')">📦 Stock</button>
-          <button class="nav-btn" onclick="goToPage('floor'); if(typeof loadFloorFromFirebase === 'function') loadFloorFromFirebase(currentSalesman);">📊 Floor Balance</button>
+          <button class="nav-btn" onclick="goToPage('floor')">📊 Floor Balance</button>
           <button class="nav-btn" onclick="goToPage('coldstore')">❄️ Coldstore</button>
           <button class="nav-btn" onclick="goToPage('commodities')">🌿 Commodities</button>
         </div>
@@ -219,106 +221,13 @@ try {
   </div>
 </div>
 
-<script>
-let currentSalesman = 'ALL';
-
-function doLogin() {
-  const u = document.getElementById('login-user').value.toLowerCase().trim();
-  const p = document.getElementById('login-pass').value;
-  if (USERS[u] && USERS[u].pw === p) {
-    localStorage.setItem(SK, USERS[u].display);
-    if (USERS[u].code) currentSalesman = USERS[u].code;
-    initApp(USERS[u].display);
-  } else { alert('Invalid credentials'); }
-}
-
-function initApp(name) {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-user-display').textContent = `(${name})`;
-  renderSalesmanSelector();
-  goToPage('dashboard');
-  
-  // Trigger initial data loads if modular functions exist
-  if (typeof loadFloorFromFirebase === 'function') {
-    loadFloorFromFirebase(currentSalesman);
-  }
-}
-
-function renderSalesmanSelector() {
-  const container = document.getElementById('salesman-selector');
-  if (!container) return;
-  container.innerHTML = SALESMEN.map(s => `
-    <button class="sm-chip ${currentSalesman === s.code ? 'active' : ''}" onclick="setSalesman('${s.code}')">
-      ${s.name}
-    </button>
-  `).join('');
-}
-
-function setSalesman(code) {
-  currentSalesman = code;
-  renderSalesmanSelector();
-  
-  // Refresh floor data for the selected salesman if function exists
-  if (typeof loadFloorFromFirebase === 'function') {
-    loadFloorFromFirebase(currentSalesman);
-  }
-}
-
-function goToPage(pageId) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const target = document.getElementById('page-' + pageId);
-  if (target) target.classList.add('active');
-  document.getElementById('hdr-page-name').textContent = pageId === 'dashboard' ? '[Home]' : `[${pageId}]`;
-  
-  if (pageId === 'floor' && typeof loadFloorFromFirebase === 'function') {
-    loadFloorFromFirebase(currentSalesman);
-  }
-  if (pageId === 'buyers' && typeof loadBuyersFromFirebase === 'function') {
-    loadBuyersFromFirebase();
-  }
-}
-
-function goHome() { goToPage('dashboard'); }
-
-function doLogout() {
-  localStorage.removeItem(SK);
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  const savedUser = localStorage.getItem(SK);
-  if (savedUser) {
-    const foundUserEntry = Object.entries(USERS).find(([k, v]) => v.display === savedUser);
-    if (foundUserEntry) {
-      currentSalesman = foundUserEntry[1].code;
-    }
-    initApp(savedUser);
-  }
-});
-
-// Helper for collapsing accordion sections used in floor balances
-function toggleSection(id) {
-  const el = document.getElementById(id);
-  const arrow = document.getElementById('arr-' + id);
-  if (el) {
-    const isHidden = el.style.display === 'none' || el.style.display === '';
-    el.style.display = isHidden ? 'block' : 'none';
-    if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-  }
-}
-</script>
-
-<!-- Include all your modular JS files here so they hook up correctly without overrides -->
-<!-- Include all your modular JS files here -->
+<!-- All modular JS script files included in correct execution order -->
 <script src="js/app.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/buyers.js"></script>
 <script src="js/cart.js"></script>
 <script src="js/coldstore.js"></script>
 <script src="js/commodities.js"></script>
-<script src="js/config.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/floor.js"></script>
 <script src="js/matcher.js"></script>
@@ -329,9 +238,5 @@ function toggleSection(id) {
 <script src="js/slipUpload.js"></script>
 <script src="js/stock.js"></script>
 <script src="js/utils.js"></script>
-</body>
-</html>
-</body>
-</html>
 </body>
 </html>
