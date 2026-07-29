@@ -1,43 +1,53 @@
 // ===== PIPELINE MATCHING FUNCTIONS =====
 
-let livePipelineStock = [];
-let livePipelineBuyers = [];
-
 async function runComprehensiveMatching() {
   console.log("Running match...");
 
+  let pipelineStock = [];
+  let pipelineBuyers = [];
+
   try {
-    // Pull the entire stock tree across all user nodes, matching your app's loadAllStockData()
-    const snapshot = await firebase.database().ref('stock').once('value');
-    const d = snapshot.val();
-    
-    livePipelineStock = [];
-    if (d) {
-      for (const u in d) {
-        for (const e in d[u]) {
-          const item = d[u][e];
-          if (item && typeof item === 'object') {
-            livePipelineStock.push({ ...item, _nodeKey: u, _id: e });
+    // Ensure we fetch all stock data using your app's global loader
+    if (typeof loadAllStockData === 'function') {
+      await loadAllStockData();
+    }
+
+    if (typeof allLiveStockData !== 'undefined' && allLiveStockData.length > 0) {
+      pipelineStock = allLiveStockData;
+    } else if (typeof liveStockData !== 'undefined' && liveStockData.length > 0) {
+      pipelineStock = liveStockData;
+    } else {
+      // Fallback direct fetch if globals aren't populated yet
+      const snapshot = await firebase.database().ref('stock').once('value');
+      const d = snapshot.val();
+      if (d) {
+        for (const u in d) {
+          for (const e in d[u]) {
+            const item = d[u][e];
+            if (item && typeof item === 'object') {
+              pipelineStock.push({ ...item, _nodeKey: u, _id: e });
+            }
           }
         }
       }
     }
 
+    // Pull buyers data
     const buyersSnap = await firebase.database().ref('buyers').once('value');
     const buyersVal = buyersSnap.val();
     if (buyersVal) {
-      livePipelineBuyers = Object.values(buyersVal);
+      pipelineBuyers = Object.values(buyersVal);
     } else if (typeof liveBuyersData !== 'undefined' && liveBuyersData.length) {
-      livePipelineBuyers = liveBuyersData;
+      pipelineBuyers = liveBuyersData;
     }
 
   } catch (e) {
     console.warn("Pipeline fetch error:", e.message);
   }
 
-  console.log("Pipeline Loaded -> Total Stock count across all nodes:", livePipelineStock.length, "Buyers count:", livePipelineBuyers.length);
+  console.log("Pipeline Loaded -> Stock count:", pipelineStock.length, "Buyers count:", pipelineBuyers.length);
 
-  if (!livePipelineStock.length || !livePipelineBuyers.length) {
+  if (!pipelineStock.length || !pipelineBuyers.length) {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
     const el = document.getElementById('pipeline-results');
     if (el) {
@@ -48,13 +58,13 @@ async function runComprehensiveMatching() {
 
   const matches = [];
   
-  livePipelineStock.forEach(stockItem => {
+  pipelineStock.forEach(stockItem => {
     const stockBal = Number(stockItem.balance !== undefined ? stockItem.balance : 1);
     if (stockBal <= 0) return; // Skip zero or negative stock
 
     const stockComm = String(stockItem.commodity || stockItem.item || '').toLowerCase().trim();
 
-    livePipelineBuyers.forEach(buyer => {
+    pipelineBuyers.forEach(buyer => {
       const buyerComms = buyer.commodities || buyer.commodity || buyer.products || [];
       
       let isMatch = false;
