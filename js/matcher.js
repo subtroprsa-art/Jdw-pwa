@@ -56,12 +56,18 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       const targetPack = (pref.pack || '').toUpperCase();
       const targetSizes = pref.sizes || ['*'];
 
-      // Find all active floor stock candidates matching commodity
+      // Find all active floor stock candidates matching commodity (handles both short codes and full text)
       let candidates = stock.filter(s => {
         if (!s.commodity || (s.flr || 0) <= 0) return false;
-        const sComm = s.commodity.toUpperCase();
-        return sComm === targetComm || sComm === targetCommName || 
-               targetComm.includes(sComm) || sComm.includes(targetComm) || targetCommName.includes(sComm);
+        const sComm = String(s.commodity).trim().toUpperCase();
+        const tComm = String(targetComm).trim().toUpperCase();
+        const tName = String(targetCommName).trim().toUpperCase();
+
+        return sComm === tComm || 
+               sComm === tName || 
+               tComm.includes(sComm) || 
+               sComm.includes(tComm) || 
+               tName.includes(sComm);
       });
 
       if (!candidates.length) continue;
