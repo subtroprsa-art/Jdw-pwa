@@ -42,6 +42,7 @@ function createMatcher(stockLines, historicalTrends = {}) {
             const buyerTurnover = Number(buyer.turnover) || 0;
             const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || [];
             const matchedResults = [];
+            const matchedCommoditiesThisBuyer = new Set();
 
             preferences.forEach(pref => {
                 const rawComm = typeof pref === 'object' ? (pref.comm || pref.commodity || pref.name || '') : pref;
@@ -52,14 +53,18 @@ function createMatcher(stockLines, historicalTrends = {}) {
 
                 let candidates = exactStockIndex.get(exactSearchKey) || [];
 
+                // Fallback 1: Base stock index
                 if (candidates.length === 0) {
                     candidates = baseStockIndex.get(baseSearchKey) || [];
                 }
 
-                if (candidates.length === 0) {
-                    exactStockIndex.forEach((stockArray, stockKey) => {
-                        if (stockKey && exactSearchKey && (stockKey.includes(exactSearchKey) || exactSearchKey.includes(stockKey))) {
-                            candidates = candidates.concat(stockArray);
+                // Fallback 2: Substring / Fuzzy match across all stock lines
+                if (candidates.length === 0 && exactSearchKey.length > 2) {
+                    stockArray.forEach(stock => {
+                        const stockComm = normalizeString(stock.commodity || stock.comm || stock.name || '');
+                        if (stockComm && (stockComm.includes(exactSearchKey) || exactSearchKey.includes(stockComm) ||
+                            (baseSearchKey && stockComm.includes(baseSearchKey)))) {
+                            candidates.push(stock);
                         }
                     });
                 }
@@ -67,7 +72,8 @@ function createMatcher(stockLines, historicalTrends = {}) {
                 const buyerHistory = historicalTrends[buyerName] || {};
                 const itemHistoryScore = buyerHistory[rawComm] || 1.0;
 
-                if (candidates.length > 0) {
+                if (candidates.length > 0 && !matchedCommoditiesThisBuyer.has(rawComm)) {
+                    matchedCommoditiesThisBuyer.add(rawComm);
                     matchedResults.push({
                         buyer: buyerName,
                         buyerTurnover: buyerTurnover,
