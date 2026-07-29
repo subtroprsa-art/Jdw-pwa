@@ -277,8 +277,12 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock (with direct Firebase fallback if window global is empty)
+  // 1. Gather Stock (with window fallbacks and direct Firebase fallback)
   let stock = window.allLiveStockData ? window.allLiveStockData.filter(s => getStockQty(s) > 0) : [];
+  if (!stock.length && typeof window.allStockData !== 'undefined' && window.allStockData.length) {
+    stock = window.allStockData.filter(s => getStockQty(s) > 0);
+  }
+
   if (!stock.length && typeof firebase !== 'undefined') {
     try {
       const stockSnap = await firebase.database().ref('stock').once('value');
@@ -299,8 +303,12 @@ async function runAIMatch() {
     }
   }
 
-  // 2. Gather Buyers (with direct Firebase fallback if window global is empty)
+  // 2. Gather Buyers (with window alternative fallbacks and direct Firebase fallback)
   let buyers = window.liveBuyerData || [];
+  if (!buyers.length && typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
+    buyers = window.allBuyers;
+  }
+
   if (!buyers.length && typeof firebase !== 'undefined') {
     try {
       const buyerSnap = await firebase.database().ref('buyers').once('value');
