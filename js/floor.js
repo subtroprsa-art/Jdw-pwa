@@ -7,17 +7,42 @@ async function loadFloorFromFirebase(user) {
   const el = document.getElementById('floor-list');
   if (el) el.innerHTML = '<div class="empty">Loading...</div>';
 
-  try {
-    const snapshot = await firebase.database().ref('floorBalance/' + user).once('value');
-    const d = snapshot.val();
-    if (!d) { el.innerHTML = '<div class="empty">No floor balance data for ' + user + '.</div>'; return; }
-    liveFloorData = Object.values(d);
-    allLiveFloorData = [];
-    populateFloorFilter(liveFloorData);
-    filterFloor();
-  } catch (e) {
-    if (el) el.innerHTML = '<div class="empty">Could not load floor balance: ' + e.message + '</div>';
+  // Define possible key variations for Firebase lookups
+  const possibleKeys = [user];
+  if (user === 'CDW') {
+    possibleKeys.push('christoff.dewet', 'Christoff', 'cdw', 'Christoff de Wet');
+  } else if (user === 'RJ') {
+    possibleKeys.push('riaan.joubert', 'Riaan', 'rj', 'Riaan Joubert');
+  } else if (user === 'POT') {
+    possibleKeys.push('potgieter', 'pot', 'Potgieter');
   }
+
+  let d = null;
+  let activeKey = user;
+
+  for (const key of possibleKeys) {
+    try {
+      const snapshot = await firebase.database().ref('floorBalance/' + key).once('value');
+      const val = snapshot.val();
+      if (val) {
+        d = val;
+        activeKey = key;
+        break;
+      }
+    } catch (err) {
+      // Ignore invalid path errors on individual iterations and continue trying fallbacks
+    }
+  }
+
+  if (!d) {
+    if (el) el.innerHTML = '<div class="empty">No floor balance data for ' + user + ' (checked keys: ' + possibleKeys.join(', ') + ').</div>';
+    return;
+  }
+
+  liveFloorData = Object.values(d);
+  allLiveFloorData = [];
+  populateFloorFilter(liveFloorData);
+  filterFloor();
 }
 
 function switchFloorTab(user, btn) {
