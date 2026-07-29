@@ -38,4 +38,3 @@ async function saveCartToFirebase(sale) {
     alert('Error adding to cart. Please try again.');
   }
 }
-}
