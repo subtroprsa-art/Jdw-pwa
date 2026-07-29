@@ -7,13 +7,17 @@ async function runComprehensiveMatching() {
   let pipelineBuyers = [];
 
   try {
-    // 1. Pull all stock nodes
-    const snapshot = await firebase.database().ref('stock').once('value');
-    const d = snapshot.val();
-    if (d) {
-      for (const u in d) {
-        for (const e in d[u]) {
-          const item = d[u][e];
+    // Fetch stock and buyers simultaneously directly from Firebase
+    const [stockSnap, buyersSnap] = await Promise.all([
+      firebase.database().ref('stock').once('value'),
+      firebase.database().ref('buyers').once('value')
+    ]);
+
+    const stockVal = stockSnap.val();
+    if (stockVal) {
+      for (const u in stockVal) {
+        for (const e in stockVal[u]) {
+          const item = stockVal[u][e];
           if (item && typeof item === 'object') {
             pipelineStock.push({ ...item, _nodeKey: u, _id: e });
           }
@@ -21,19 +25,9 @@ async function runComprehensiveMatching() {
       }
     }
 
-    if (!pipelineStock.length && typeof allLiveStockData !== 'undefined' && allLiveStockData.length) {
-      pipelineStock = allLiveStockData;
-    }
-
-    // 2. Safely grab buyers from the global array loaded by buyers.js, or fetch directly if needed
-    if (typeof liveBuyersData !== 'undefined' && Array.isArray(liveBuyersData) && liveBuyersData.length > 0) {
-      pipelineBuyers = liveBuyersData;
-    } else {
-      const buyersSnap = await firebase.database().ref('buyers').once('value');
-      const buyersVal = buyersSnap.val();
-      if (buyersVal) {
-        pipelineBuyers = Array.isArray(buyersVal) ? buyersVal : Object.values(buyersVal);
-      }
+    const buyersVal = buyersSnap.val();
+    if (buyersVal) {
+      pipelineBuyers = Array.isArray(buyersVal) ? buyersVal : Object.values(buyersVal);
     }
 
   } catch (e) {
