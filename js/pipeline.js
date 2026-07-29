@@ -285,76 +285,45 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock from global memory first
-  let rawStock = [];
+  // 1. Resolve Stock from any possible global source
+  let stock = [];
   if (window.allStockData && window.allStockData.length) {
-    rawStock = window.allStockData;
+    stock = window.allStockData.filter(s => getStockQty(s) > 0);
   } else if (window.allLiveStockData && window.allLiveStockData.length) {
-    rawStock = window.allLiveStockData;
-  } else if (typeof allStockData !== 'undefined' && allStockData.length) {
-    rawStock = allStockData;
+    stock = window.allLiveStockData.filter(s => getStockQty(s) > 0);
+  } else if (typeof allStockData !== 'undefined' && Array.isArray(allStockData)) {
+    stock = allStockData.filter(s => getStockQty(s) > 0);
   }
-  
-  let stock = rawStock.filter(s => getStockQty(s) > 0);
 
-  // 2. Gather Buyers from global memory first
+  // 2. Resolve Buyers from any possible global source
   let buyers = [];
   if (window.allBuyers && window.allBuyers.length) {
     buyers = window.allBuyers;
   } else if (window.liveBuyerData && window.liveBuyerData.length) {
     buyers = window.liveBuyerData;
-  } else if (typeof allBuyers !== 'undefined' && allBuyers.length) {
+  } else if (typeof allBuyers !== 'undefined' && Array.isArray(allBuyers)) {
     buyers = allBuyers;
   }
 
-  // 3. Fallback direct Firebase fetch if arrays are still empty
+  // 3. Only query Firebase if global memory is completely empty
   if ((!stock.length || !buyers.length) && typeof firebase !== 'undefined') {
-    console.log('Fetching fresh data from Firebase for matcher...');
+    console.log('Global data missing, fetching fresh data from Firebase...');
     try {
       const [stockSnap, buyerSnap] = await Promise.all([
         firebase.database().ref('stock').once('value'),
         firebase.database().ref('buyers').once('value')
       ]);
 
-      // Unpack Stock safely
-      const rawStockData = stockSnap.val();
-      let items = [];
-      if (rawStockData) {
-        if (Array.isArray(rawStockData)) {
-          items = rawStockData.filter(Boolean);
-        } else if (typeof rawStockData === 'object') {
-          Object.values(rawStockData).forEach(val => {
-            if (Array.isArray(val)) {
-              items = items.concat(val.filter(Boolean));
-            } else if (val && typeof val === 'object') {
-              items = items.concat(Object.values(val).filter(Boolean));
-            }
-          });
-        }
+      const rawStock = stockSnap.val();
+      if (rawStock) {
+        let items = Array.isArray(rawStock) ? rawStock : Object.values(rawStock).flatMap(v => Array.isArray(v) ? v : Object.values(v || {}));
+        stock = items.filter(s => s && getStockQty(s) > 0);
       }
-      stock = items.filter(s => getStockQty(s) > 0);
-      window.allStockData = stock;
-      window.allLiveStockData = stock;
 
-      // Unpack Buyers safely
-      const rawBuyerData = buyerSnap.val();
-      let unpackedBuyers = [];
-      if (rawBuyerData) {
-        if (Array.isArray(rawBuyerData)) {
-          unpackedBuyers = rawBuyerData.filter(Boolean);
-        } else if (typeof rawBuyerData === 'object') {
-          unpackedBuyers = Object.values(rawBuyerData).map(val => {
-            if (val && typeof val === 'object' && !val.name && !val.prefs) {
-              const innerVals = Object.values(val);
-              if (innerVals.length && typeof innerVals[0] === 'object') return innerVals[0];
-            }
-            return val;
-          }).filter(Boolean);
-        }
+      const rawBuyers = buyerSnap.val();
+      if (rawBuyers) {
+        buyers = Array.isArray(rawBuyers) ? rawBuyers.filter(Boolean) : Object.values(rawBuyers).filter(Boolean);
       }
-      buyers = unpackedBuyers;
-      window.allBuyers = buyers;
-      window.liveBuyerData = buyers;
     } catch (e) {
       console.error('Fallback fetch error:', e);
     }
