@@ -16,25 +16,7 @@ function getBaseCommodity(str) {
 }
 
 function createMatcher(stockLines, historicalTrends = {}) {
-    const exactStockIndex = new Map();
-    const baseStockIndex = new Map();
-
     const stockArray = Array.isArray(stockLines) ? stockLines : [];
-
-    stockArray.forEach(stock => {
-        const rawComm = stock.commodity || stock.comm || stock.name || stock.item || stock.description || stock.produce || '';
-        const exactKey = normalizeString(rawComm);
-        const baseKey = getBaseCommodity(rawComm);
-
-        if (exactKey) {
-            if (!exactStockIndex.has(exactKey)) exactStockIndex.set(exactKey, []);
-            exactStockIndex.get(exactKey).push(stock);
-        }
-        if (baseKey) {
-            if (!baseStockIndex.has(baseKey)) baseStockIndex.set(baseKey, []);
-            baseStockIndex.get(baseKey).push(stock);
-        }
-    });
 
     return {
         matchBuyerPreferences(buyer) {
@@ -45,69 +27,41 @@ function createMatcher(stockLines, historicalTrends = {}) {
             const buyerHistory = historicalTrends[buyerName] || {};
             const historyKeys = Object.keys(buyerHistory);
             
-            // Universal fallback ensuring all available floor stock categories are evaluated for every buyer
             const stockKeys = stockArray.map(s => s.commodity || s.comm || s.name || s.description).filter(Boolean);
-            
             const allPrefsSet = new Set([...explicitPrefs, ...historyKeys, ...stockKeys]);
             const matchedResults = [];
+            const processedCommodities = new Set();
 
             allPrefsSet.forEach(pref => {
                 const rawComm = typeof pref === 'object' ? (pref.comm || pref.commodity || pref.name || '') : pref;
                 const mappedComm = normalizeString(rawComm);
                 if (!mappedComm) return;
                 
-                const exactSearchKey = mappedComm;
                 const baseSearchKey = getBaseCommodity(rawComm);
+                if (processedCommodities.has(baseSearchKey)) return;
 
-                let candidates = [];
-                const seenStockIds = new Set();
-
-                // 1. Exact match check
-                if (exactStockIndex.has(exactSearchKey)) {
-                    exactStockIndex.get(exactSearchKey).forEach(s => {
-                        const sId = s.id || s.code || JSON.stringify(s);
-                        if (!seenStockIds.has(sId)) {
-                            seenStockIds.add(sId);
-                            candidates.push(s);
-                        }
-                    });
-                }
-
-                // 2. Base match check
-                if (baseStockIndex.has(baseSearchKey)) {
-                    baseStockIndex.get(baseSearchKey).forEach(s => {
-                        const sId = s.id || s.code || JSON.stringify(s);
-                        if (!seenStockIds.has(sId)) {
-                            seenStockIds.add(sId);
-                            candidates.push(s);
-                        }
-                    });
-                }
-
-                // 3. Substring / keyword match check across all stock lines
-                if (exactSearchKey.length > 1) {
-                    stockArray.forEach(stock => {
-                        const stockComm = normalizeString(stock.commodity || stock.comm || stock.name || stock.description || '');
-                        const sId = stock.id || stock.code || JSON.stringify(stock);
-                        if (stockComm && (stockComm.includes(exactSearchKey) || exactSearchKey.includes(stockComm) ||
-                            (baseSearchKey && stockComm.includes(baseSearchKey)))) {
-                            if (!seenStockIds.has(sId)) {
-                                seenStockIds.add(sId);
-                                candidates.push(stock);
-                            }
-                        }
-                    });
-                }
-
-                const itemHistoryScore = buyerHistory[rawComm] || 1.0;
+                let candidates = stockArray.filter(stock => {
+                    const stockComm = normalizeString(stock.commodity || stock.comm || stock.name || stock.description || '');
+                    return stockComm && (stockComm.includes(mappedComm) || mappedComm.includes(stockComm) || (baseSearchKey && stockComm.includes(baseSearchKey)));
+                });
 
                 if (candidates.length > 0) {
+                    processedCommodities.add(baseSearchKey);
+
+                    candidates.sort((a, b) => {
+                        const qtyA = Number(a.qty || a.quantity || a.pallets || a.cartons || 0);
+                        const qtyB = Number(b.qty || b.quantity || b.pallets || b.cartons || 0);
+                        return qtyB - qtyA;
+                    });
+
+                    const topCandidate = candidates[0];
+
                     matchedResults.push({
                         buyer: buyerName,
                         buyerTurnover: buyerTurnover,
                         commodity: rawComm,
-                        candidates: candidates,
-                        trendScore: itemHistoryScore
+                        candidates: [topCandidate],
+                        trendScore: buyerHistory[rawComm] || 1.0
                     });
                 }
             });
@@ -191,42 +145,34 @@ function renderMatchResults(matchResults) {
     container.innerHTML = sortedBuyers.map((group, index) => {
         const dropdownId = 'match-dropdown-' + index;
         
-        const matchesHtml = group.matches.map(m => `
-            <div style="background:var(--paper, #f8fafc); border-radius:8px; padding:10px; margin-bottom:8px; border:1.5px solid var(--border, #e2e8f0);">
-                <div style="font-weight:700; font-size:13px; color:var(--moss, #1e4d2b); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>Commodity Preference: ${m.commodity}</span>
-                    <span style="font-size:11px; background:#e2e8f0; padding:2px 6px; border-radius:4px; color:#475569;">${m.candidates.length} available</span>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                    ${m.candidates.map(stock => {
-                        const desc = stock.description || stock.name || stock.comm || stock.commodity || 'Stock Line';
-                        const farmer = stock.farmer || stock.supplier || stock.grower || stock.producer || '';
-                        const qty = stock.qty || stock.quantity || stock.pallets || stock.cartons || '';
-                        const price = stock.price || stock.rate || '';
+        const matchesHtml = group.matches.map(m => {
+            const stock = m.candidates[0];
+            const desc = stock.description || stock.name || stock.comm || stock.commodity || m.commodity;
+            const farmer = stock.farmer || stock.supplier || stock.grower || stock.producer || 'Unknown Farmer';
+            const seqNr = stock.seq || stock.seqNr || stock.id || stock.code || 'N/A';
+            const qty = stock.qty || stock.quantity || stock.pallets || stock.cartons || '';
+            const size = stock.size || stock.count || '';
 
-                        return `
-                            <div style="background:#fff; padding:8px 10px; border-radius:6px; border:1.5px solid var(--border, #cbd5e1); display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-                                <div>
-                                    <span style="font-weight:700; color:#0f172a;">${desc}</span>
-                                    ${farmer ? `<div style="font-size:11px; color:var(--muted, #64748b);">Farmer/Grower: <span style="font-weight:600; color:#1e293b;">${farmer}</span></div>` : ''}
-                                </div>
-                                <div style="text-align:right;">
-                                    ${qty ? `<div style="font-weight:700; color:var(--moss);">${qty} units</div>` : ''}
-                                    ${price ? `<div style="font-size:11px; color:var(--muted);">R ${price}</div>` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
+            return `
+                <div style="background:var(--paper, #f8fafc); border-radius:8px; padding:10px; margin-bottom:8px; border:1.5px solid var(--border, #e2e8f0); display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                    <div>
+                        <div style="font-weight:700; color:var(--moss, #1e4d2b); margin-bottom:2px;">
+                            ${desc} ${size ? `(${size})` : ''} ${qty ? `- ${qty}` : ''}
+                        </div>
+                        <div style="color:var(--muted, #64748b); font-size:11px;">
+                            Farmer: <span style="font-weight:600; color:#1e293b;">${farmer}</span> | Seq Nr: <span style="font-weight:600; color:#0f172a;">${seqNr}</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         return `
             <div style="background:#fff; border-radius:12px; box-shadow:var(--shadow, 0 1px 3px rgba(0,0,0,0.05)); margin-bottom:10px; overflow:hidden; border:1.5px solid var(--border, #e2e8f0);">
                 <div onclick="const el=document.getElementById('${dropdownId}'); el.style.display = el.style.display==='none'?'block':'none';" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; cursor:pointer; background:#fff;">
                     <div>
                         <div style="font-weight:800; font-size:15px; color:#0f172a;">${group.buyer}</div>
-                        <div style="font-size:11px; color:var(--muted, #64748b); margin-top:2px;">${group.matches.length} matching commodity category(ies)</div>
+                        <div style="font-size:11px; color:var(--muted, #64748b); margin-top:2px;">${group.matches.length} matching commodity line(s)</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px;">
                         <div style="background:var(--moss, #1e4d2b); border-radius:8px; padding:6px 12px; text-align:center;">
