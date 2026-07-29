@@ -41,12 +41,14 @@ function createMatcher(stockLines, historicalTrends = {}) {
             const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
             const buyerTurnover = Number(buyer.turnover) || 0;
             
-            const explicitPrefs = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || [];
+            const explicitPrefs = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || buyer.products || buyer.categories || buyer.buying || [];
             const buyerHistory = historicalTrends[buyerName] || {};
             const historyKeys = Object.keys(buyerHistory);
             
-            // Combine all potential commodities this buyer cares about
-            const allPrefsSet = new Set([...explicitPrefs, ...historyKeys]);
+            // Universal fallback ensuring all available floor stock categories are evaluated for every buyer
+            const stockKeys = stockArray.map(s => s.commodity || s.comm || s.name || s.description).filter(Boolean);
+            
+            const allPrefsSet = new Set([...explicitPrefs, ...historyKeys, ...stockKeys]);
             const matchedResults = [];
 
             allPrefsSet.forEach(pref => {
@@ -83,7 +85,7 @@ function createMatcher(stockLines, historicalTrends = {}) {
                 }
 
                 // 3. Substring / keyword match check across all stock lines
-                if (exactSearchKey.length > 2) {
+                if (exactSearchKey.length > 1) {
                     stockArray.forEach(stock => {
                         const stockComm = normalizeString(stock.commodity || stock.comm || stock.name || stock.description || '');
                         const sId = stock.id || stock.code || JSON.stringify(stock);
@@ -162,7 +164,6 @@ function renderMatchResults(matchResults) {
                 matches: []
             };
         }
-        // Deduplicate commodities per buyer to ensure every matched category lists cleanly
         const existingMatch = buyerMap[res.buyer].matches.find(m => m.commodity.toUpperCase() === res.commodity.toUpperCase());
         if (!existingMatch) {
             buyerMap[res.buyer].matches.push(res);
