@@ -7,7 +7,7 @@ async function loadFloorFromFirebase(user) {
   const el = document.getElementById('floor-list');
   if (el) el.innerHTML = '<div class="empty">Loading...</div>';
   try {
-    const snapshot = await firebase.database().ref('floor/' + user).once('value');
+    const snapshot = await firebase.database().ref('floorBalance/' + user).once('value');
     const d = snapshot.val();
     if (!d) { el.innerHTML = '<div class="empty">No floor balance data.</div>'; return; }
     liveFloorData = Object.values(d);
@@ -159,7 +159,7 @@ function populateFloorFilter(data) {
 
 async function loadAllFloorData() {
   try {
-    const snapshot = await firebase.database().ref('floor').once('value');
+    const snapshot = await firebase.database().ref('floorBalance').once('value');
     const d = snapshot.val();
     const all = [];
     for (const u in d || {}) {
