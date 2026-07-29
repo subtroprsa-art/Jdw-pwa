@@ -46,7 +46,7 @@ function runDeterministicMatch(stock, buyers, todayDow) {
     if (buyer.lastDate) {
       const lastTxnDate = new Date(buyer.lastDate);
       const daysSinceLast = Math.floor((today - lastTxnDate) / (1000 * 60 * 60 * 24));
-      if (daysSinceLast > 30) recencyPenalty = Math.min(25, Math.floor((daysSinceLast - 30) / 5)); // Penalize inactive buyers
+      if (daysSinceLast > 30) recencyPenalty = Math.min(25, Math.floor((daysSinceLast - 30) / 5));
     }
 
     for (const pref of buyer.prefs) {
@@ -56,7 +56,9 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       const targetPack = (pref.pack || '').toUpperCase();
       const targetSizes = pref.sizes || ['*'];
 
-      // Find all active floor stock candidates matching commodity (handles both short codes and full text)
+      console.log(`Checking preference for ${buyer.name}: comm="${pref.comm}" -> mapped="${targetComm}"`);
+
+      // Find all active floor stock candidates matching commodity
       let candidates = stock.filter(s => {
         if (!s.commodity || (s.flr || 0) <= 0) return false;
         const sComm = String(s.commodity).trim().toUpperCase();
@@ -70,6 +72,8 @@ function runDeterministicMatch(stock, buyers, todayDow) {
                tName.includes(sComm);
       });
 
+      console.log(`Candidates found for ${pref.comm}:`, candidates.length);
+
       if (!candidates.length) continue;
 
       let best = null;
@@ -80,31 +84,25 @@ function runDeterministicMatch(stock, buyers, todayDow) {
         const stockPack = (s.pack || '').toUpperCase();
         const stockSize = (s.size || '*').toUpperCase();
 
-        // Base structural score
         let score = 30;
         
-        // 1. Historical Pack Size Affinity Match (High weight)
         if (targetPack && stockPack === targetPack) {
           score += 35;
         } else if (!targetPack) {
           score += 10;
         }
 
-        // 2. Historical Size Affinity Match
         if (targetSizes.includes('*') || targetSizes.includes(stockSize)) {
           score += 15;
         }
 
-        // 3. Volume and Turnover Tier Weighting
         score += Math.min(15, Math.round((s.flr || 0) / 40));
         const buyerTurnover = buyer.turnover || buyer.spend || 0;
         score += Math.min(15, Math.round(buyerTurnover / 75000));
 
-        // 4. Schedule & Recency modifiers
         if (buysToday) score += 15;
         score -= recencyPenalty;
 
-        // 5. Operational friction penalty
         if (s.inColdstore) score -= 5;
         
         score = Math.max(1, Math.min(100, score));
@@ -147,10 +145,8 @@ function runDeterministicMatch(stock, buyers, todayDow) {
     }
   }
 
-  // Sort overall results by affinity score descending
   results.sort((a, b) => b.score - a.score);
   
-  // Strict Buyer-Level Deduplication: Keep ONLY the single best matching line per unique buyer
   const seenBuyers = new Set();
   const deduped = results.filter(r => {
     if (seenBuyers.has(r.buyer)) return false;
