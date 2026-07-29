@@ -39,7 +39,7 @@ function createMatcher(stockLines, historicalTrends = {}) {
     return {
         matchBuyerPreferences(buyer) {
             const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
-            // Target b.prefs which is what buyers.js actually outputs[cite: 2]
+            const buyerTurnover = Number(buyer.turnover) || 0;
             const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || [];
             const matchedResults = [];
 
@@ -70,6 +70,7 @@ function createMatcher(stockLines, historicalTrends = {}) {
                 if (candidates.length > 0) {
                     matchedResults.push({
                         buyer: buyerName,
+                        buyerTurnover: buyerTurnover,
                         commodity: rawComm,
                         candidates: candidates,
                         trendScore: itemHistoryScore
@@ -114,7 +115,10 @@ function runComprehensiveMatching(stockLines, buyers, historicalTrends = {}) {
         });
     });
 
+    // SORT MATCH GROUPS: Highest buyer historical turnover/value first
+    matchResults.sort((a, b) => b.buyerTurnover - a.buyerTurnover);
+
     console.log(`Matches found: ${totalMatchesFound}`);
-    console.log(`--- Matching Complete. Total match groups: ${matchResults.length} ---`);
+    console.log(`--- Matching Complete. Total match groups: ${matchResults.length} (Sorted by Highest Value) ---`);
     return matchResults;
 }
