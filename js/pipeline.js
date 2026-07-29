@@ -287,7 +287,7 @@ async function runAIMatch() {
     await new Promise(r => setTimeout(r, 100));
   }
 
-  // 1. Gather Stock (Prioritize modular window.allStockData)
+  // 1. Gather Stock (Prioritize modular window.allStockData, then fallback to window.allLiveStockData)
   let rawStock = [];
   if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
     rawStock = window.allStockData;
@@ -296,7 +296,7 @@ async function runAIMatch() {
   }
   let stock = rawStock.filter(s => getStockQty(s) > 0);
 
-  // 2. Gather Buyers (Prioritize modular window.allBuyers from buyers.js first!)
+  // 2. Gather Buyers (Prioritize modular window.allBuyers, then fallback to window.liveBuyerData)
   let buyers = [];
   if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
     buyers = window.allBuyers;
