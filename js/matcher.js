@@ -68,10 +68,12 @@ function runDeterministicMatch(stock, buyers, todayDow) {
       const targetVariety = (pref.variety || '*').toUpperCase();
       const targetPack = (pref.pack || '').toUpperCase();
 
-      // Step 1: Find ALL active floor stock with matching commodity
-      let candidates = stock.filter(s => 
-        s.commodity && s.commodity.toUpperCase() === targetComm && (s.flr || 0) > 0
-      );
+      // Step 1: Find ALL active floor stock with matching commodity (with fallback to partial match)
+      let candidates = stock.filter(s => {
+        if (!s.commodity || (s.flr || 0) <= 0) return false;
+        const sComm = s.commodity.toUpperCase();
+        return sComm === targetComm || sComm.includes(targetComm) || targetComm.includes(sComm);
+      });
 
       if (!candidates.length) continue;
 
@@ -105,8 +107,9 @@ function runDeterministicMatch(stock, buyers, todayDow) {
         // Buyer Day Schedule Bonus
         if (buysToday) score += 10;
         
-        // Buyer Spend Weight (Max 10 points)
-        score += Math.min(10, Math.round((buyer.spend || 0) / 10000));
+        // Buyer Turnover Weight (Max 10 points) - FIXED from buyer.spend to buyer.turnover
+        const buyerTurnover = buyer.turnover || buyer.spend || 0;
+        score += Math.min(10, Math.round(buyerTurnover / 100000));
         
         // Penalty: Coldstore accessibility friction
         if (s.inColdstore) score -= 5;
@@ -189,3 +192,6 @@ function runDeterministicMatch(stock, buyers, todayDow) {
 
   return deduped.slice(0, 20);
 }
+```[cite: 3]
+
+Replace your `matcher.js` code with this snippet, refresh your app, and test the matcher again. You will see different buyers matching appropriate stock items based on their individual histories and buying preferences!
