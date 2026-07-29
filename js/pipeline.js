@@ -2,6 +2,7 @@
 window.allLiveStockData = window.allLiveStockData || [];
 window.liveBuyerData = window.liveBuyerData || [];
 window.allBuyers = window.allBuyers || [];
+window.allStockData = window.allStockData || [];
 
 // ===== LIVE FIREBASE DATA SYNC =====
 function syncPipelineData() {
@@ -31,6 +32,7 @@ function syncPipelineData() {
     }
 
     window.allLiveStockData = items;
+    window.allStockData = items; // Keep both global stock trackers synced
     console.log("✅ Pipeline Live Stock Synced:", window.allLiveStockData.length, "lines");
   }, err => console.error("Stock sync error:", err));
 
@@ -278,7 +280,7 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock
+  // 1. Gather Stock (Checking multiple global references safely)
   let rawStock = [];
   if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
     rawStock = window.allStockData;
@@ -287,7 +289,7 @@ async function runAIMatch() {
   }
   let stock = rawStock.filter(s => getStockQty(s) > 0);
 
-  // 2. Gather Buyers (Checking window.allBuyers first, then fallbacks)
+  // 2. Gather Buyers
   let buyers = [];
   if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
     buyers = window.allBuyers;
@@ -307,6 +309,7 @@ async function runAIMatch() {
         else if (typeof raw[key] === 'object') items = items.concat(Object.values(raw[key]));
       });
       stock = items.filter(s => getStockQty(s) > 0);
+      window.allStockData = stock;
     } catch (e) {
       console.error('Fallback stock fetch error:', e);
     }
