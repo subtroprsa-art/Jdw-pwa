@@ -23,6 +23,7 @@ async function loadBuyersFromFirebase() {
 }
 
 function buildBuyerProfiles(history) {
+  window.allBuyers = liveBuyerData;
   const map = {};
   const CN = { AVOS: 'Avocados', LEMS: 'Lemons', NAAR: 'Naartjies', ORGS: 'Oranges', CLTM: 'Clementines', KIWI: 'Kiwifruit', STRS: 'Strawberries', FIGS: 'Figs', GVS: 'Guavas', DRAG: 'Dragon Fruit', MANG: 'Mangoes', GFT: 'Grapefruit', UNK: 'Unknown', SATS: 'Satsumas', PAPO: 'Papino', BERS: 'Berries' };
   const PG = { AVOS: '4KG TRAY', KIWI: '500G PUNNET', STRS: '250G PUNNET', LEMS: '15KG CARTON', ORGS: '15KG CARTON', NAAR: '10KG CARTON', FIGS: '160G PUNNET', GVS: '4KG TRAY', MANG: '4KG TRAY' };
