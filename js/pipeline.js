@@ -1,44 +1,67 @@
-// ===== PIPELINE MATCHING FUNCTIONS =====
+// ===== PIPELINE, STOCK, & BUYERS UNIFIED MANAGER =====
 
-async function runComprehensiveMatching() {
-  console.log("Running match...");
+// Global application data stores to ensure everything is accessible everywhere
+window.liveStockData = window.liveStockData || [];
+window.allLiveStockData = window.allLiveStockData || [];
+window.liveBuyersData = window.liveBuyersData || [];
 
-  let pipelineStock = [];
-  let pipelineBuyers = [];
-
+// Unified initialization and sync across Firebase nodes
+async function initializeAppSystem() {
+  console.log("🔄 Initializing unified Firebase data sync for stock and buyers...");
   try {
-    // Fetch stock and buyers simultaneously directly from Firebase
     const [stockSnap, buyersSnap] = await Promise.all([
       firebase.database().ref('stock').once('value'),
       firebase.database().ref('buyers').once('value')
     ]);
 
+    // 1. Process Stock (Flattening all multi-node child branches correctly)
     const stockVal = stockSnap.val();
+    let loadedStock = [];
     if (stockVal) {
       for (const u in stockVal) {
         for (const e in stockVal[u]) {
           const item = stockVal[u][e];
           if (item && typeof item === 'object') {
-            pipelineStock.push({ ...item, _nodeKey: u, _id: e });
+            loadedStock.push({ ...item, _nodeKey: u, _id: e });
           }
         }
       }
     }
+    window.liveStockData = loadedStock;
+    window.allLiveStockData = loadedStock;
 
+    // 2. Process Buyers (Handling array or object dictionary maps)
     const buyersVal = buyersSnap.val();
+    let loadedBuyers = [];
     if (buyersVal) {
-      pipelineBuyers = Array.isArray(buyersVal) ? buyersVal : Object.values(buyersVal);
+      loadedBuyers = Array.isArray(buyersVal) ? buyersVal : Object.values(buyersVal);
     }
+    window.liveBuyersData = loadedBuyers;
 
-  } catch (e) {
-    console.warn("Pipeline fetch error:", e.message);
+    console.log(`✅ System Synced -> Total Stock: ${loadedStock.length} | Total Buyers: ${loadedBuyers.length}`);
+  } catch (err) {
+    console.error("❌ Unified sync error:", err);
   }
+}
+
+// Comprehensive Pipeline Matching Engine
+async function runComprehensiveMatching() {
+  console.log("Running comprehensive pipeline match...");
+
+  // Ensure data is synced before execution
+  if (!window.liveStockData.length || !window.liveBuyersData.length) {
+    await initializeAppSystem();
+  }
+
+  const pipelineStock = window.liveStockData.length ? window.liveStockData : (window.allLiveStockData || []);
+  const pipelineBuyers = window.liveBuyersData || [];
 
   console.log("Pipeline Loaded -> Stock count:", pipelineStock.length, "Buyers count:", pipelineBuyers.length);
 
+  const el = document.getElementById('pipeline-results');
+
   if (!pipelineStock.length || !pipelineBuyers.length) {
     console.warn("⚠️ Stock lines or buyers data is missing or empty!");
-    const el = document.getElementById('pipeline-results');
     if (el) {
       el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty.</div>';
     }
@@ -81,11 +104,7 @@ async function runComprehensiveMatching() {
 
 function runAIFromPipeline() {
   console.log("runAIFromPipeline invoked");
-  if (typeof runComprehensiveMatching === 'function') {
-    runComprehensiveMatching();
-  } else {
-    console.warn("runComprehensiveMatching is not available.");
-  }
+  runComprehensiveMatching();
 }
 
 function renderPipelineMatches(matches) {
@@ -103,4 +122,9 @@ function renderPipelineMatches(matches) {
       <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: ${m.stock.balance || 0} | Pack: ${m.stock.pack || '-'} | GRN: ${m.stock.grn || '-'}</div>
     </div>`;
   }).join('');
+}
+
+// Auto-initialize system bindings on script load
+if (typeof firebase !== 'undefined' && firebase.database) {
+  initializeAppSystem();
 }
