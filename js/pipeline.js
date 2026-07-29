@@ -64,8 +64,25 @@ async function runComprehensiveMatching() {
 
   const matches = [];
   livePipelineStock.forEach(stockItem => {
+    const stockBal = Number(stockItem.balance) || 0;
+    if (stockBal <= 0) return; // Skip zero or negative stock
+
     livePipelineBuyers.forEach(buyer => {
-      if (stockItem.balance && Number(stockItem.balance) > 0) {
+      // Check if buyer has commodity interests and if it matches stock commodity
+      const buyerComms = buyer.commodities || buyer.commodity || [];
+      const stockComm = (stockItem.commodity || '').toLowerCase();
+      
+      let matchesCommodity = false;
+      if (Array.isArray(buyerComms)) {
+        matchesCommodity = buyerComms.some(c => String(c).toLowerCase().includes(stockComm) || stockComm.includes(String(c).toLowerCase()));
+      } else if (typeof buyerComms === 'string') {
+        matchesCommodity = buyerComms.toLowerCase().includes(stockComm) || stockComm.includes(buyerComms.toLowerCase());
+      } else {
+        // If buyer has no strict commodity restriction listed, allow general match or check preferences
+        matchesCommodity = true; 
+      }
+
+      if (matchesCommodity) {
         matches.push({ stock: stockItem, buyer: buyer });
       }
     });
@@ -88,7 +105,7 @@ function renderPipelineMatches(matches) {
   if (!el) return;
 
   if (!matches || !matches.length) {
-    el.innerHTML = '<div class="empty">No matching pipeline results found.</div>';
+    el.innerHTML = '<div class="empty">No matching pipeline results found. Check commodity configurations for buyers and stock.</div>';
     return;
   }
 
