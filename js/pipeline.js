@@ -17,7 +17,6 @@ function syncPipelineData() {
     const raw = snapshot.val() || {};
     let items = [];
     
-    // Flatten if stored under salesman keys (RJ, CW, POT) or single array
     if (Array.isArray(raw)) {
       items = raw;
     } else if (typeof raw === 'object') {
@@ -277,7 +276,18 @@ async function runAIMatch() {
   if (err) err.style.display = 'none';
   if (rd) rd.style.display = 'none';
 
-  // 1. Gather Stock (Prioritize window.allStockData from stock.js, then window.allLiveStockData)
+  // Brief safety pause loop to ensure modular global variables from stock.js/buyers.js have fully bound
+  let attempts = 0;
+  while (
+    ((!window.allStockData || !window.allStockData.length) && (!window.allLiveStockData || !window.allLiveStockData.length)) ||
+    ((!window.allBuyers || !window.allBuyers.length) && (!window.liveBuyerData || !window.liveBuyerData.length))
+  ) {
+    if (attempts > 10) break; // give up after 1 second and fall back to firebase direct fetch
+    attempts++;
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  // 1. Gather Stock
   let rawStock = [];
   if (typeof window.allStockData !== 'undefined' && window.allStockData.length) {
     rawStock = window.allStockData;
@@ -286,7 +296,7 @@ async function runAIMatch() {
   }
   let stock = rawStock.filter(s => getStockQty(s) > 0);
 
-  // 2. Gather Buyers (Prioritize window.allBuyers from buyers.js, then window.liveBuyerData)
+  // 2. Gather Buyers
   let buyers = [];
   if (typeof window.allBuyers !== 'undefined' && window.allBuyers.length) {
     buyers = window.allBuyers;
@@ -294,7 +304,7 @@ async function runAIMatch() {
     buyers = window.liveBuyerData;
   }
 
-  // Fallback direct Firebase fetch if data hasn't populated globally yet
+  // Fallback direct Firebase fetch if arrays are still empty
   if (!stock.length && typeof firebase !== 'undefined') {
     try {
       const stockSnap = await firebase.database().ref('stock').once('value');
