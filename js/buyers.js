@@ -12,11 +12,18 @@ async function loadBuyersFromFirebase() {
     if (!raw) { renderBuyers([]); return; }
     const hist = Array.isArray(raw) ? raw : Object.values(raw);
     liveBuyerData = buildBuyerProfiles(hist);
+    
+    // EXPOSE GLOBALLY FOR PIPELINE MATCHER
+    window.liveBuyerData = liveBuyerData;
+    window.allBuyers = liveBuyerData;
+
     renderBuyers(liveBuyerData);
     console.log('Buyers loaded:', liveBuyerData.length);
   } catch (e) {
     console.error('loadBuyers error:', e.message);
     liveBuyerData = [];
+    window.liveBuyerData = [];
+    window.allBuyers = [];
     const el = document.getElementById('list-buyers');
     if (el) el.innerHTML = '<div class="empty">Error loading buyers: ' + e.message + '</div>';
   }
