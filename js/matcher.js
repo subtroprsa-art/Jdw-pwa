@@ -57,6 +57,9 @@ const PACK_NAMES = {
 function runDeterministicMatch(stock, buyers, todayDow) {
   const results = [];
 
+  // Create reverse map lookup for bidirectional commodity matching
+  const REVERSE_COMM_MAP = Object.fromEntries(Object.entries(COMM_MAP).map(([k, v]) => [v, k.toUpperCase()]));
+
   for (const buyer of buyers) {
     if (!buyer.prefs || !buyer.prefs.length) continue;
     const buysToday = !!(buyer.buyingDays && buyer.buyingDays[todayDow]);
@@ -64,13 +67,20 @@ function runDeterministicMatch(stock, buyers, todayDow) {
     for (const pref of buyer.prefs) {
       const rawComm = pref.comm || '';
       const targetComm = (COMM_MAP[rawComm] || rawComm).toUpperCase();
+      const targetCommName = (REVERSE_COMM_MAP[targetComm] || rawComm).toUpperCase();
+      
       const targetVariety = (pref.variety || '*').toUpperCase();
       const targetPack = (pref.pack || '').toUpperCase();
 
       let candidates = stock.filter(s => {
         if (!s.commodity || (s.flr || 0) <= 0) return false;
         const sComm = s.commodity.toUpperCase();
-        return sComm === targetComm || sComm.includes(targetComm) || targetComm.includes(sComm);
+        
+        return sComm === targetComm || 
+               sComm === targetCommName || 
+               targetComm.includes(sComm) || 
+               sComm.includes(targetComm) || 
+               targetCommName.includes(sComm);
       });
 
       if (!candidates.length) continue;
