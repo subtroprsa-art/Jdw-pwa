@@ -6,16 +6,56 @@ function normalizeString(str) {
     return str.toString().trim().toUpperCase();
 }
 
-function getBaseCommodity(str) {
-    let norm = normalizeString(str);
-    if (norm.endsWith('S') && norm.length > 3) {
-        norm = norm.slice(0, -1);
+// Extract base commodity category (e.g., AVOS, LEMS, ORGS, NOVA from any product name string)
+function getBroadCommodityCategory(str) {
+    const norm = normalizeString(str);
+    if (norm.includes('AVO') || norm.includes('AVOCADO')) return 'AVOS';
+    if (norm.includes('LEM') || norm.includes('LEMON')) return 'LEMS';
+    if (norm.includes('ORG') || norm.includes('ORANGE') || norm.includes('CITRUS')) return 'ORGS';
+    if (norm.includes('NOV')) return 'NOVA';
+    if (norm.includes('BER') || norm.includes('BERRY')) return 'BERS';
+    if (norm.includes('NUT')) return 'NUTPS';
+    
+    // Fallback to first token or base string
+    let base = norm.split(/[\s,_.-]+/)[0];
+    if (base.endsWith('S') && base.length > 3) {
+        base = base.slice(0, -1);
     }
-    return norm;
+    return base || 'OTHER';
+}
+
+// Helper to parse date strings (handling formats like YYYY/MM/DD, DD/MM/YYYY, or timestamps)
+function parseStockDate(dateStr) {
+    if (!dateStr) return null;
+    if (typeof dateStr === 'number') return new Date(dateStr);
+    
+    let cleanStr = dateStr.toString().trim();
+    // Handle DD/MM/YYYY format commonly used in local packhouses
+    if (cleanStr.includes('/')) {
+        const parts = cleanStr.split('/');
+        if (parts.length === 3) {
+            // Check if format is DD/MM/YYYY
+            if (parts[0].length <= 2 && parts[2].length === 4) {
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            }
+        }
+    }
+    const d = new Date(cleanStr);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// Calculate age of stock in days relative to current date (2026)
+function getStockAgeInDays(stockItem) {
+    const dateVal = stockItem.date || stockItem.pack || stockItem.intakeDate || stockItem.createdAt || stockItem.timestamp;
+    const parsedDate = parseStockDate(dateVal);
+    if (!parsedDate) return 0; // Default to fresh if unparseable
+    
+    const diffTime = Math.abs(new Date() - parsedDate);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 async function runComprehensiveMatching() {
-  console.log("Running comprehensive pipeline match...");
+  console.log("Running comprehensive pipeline match with strict product grouping and age constraints...");
 
   let pipelineStock = [];
   let pipelineBuyers = [];
@@ -64,11 +104,9 @@ async function runComprehensiveMatching() {
 
   const allProcessedMatches = [];
 
-  // 4. Evaluate buyers and distill down to exactly ONE best stock line per unique base commodity
-  pipelineBuyers.forEach(buyer => {
+  // First, sort buyers by turnover descending to determine tier rankings
+  const evaluatedBuyers = pipelineBuyers.map(buyer => {
     const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
-    
-    // Extract actual turnover cleanly from buyer properties
     const turnoverVal = Number(
       buyer.turnover || 
       buyer.totalSpent || 
@@ -78,25 +116,47 @@ async function runComprehensiveMatching() {
       buyer.spend || 
       0
     );
+    return { buyer, buyerName, turnoverVal };
+  });
 
-    const commodityBestMatchMap = {};
+  evaluatedBuyers.sort((a, b) => b.turnover - a.turnover);
+
+  // Divide buyers into tiers based on ranking index (Top tier = top 30% or top spenders)
+  const totalBuyersCount = evaluatedBuyers.length;
+
+  evaluatedBuyers.forEach((item, index) => {
+    const { buyer, buyerName, turnoverVal } = item;
+    
+    // Define Top Tier vs Lower Tier (Top 35% or buyers with > R300,000 turnover are top tier)
+    const isTopTier = index < Math.ceil(totalBuyersCount * 0.35) || turnoverVal > 300000;
+    const maxStockAgeDays = isTopTier ? 10 : 14;
+
+    const broadCategoryBestMatchMap = {};
 
     pipelineStock.forEach(stockItem => {
       const rawComm = stockItem.commodity || stockItem.comm || stockItem.variety || stockItem.item || stockItem.description || 'Produce Item';
-      const baseCommKey = getBaseCommodity(rawComm);
+      const broadCategory = getBroadCommodityCategory(rawComm);
+      
+      // Check stock age constraint
+      const stockAge = getStockAgeInDays(stockItem);
+      if (stockAge > maxStockAgeDays) {
+        return; // Skip stock that is older than the allowed threshold for this buyer tier
+      }
+
       const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
 
-      // Keep only the single best match item (e.g., highest quantity or primary batch) per base commodity key
-      if (!commodityBestMatchMap[baseCommKey] || stockQty > commodityBestMatchMap[baseCommKey]._sortQty) {
-        commodityBestMatchMap[baseCommKey] = {
+      // Keep strictly ONE single best match line per broad commodity category (e.g., one best line for Lems, one for Avos, one for Orgs, etc.)
+      if (!broadCategoryBestMatchMap[broadCategory] || stockQty > broadCategoryBestMatchMap[broadCategory]._sortQty) {
+        broadCategoryBestMatchMap[broadCategory] = {
           ...stockItem,
           _matchedCommodityName: rawComm,
-          _sortQty: stockQty
+          _sortQty: stockQty,
+          _stockAge: stockAge
         };
       }
     });
 
-    const uniqueBuyerStockItems = Object.values(commodityBestMatchMap);
+    const uniqueBuyerStockItems = Object.values(broadCategoryBestMatchMap);
     if (uniqueBuyerStockItems.length > 0) {
       allProcessedMatches.push({
         buyerName: buyerName,
@@ -106,10 +166,10 @@ async function runComprehensiveMatching() {
     }
   });
 
-  // 5. Rank ALL buyers strictly by Turnover descending (Highest turnover like FLM at the top)
+  // 5. Ensure final rendered list is strictly ordered by Turnover descending
   allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
 
-  console.log("Ranked buyers with matches:", allProcessedMatches.length);
+  console.log("Ranked buyers with clean single-line commodity matches:", allProcessedMatches.length);
   renderPipelineMatches(allProcessedMatches);
 }
 
@@ -123,7 +183,7 @@ function renderPipelineMatches(rankedBuyers) {
   if (!el) return;
 
   if (!rankedBuyers || !rankedBuyers.length) {
-    el.innerHTML = '<div class="empty">No matching pipeline results found based on commodity filters.</div>';
+    el.innerHTML = '<div class="empty">No matching pipeline results found based on age and commodity filters.</div>';
     return;
   }
 
@@ -159,7 +219,7 @@ function renderPipelineMatches(rankedBuyers) {
       htmlOutput += `
         <div style="padding:8px 0;border-bottom:1px solid #eee;">
           <div style="font-size:13px;font-weight:700;color:#333;">${commodityName}${variety} (${grade}, ${size})${producer}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Count/Qty: <strong>${availableQty}</strong> | Pack: ${stock.pack || '-'} | GRN: ${stock.grn || '-'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Count/Qty: <strong>${availableQty}</strong> | Age: ${stock._stockAge !== undefined ? stock._stockAge + ' days' : 'Fresh'} | Pack: ${stock.pack || '-'} | GRN: ${stock.grn || '-'}</div>
         </div>
       `;
     });
