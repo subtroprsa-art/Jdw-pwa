@@ -30,11 +30,9 @@ function parseStockDate(dateStr) {
     if (typeof dateStr === 'number') return new Date(dateStr);
     
     let cleanStr = dateStr.toString().trim();
-    // Handle DD/MM/YYYY format commonly used in local packhouses
     if (cleanStr.includes('/')) {
         const parts = cleanStr.split('/');
         if (parts.length === 3) {
-            // Check if format is DD/MM/YYYY
             if (parts[0].length <= 2 && parts[2].length === 4) {
                 return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
             }
@@ -48,14 +46,26 @@ function parseStockDate(dateStr) {
 function getStockAgeInDays(stockItem) {
     const dateVal = stockItem.date || stockItem.pack || stockItem.intakeDate || stockItem.createdAt || stockItem.timestamp;
     const parsedDate = parseStockDate(dateVal);
-    if (!parsedDate) return 0; // Default to fresh if unparseable
+    if (!parsedDate) return 0;
     
     const diffTime = Math.abs(new Date() - parsedDate);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
+// Helper to clean and format phone numbers for WhatsApp and Tel links
+function formatPhoneNumber(phone) {
+    if (!phone) return '';
+    let cleaned = phone.toString().replace(/[^\d+]/g, '');
+    if (cleaned.startsWith('0')) {
+        cleaned = '+27' + cleaned.slice(1); // Standardizing South African numbers
+    } else if (!cleaned.startsWith('+')) {
+        cleaned = '+' + cleaned;
+    }
+    return cleaned;
+}
+
 async function runComprehensiveMatching() {
-  console.log("Running comprehensive pipeline match with strict product grouping and age constraints...");
+  console.log("Running comprehensive pipeline match with buyer contact integration...");
 
   let pipelineStock = [];
   let pipelineBuyers = [];
@@ -104,7 +114,6 @@ async function runComprehensiveMatching() {
 
   const allProcessedMatches = [];
 
-  // First, sort buyers by turnover descending to determine tier rankings
   const evaluatedBuyers = pipelineBuyers.map(buyer => {
     const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
     const turnoverVal = Number(
@@ -116,18 +125,21 @@ async function runComprehensiveMatching() {
       buyer.spend || 
       0
     );
-    return { buyer, buyerName, turnoverVal };
+    
+    // Extract phone number from various potential buyer fields
+    const rawPhone = buyer.phone || buyer.telephone || buyer.cell || buyer.mobile || buyer.contactNumber || buyer.tel || '';
+    const formattedPhone = formatPhoneNumber(rawPhone);
+
+    return { buyer, buyerName, turnoverVal, formattedPhone, rawPhone };
   });
 
   evaluatedBuyers.sort((a, b) => b.turnover - a.turnover);
 
-  // Divide buyers into tiers based on ranking index (Top tier = top 30% or top spenders)
   const totalBuyersCount = evaluatedBuyers.length;
 
   evaluatedBuyers.forEach((item, index) => {
-    const { buyer, buyerName, turnoverVal } = item;
+    const { buyer, buyerName, turnoverVal, formattedPhone } = item;
     
-    // Define Top Tier vs Lower Tier (Top 35% or buyers with > R300,000 turnover are top tier)
     const isTopTier = index < Math.ceil(totalBuyersCount * 0.35) || turnoverVal > 300000;
     const maxStockAgeDays = isTopTier ? 10 : 14;
 
@@ -137,15 +149,13 @@ async function runComprehensiveMatching() {
       const rawComm = stockItem.commodity || stockItem.comm || stockItem.variety || stockItem.item || stockItem.description || 'Produce Item';
       const broadCategory = getBroadCommodityCategory(rawComm);
       
-      // Check stock age constraint
       const stockAge = getStockAgeInDays(stockItem);
       if (stockAge > maxStockAgeDays) {
-        return; // Skip stock that is older than the allowed threshold for this buyer tier
+        return; 
       }
 
       const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
 
-      // Keep strictly ONE single best match line per broad commodity category (e.g., one best line for Lems, one for Avos, one for Orgs, etc.)
       if (!broadCategoryBestMatchMap[broadCategory] || stockQty > broadCategoryBestMatchMap[broadCategory]._sortQty) {
         broadCategoryBestMatchMap[broadCategory] = {
           ...stockItem,
@@ -161,15 +171,15 @@ async function runComprehensiveMatching() {
       allProcessedMatches.push({
         buyerName: buyerName,
         turnover: turnoverVal,
+        phone: formattedPhone,
         stockItems: uniqueBuyerStockItems
       });
     }
   });
 
-  // 5. Ensure final rendered list is strictly ordered by Turnover descending
   allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
 
-  console.log("Ranked buyers with clean single-line commodity matches:", allProcessedMatches.length);
+  console.log("Ranked buyers with communication links:", allProcessedMatches.length);
   renderPipelineMatches(allProcessedMatches);
 }
 
@@ -192,17 +202,33 @@ function renderPipelineMatches(rankedBuyers) {
   rankedBuyers.forEach((buyerData, idx) => {
     const dropdownId = `buyer-dropdown-${idx}`;
     const formattedTurnover = `R ${buyerData.turnover.toLocaleString()}`;
+    const phone = buyerData.phone || '';
+
+    // Generate WhatsApp Message Preview with stock items summary
+    const stockSummaryText = buyerData.stockItems.map(s => `- ${s._matchedCommodityName || s.commodity} (${s.count !== undefined ? s.count : 'Available'})`).join('\n');
+    const waMessage = encodeURIComponent(`Hi ${buyerData.buyerName}, we have fresh stock available matching your preferences:\n\n${stockSummaryText}\n\nLet me know if you'd like to secure any of these!`);
+    
+    const waLink = phone ? `https://wa.me/${phone.replace('+', '')}?text=${waMessage}` : '#';
+    const telLink = phone ? `tel:${phone}` : '#';
 
     htmlOutput += `
       <div style="background:#fff;border-radius:10px;margin-bottom:10px;border:1.5px solid var(--border);overflow:hidden;">
-        <div onclick="toggleBuyerDropdown('${dropdownId}')" style="padding:14px 16px;background:#f8f9fa;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:800;font-size:15px;color:var(--moss);">
-            ${buyerData.buyerName} 
-            <span style="font-size:12px;color:var(--muted);font-weight:normal;margin-left:8px;">(Turnover: ${formattedTurnover})</span>
+        <div style="padding:14px 16px;background:#f8f9fa;display:flex;justify-content:space-between;align-items:center;">
+          <div onclick="toggleBuyerDropdown('${dropdownId}')" style="cursor:pointer;flex-grow:1;">
+            <div style="font-weight:800;font-size:15px;color:var(--moss);">
+              ${buyerData.buyerName} 
+              <span style="font-size:12px;color:var(--muted);font-weight:normal;margin-left:8px;">(Turnover: ${formattedTurnover})</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Phone: ${phone || 'No phone on file'}</div>
           </div>
-          <div style="font-size:12px;color:var(--muted);font-weight:bold;display:flex;align-items:center;gap:8px;">
-            <span>${buyerData.stockItems.length} Products</span>
-            <span>▼</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${phone ? `
+              <a href="${telLink}" title="Call Buyer" style="background:#e2f0d9;color:#2d6a4f;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">📞 Call</a>
+              <a href="${waLink}" target="_blank" title="WhatsApp Buyer" style="background:#d8f3dc;color:#1b4332;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">💬 WhatsApp</a>
+            ` : `<span style="font-size:11px;color:#999;font-style:italic;">No contact</span>`}
+            <div onclick="toggleBuyerDropdown('${dropdownId}')" style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:bold;padding-left:6px;">
+              <span>${buyerData.stockItems.length} Products ▼</span>
+            </div>
           </div>
         </div>
         <div id="${dropdownId}" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:#fff;">
