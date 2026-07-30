@@ -51,10 +51,6 @@ async function runComprehensiveMatching() {
   const matches = [];
   
   pipelineStock.forEach(stockItem => {
-    // Check available stock using 'count' or 'qty_rec' instead of 'balance'
-    const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || 0));
-    if (stockQty <= 0) return; // Skip zero or negative stock[cite: 1]
-
     const stockComm = String(stockItem.commodity || stockItem.variety || '').toLowerCase().trim();
 
     pipelineBuyers.forEach(buyer => {
@@ -92,23 +88,13 @@ function renderPipelineMatches(matches) {
     return;
   }
 
-  // Filter out items with 0 or negative count/qty
-  const validMatches = matches.filter(m => {
-    const qty = Number(m.stock.count !== undefined ? m.stock.count : (m.stock.qty_rec || 0));
-    return qty > 0;
-  });
-
-  if (!validMatches.length) {
-    el.innerHTML = '<div class="empty">No stock with available quantity found for these matches.</div>';
-    return;
-  }
-
-  el.innerHTML = validMatches.slice(0, 50).map((m, idx) => {
+  // Render all matches safely without over-filtering out results
+  el.innerHTML = matches.slice(0, 50).map((m, idx) => {
     const variety = m.stock.variety || m.stock.commodity || 'Produce Item';
     const producer = m.stock.producer ? ` - ${m.stock.producer}` : '';
     const grade = m.stock.grade ? `Grade ${m.stock.grade}` : '';
     const size = m.stock.size ? `Size: ${m.stock.size}` : '';
-    const availableQty = m.stock.count !== undefined ? m.stock.count : (m.stock.qty_rec || 0);
+    const availableQty = m.stock.count !== undefined ? m.stock.count : (m.stock.qty_rec || m.stock.qty_sort || 'N/A');
 
     return `<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1.5px solid var(--border)">
       <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.buyer.name}</div>
