@@ -1,6 +1,29 @@
 // ==========================================
-// FULLY REVISED PIPELINE SCRIPT (STRICTLY NO DATES & NO OBJECT LEFTOVERS)
+// PIPELINE SCRIPT WITH RESTORED runAIFromPipeline & CLEAN WHATSAPP (NO DATES)
 // ==========================================
+
+let firebaseBuyerPhonesCache = {};
+
+function normalizeString(str) {
+    if (!str) return '';
+    return str.toString().trim().toUpperCase();
+}
+
+function getBroadCommodityCategory(str) {
+    const norm = normalizeString(str);
+    if (norm.includes('AVO') || norm.includes('AVOCADO')) return 'AVOS';
+    if (norm.includes('LEM') || norm.includes('LEMON')) return 'LEMS';
+    if (norm.includes('ORG') || norm.includes('ORANGE') || norm.includes('CITRUS')) return 'ORGS';
+    if (norm.includes('NOV')) return 'NOVA';
+    if (norm.includes('BER') || norm.includes('BERRY')) return 'BERS';
+    if (norm.includes('NUT')) return 'NUTPS';
+    
+    let base = norm.split(/[\s,_.-]+/)[0];
+    if (base.endsWith('S') && base.length > 3) {
+        base = base.slice(0, -1);
+    }
+    return base || 'OTHER';
+}
 
 function getFriendlyProductName(rawName) {
     if (!rawName) return 'Produce';
@@ -18,6 +41,184 @@ function getFriendlyProductName(rawName) {
     return clean || 'Produce';
 }
 
+function parseStockDate(dateStr) {
+    if (!dateStr) return null;
+    if (typeof dateStr === 'number') return new Date(dateStr);
+    
+    let cleanStr = dateStr.toString().trim();
+    if (cleanStr.includes('/')) {
+        const parts = cleanStr.split('/');
+        if (parts.length === 3) {
+            if (parts[0].length <= 2 && parts[2].length === 4) {
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            }
+        }
+    }
+    const d = new Date(cleanStr);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function getStockAgeInDays(stockItem) {
+    const dateVal = stockItem.date || stockItem.pack || stockItem.intakeDate || stockItem.createdAt || stockItem.timestamp;
+    const parsedDate = parseStockDate(dateVal);
+    if (!parsedDate) return 0;
+    
+    const diffTime = Math.abs(new Date() - parsedDate);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+function formatPhoneNumber(phone) {
+    if (!phone) return '';
+    let cleaned = phone.toString().replace(/[^\d+]/g, '');
+    if (cleaned.startsWith('0')) {
+        cleaned = '+27' + cleaned.slice(1);
+    } else if (!cleaned.startsWith('+')) {
+        cleaned = '+' + cleaned;
+    }
+    return cleaned;
+}
+
+async function runComprehensiveMatching() {
+  console.log("Running comprehensive pipeline match...");
+
+  let pipelineStock = [];
+  let pipelineBuyers = [];
+
+  try {
+    const phonesSnap = await firebase.database().ref('buyerPhones').once('value');
+    if (phonesSnap.exists()) {
+      firebaseBuyerPhonesCache = phonesSnap.val() || {};
+    }
+
+    const stockSnap = await firebase.database().ref('stock').once('value');
+    const stockVal = stockSnap.val();
+    if (stockVal) {
+      for (const u in stockVal) {
+        for (const e in stockVal[u]) {
+          const item = stockVal[u][e];
+          if (item && typeof item === 'object') {
+            pipelineStock.push({ ...item, _nodeKey: u, _id: e });
+          }
+        }
+      }
+    }
+
+    if (!pipelineStock.length && typeof allLiveStockData !== 'undefined' && allLiveStockData.length) {
+      pipelineStock = allLiveStockData;
+    }
+
+    if (typeof liveBuyerData !== 'undefined' && liveBuyerData.length > 0) {
+      pipelineBuyers = liveBuyerData;
+    } else if (typeof allBuyers !== 'undefined' && allBuyers.length > 0) {
+      pipelineBuyers = allBuyers;
+    }
+
+  } catch (e) {
+    console.warn("Pipeline fetch error:", e.message);
+  }
+
+  const el = document.getElementById('pipeline-results');
+
+  if (!pipelineStock.length || !pipelineBuyers.length) {
+    if (el) {
+      el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty. Please ensure buyers are loaded.</div>';
+    }
+    return;
+  }
+
+  const allProcessedMatches = [];
+
+  const evaluatedBuyers = pipelineBuyers.map(buyer => {
+    const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
+    const turnoverVal = Number(
+      buyer.turnover || 
+      buyer.totalSpent || 
+      buyer.revenue || 
+      buyer.historicalTotal || 
+      buyer.totalTurnover || 
+      buyer.spend || 
+      0
+    );
+    
+    let rawPhone = '';
+    const normalizedBuyerName = normalizeString(buyerName);
+    
+    for (const [fbKey, fbVal] of Object.entries(firebaseBuyerPhonesCache)) {
+      if (normalizeString(fbKey) === normalizedBuyerName || normalizedBuyerName.includes(normalizeString(fbKey)) || normalizeString(fbKey).includes(normalizedBuyerName)) {
+        if (typeof fbVal === 'string') {
+          rawPhone = fbVal;
+        } else if (fbVal && typeof fbVal === 'object') {
+          rawPhone = fbVal.phone || fbVal.telephone || fbVal.number || Object.values(fbVal)[0] || '';
+        }
+        break;
+      }
+    }
+
+    if (!rawPhone) {
+      rawPhone = buyer.phone || buyer.telephone || buyer.cell || buyer.mobile || buyer.contactNumber || buyer.tel || '';
+    }
+
+    const formattedPhone = formatPhoneNumber(rawPhone);
+
+    return { buyer, buyerName, turnoverVal, formattedPhone };
+  });
+
+  evaluatedBuyers.sort((a, b) => b.turnover - a.turnover);
+
+  const totalBuyersCount = evaluatedBuyers.length;
+
+  evaluatedBuyers.forEach((item, index) => {
+    const { buyer, buyerName, turnoverVal, formattedPhone } = item;
+    
+    const isTopTier = index < Math.ceil(totalBuyersCount * 0.35) || turnoverVal > 300000;
+    const maxStockAgeDays = isTopTier ? 10 : 14;
+
+    const broadCategoryBestMatchMap = {};
+
+    pipelineStock.forEach(stockItem => {
+      const rawComm = stockItem.commodity || stockItem.comm || stockItem.variety || stockItem.item || stockItem.description || 'Produce Item';
+      const broadCategory = getBroadCommodityCategory(rawComm);
+      
+      const stockAge = getStockAgeInDays(stockItem);
+      if (stockAge > maxStockAgeDays) {
+        return; 
+      }
+
+      const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || '*'));
+
+      if (!broadCategoryBestMatchMap[broadCategory] || stockQty > broadCategoryBestMatchMap[broadCategory]._sortQty) {
+        broadCategoryBestMatchMap[broadCategory] = {
+          ...stockItem,
+          _matchedCommodityName: rawComm,
+          _sortQty: stockQty === '*' ? 0 : stockQty,
+          _stockAge: stockAge
+        };
+      }
+    });
+
+    const uniqueBuyerStockItems = Object.values(broadCategoryBestMatchMap);
+    if (uniqueBuyerStockItems.length > 0) {
+      allProcessedMatches.push({
+        buyerName: buyerName,
+        turnover: turnoverVal,
+        phone: formattedPhone,
+        stockItems: uniqueBuyerStockItems
+      });
+    }
+  });
+
+  allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
+  renderPipelineMatches(allProcessedMatches);
+}
+
+// RESTORED: Ensures your HTML match button onclick event finds the function immediately
+function runAIFromPipeline() {
+  runComprehensiveMatching();
+}
+
+window.runAIFromPipeline = runAIFromPipeline;
+window.runComprehensiveMatching = runComprehensiveMatching;
+
 function renderPipelineMatches(rankedBuyers) {
   const el = document.getElementById('pipeline-results');
   if (!el) return;
@@ -34,7 +235,7 @@ function renderPipelineMatches(rankedBuyers) {
     const formattedTurnover = `R ${buyerData.turnover.toLocaleString()}`;
     const phone = buyerData.phone || '';
 
-    // STRICTLY STRIP DATES: Clean bullet points containing ONLY name and pack/size
+    // STRICTLY NO DATES: Clean bullet points containing ONLY name and pack/size
     const stockSummaryText = buyerData.stockItems.map(s => {
       const rawComm = s._matchedCommodityName || s.commodity || s.variety || 'Produce';
       const friendlyName = getFriendlyProductName(rawComm);
@@ -94,4 +295,11 @@ function renderPipelineMatches(rankedBuyers) {
   });
 
   el.innerHTML = htmlOutput;
+}
+
+function toggleBuyerDropdown(id) {
+  const dropdown = document.getElementById(id);
+  if (dropdown) {
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+  }
 }
