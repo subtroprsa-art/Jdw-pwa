@@ -1,6 +1,6 @@
-// ===== PIPELINE MATCHING FUNCTIONS =====
+// ===== PIPELINE MATCHING FUNCTIONS =====[cite: 1]
 
-// Helper normalization functions imported/adapted from matcher.js
+// 1. Normalization & Indexing Helpers (Adapted from matcher.js)
 function normalizeString(str) {
     if (!str) return '';
     return str.toString().trim().toUpperCase();
@@ -21,7 +21,7 @@ async function runComprehensiveMatching() {
   let pipelineBuyers = [];
 
   try {
-    // 1. Pull stock directly from Firebase
+    // 2. Pull stock directly from Firebase[cite: 1]
     const stockSnap = await firebase.database().ref('stock').once('value');
     const stockVal = stockSnap.val();
     if (stockVal) {
@@ -39,7 +39,7 @@ async function runComprehensiveMatching() {
       pipelineStock = allLiveStockData;
     }
 
-    // 2. Grab the buyers directly from the global array buyers.js already loaded
+    // 3. Grab buyers directly from buyers.js global data[cite: 1]
     if (typeof liveBuyerData !== 'undefined' && liveBuyerData.length > 0) {
       pipelineBuyers = liveBuyerData;
     } else if (typeof allBuyers !== 'undefined' && allBuyers.length > 0) {
@@ -62,7 +62,7 @@ async function runComprehensiveMatching() {
     return;
   }
 
-  // Build multi-tier stock index (from matcher.js logic)[cite: 2]
+  // Build multi-tier stock index maps (from matcher.js architecture)
   const exactStockIndex = new Map();
   const baseStockIndex = new Map();
 
@@ -83,34 +83,36 @@ async function runComprehensiveMatching() {
 
   const allProcessedMatches = [];
 
+  // 4. Evaluate each buyer against the indexed stock using matcher logic
   pipelineBuyers.forEach(buyer => {
     const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
-    const preferences = buyer.preferences || buyer.commPreferences || buyer.items || [];
-    
-    // Calculate total turnover or history weighting for ranking
+    const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || buyer.history || [];
+
+    // Calculate turnover value and give top historical buyers (like FLM) priority sorting
     const turnoverVal = Number(buyer.turnover || buyer.totalSpent || buyer.revenue || buyer.historicalTotal || 0);
-    // Give FLM or historically major buyers an extra boost or honor their exact turnover value
     const isTopHistoricalBuyer = normalizeString(buyerName).includes('FLM');
-    const effectiveTurnover = isTopHistoricalBuyer ? Math.max(turnoverVal, 999999) : turnoverVal;
+    const effectiveTurnover = isTopHistoricalBuyer ? Math.max(turnoverVal, 2000000) : turnoverVal;
 
     const buyerCommodityMap = {};
 
     preferences.forEach(pref => {
-      const rawComm = pref.comm || pref.commodity || pref.name || '';
-      const mappedComm = pref.mapped || pref.mappedCommodity || rawComm;
+      const rawComm = typeof pref === 'string' ? pref : (pref.comm || pref.commodity || pref.name || '');
+      const mappedComm = typeof pref === 'object' ? (pref.mapped || pref.mappedCommodity || rawComm) : rawComm;
       
       const exactSearchKey = normalizeString(mappedComm);
       const baseSearchKey = getBaseCommodity(mappedComm);
 
-      // Tier 1: Exact match lookup[cite: 2]
+      if (!exactSearchKey) return;
+
+      // Tier 1: Exact match lookup
       let candidates = exactStockIndex.get(exactSearchKey) || [];
 
-      // Tier 2: Singular/plural normalized match[cite: 2]
+      // Tier 2: Singular/plural normalized match
       if (candidates.length === 0) {
         candidates = baseStockIndex.get(baseSearchKey) || [];
       }
 
-      // Tier 3: Substring fallback matching[cite: 2]
+      // Tier 3: Substring fallback matching across indexed stock lines
       if (candidates.length === 0) {
         exactStockIndex.forEach((stockArray, stockKey) => {
           if (stockKey && exactSearchKey && (stockKey.includes(exactSearchKey) || exactSearchKey.includes(stockKey))) {
@@ -119,35 +121,32 @@ async function runComprehensiveMatching() {
         });
       }
 
-      if (candidates.length > 0) {
-        // Find the best/highest quantity candidate for this commodity
-        candidates.forEach(stockItem => {
-          const commodityKey = normalizeString(mappedComm || stockItem.commodity || stockItem.variety || 'ITEM');
-          const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
+      // Keep only the single best match per commodity/product to prevent duplicate rows
+      candidates.forEach(stockItem => {
+        const commodityKey = normalizeString(mappedComm || stockItem.commodity || stockItem.variety || 'ITEM');
+        const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
 
-          // Keep only the best match per product/commodity per buyer
-          if (!buyerCommodityMap[commodityKey] || stockQty > buyerCommodityMap[commodityKey]._sortQty) {
-            buyerCommodityMap[commodityKey] = {
-              ...stockItem,
-              _matchedCommodityName: mappedComm || stockItem.commodity || stockItem.variety || 'Produce Item',
-              _sortQty: stockQty
-            };
-          }
-        });
-      }
+        if (!buyerCommodityMap[commodityKey] || stockQty > buyerCommodityMap[commodityKey]._sortQty) {
+          buyerCommodityMap[commodityKey] = {
+            ...stockItem,
+            _matchedCommodityName: mappedComm || stockItem.commodity || stockItem.variety || 'Produce Item',
+            _sortQty: stockQty
+          };
+        }
+      });
     });
 
     const uniqueBuyerStockItems = Object.values(buyerCommodityMap);
     if (uniqueBuyerStockItems.length > 0) {
       allProcessedMatches.push({
         buyerName: buyerName,
-        turnover: effectiveTrustValue(effectiveTurnover, buyerName),
+        turnover: effectiveTurnover,
         stockItems: uniqueBuyerStockItems
       });
     }
   });
 
-  // Sort buyers strictly by Turnover descending (highest turnover first, e.g., FLM at the top)
+  // 5. Rank buyers strictly by Turnover descending (highest turnover first, e.g., FLM at the top)
   allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
 
   console.log("Ranked buyers with matches:", allProcessedMatches.length);
@@ -191,7 +190,7 @@ function renderPipelineMatches(rankedBuyers) {
 
     buyerData.stockItems.forEach(stock => {
       const commodityName = stock._matchedCommodityName || stock.commodity || stock.variety || 'Produce Item';
-      const variety = stock.variety ? ` - ${stock.variety}` : '';
+      const variety = stock.variety && stock.variety !== commodityName ? ` - ${stock.variety}` : '';
       const producer = stock.producer ? ` | Producer: ${stock.producer}` : '';
       const grade = stock.grade ? `Grade ${stock.grade}` : '';
       const size = stock.size ? `Size: ${stock.size}` : '';
@@ -212,15 +211,6 @@ function renderPipelineMatches(rankedBuyers) {
   });
 
   el.innerHTML = htmlOutput;
-}
-
-// Helper to calculate or assign fallback turnover scores
-function effectiveTrustValue(val, name) {
-  if (val > 0) return val;
-  // Fallback heuristic scoring if turnover property is missing on buyer object
-  const upperName = String(name).toUpperCase();
-  if (upperName.includes('FLM')) return 1500000;
-  return 50000;
 }
 
 // Helper function to handle opening/closing the dropdown accordions
