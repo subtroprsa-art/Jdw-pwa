@@ -1,5 +1,5 @@
 // ==========================================
-// CORRECTED dashboard.js FILE
+// CORRECTED dashboard.js FILE (COMPLETE CODE)
 // ==========================================
 
 async function loadDashboard() {
@@ -39,3 +39,8 @@ function setElemText(id, text) {
 }
 
 window.loadDashboard = loadDashboard;
+
+// Safe listener to ensure it triggers if loaded independently
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(loadDashboard, 500);
+});
