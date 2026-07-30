@@ -1,4 +1,4 @@
-// ===== PIPELINE MATCHING FUNCTIONS WITH CLEAN USER-FRIENDLY WHATSAPP MESSAGE FORMAT =====
+// ===== PIPELINE MATCHING FUNCTIONS WITH CLEAN WHATSAPP MESSAGE FORMAT (NO DATES) =====
 
 let firebaseBuyerPhonesCache = {};
 
@@ -74,7 +74,7 @@ function formatPhoneNumber(phone) {
 }
 
 async function runComprehensiveMatching() {
-  console.log("Running comprehensive pipeline match with clean WhatsApp messaging...");
+  console.log("Running comprehensive pipeline match with clean WhatsApp messaging (no dates)...");
 
   let pipelineStock = [];
   let pipelineBuyers = [];
@@ -226,7 +226,7 @@ function renderPipelineMatches(rankedBuyers) {
     const formattedTurnover = `R ${buyerData.turnover.toLocaleString()}`;
     const phone = buyerData.phone || '';
 
-    // Clean WhatsApp message format without product codes and without day age
+    // WhatsApp message format without product codes and without dates
     const stockSummaryText = buyerData.stockItems.map(s => {
       const friendlyName = getFriendlyProductName(s._matchedCommodityName || s.commodity);
       const packInfo = s.pack ? s.pack : (s.size ? `${s.size}kg` : '');
