@@ -89,17 +89,23 @@ async function runComprehensiveMatching() {
   pipelineBuyers.forEach(buyer => {
     const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
     
-    // Check all possible buyer preference properties (prefs, preferences, commodities, items, history)
+    // Check all possible buyer preference properties
     const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.commodities || buyer.items || buyer.history || [];
 
-    // Calculate actual turnover value and give top historical buyers (like FLM) priority sorting
-    const turnoverVal = Number(buyer.turnover || buyer.totalSpent || buyer.revenue || buyer.historicalTotal || 0);
-    const isTopHistoricalBuyer = normalizeString(buyerName).includes('FLM');
-    const effectiveTurnover = isTopHistoricalBuyer ? Math.max(turnoverVal, 5000000) : turnoverVal;
+    // Extract exact turnover cleanly from buyer object properties
+    const turnoverVal = Number(
+      buyer.turnover || 
+      buyer.totalSpent || 
+      buyer.revenue || 
+      buyer.historicalTotal || 
+      buyer.totalTurnover || 
+      buyer.spend || 
+      0
+    );
 
     const buyerCommodityMap = {};
 
-    // If buyer has explicit preferences, match them. Otherwise, map relevant floor stock items.
+    // Use explicit buyer preferences if present, otherwise evaluate general floor stock availability
     const searchPreferences = Array.isArray(preferences) && preferences.length > 0 ? preferences : Array.from(allStockCommodities);
 
     searchPreferences.forEach(pref => {
@@ -128,10 +134,10 @@ async function runComprehensiveMatching() {
 
       candidates.forEach(stockItem => {
         const itemComm = stockItem.commodity || stockItem.variety || stockItem.item || mappedComm || 'Produce Item';
-        const commodityKey = normalizeString(itemComm + '_' + (stockItem.variety || ''));
+        const commodityKey = normalizeString(itemComm + '_' + (stockItem.variety || '') + '_' + (stockItem.grade || ''));
         const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
 
-        // Keep distinct product lines (not just one filtered commodity)
+        // Keep distinct product lines per buyer
         if (!buyerCommodityMap[commodityKey] || stockQty > buyerCommodityMap[commodityKey]._sortQty) {
           buyerCommodityMap[commodityKey] = {
             ...stockItem,
@@ -146,13 +152,13 @@ async function runComprehensiveMatching() {
     if (uniqueBuyerStockItems.length > 0) {
       allProcessedMatches.push({
         buyerName: buyerName,
-        turnover: effectiveTurnover,
+        turnover: turnoverVal,
         stockItems: uniqueBuyerStockItems
       });
     }
   });
 
-  // 5. Rank buyers strictly by Turnover descending
+  // 5. Rank buyers strictly by Turnover descending (Highest turnover like FLM at the top)
   allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
 
   console.log("Ranked buyers with matches:", allProcessedMatches.length);
