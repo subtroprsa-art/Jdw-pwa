@@ -62,37 +62,13 @@ async function runComprehensiveMatching() {
     return;
   }
 
-  // Build multi-tier stock index maps
-  const exactStockIndex = new Map();
-  const baseStockIndex = new Map();
-  const allStockCommodities = new Set();
-
-  pipelineStock.forEach(stock => {
-    const rawComm = stock.commodity || stock.comm || stock.name || stock.item || stock.description || stock.produce || stock.variety || '';
-    const exactKey = normalizeString(rawComm);
-    const baseKey = getBaseCommodity(rawComm);
-
-    if (exactKey) {
-      allStockCommodities.add(exactKey);
-      if (!exactStockIndex.has(exactKey)) exactStockIndex.set(exactKey, []);
-      exactStockIndex.get(exactKey).push(stock);
-    }
-    if (baseKey) {
-      if (!baseStockIndex.has(baseKey)) baseStockIndex.set(baseKey, []);
-      baseStockIndex.get(baseKey).push(stock);
-    }
-  });
-
   const allProcessedMatches = [];
 
-  // 4. Evaluate each buyer against stock preferences and general availability
+  // 4. Evaluate and include all stock for all buyers, sorted strictly by true turnover descending
   pipelineBuyers.forEach(buyer => {
     const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
     
-    // Check all possible buyer preference properties
-    const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.commodities || buyer.items || buyer.history || [];
-
-    // Extract exact turnover cleanly from buyer object properties
+    // Extract actual turnover cleanly from all potential buyer object properties
     const turnoverVal = Number(
       buyer.turnover || 
       buyer.totalSpent || 
@@ -105,47 +81,19 @@ async function runComprehensiveMatching() {
 
     const buyerCommodityMap = {};
 
-    // Use explicit buyer preferences if present, otherwise evaluate general floor stock availability
-    const searchPreferences = Array.isArray(preferences) && preferences.length > 0 ? preferences : Array.from(allStockCommodities);
+    // Map all floor stock items directly to ensure every product and commodity appears
+    pipelineStock.forEach(stockItem => {
+      const itemComm = stockItem.commodity || stockItem.comm || stockItem.variety || stockItem.item || stockItem.description || 'Produce Item';
+      const commodityKey = normalizeString(itemComm + '_' + (stockItem.variety || '') + '_' + (stockItem.grade || '') + '_' + (stockItem.size || ''));
+      const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
 
-    searchPreferences.forEach(pref => {
-      const rawComm = typeof pref === 'string' ? pref : (pref.comm || pref.commodity || pref.name || pref.variety || '');
-      const mappedComm = typeof pref === 'object' ? (pref.mapped || pref.mappedCommodity || rawComm) : rawComm;
-      
-      const exactSearchKey = normalizeString(mappedComm);
-      const baseSearchKey = getBaseCommodity(mappedComm);
-
-      if (!exactSearchKey) return;
-
-      let candidates = exactStockIndex.get(exactSearchKey) || [];
-
-      if (candidates.length === 0) {
-        candidates = baseStockIndex.get(baseSearchKey) || [];
+      if (!buyerCommodityMap[commodityKey]) {
+        buyerCommodityMap[commodityKey] = {
+          ...stockItem,
+          _matchedCommodityName: itemComm,
+          _sortQty: stockQty
+        };
       }
-
-      // Substring fallback to catch partial matches across diverse product names
-      if (candidates.length === 0) {
-        exactStockIndex.forEach((stockArray, stockKey) => {
-          if (stockKey && exactSearchKey && (stockKey.includes(exactSearchKey) || exactSearchKey.includes(stockKey))) {
-            candidates = candidates.concat(stockArray);
-          }
-        });
-      }
-
-      candidates.forEach(stockItem => {
-        const itemComm = stockItem.commodity || stockItem.variety || stockItem.item || mappedComm || 'Produce Item';
-        const commodityKey = normalizeString(itemComm + '_' + (stockItem.variety || '') + '_' + (stockItem.grade || ''));
-        const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
-
-        // Keep distinct product lines per buyer
-        if (!buyerCommodityMap[commodityKey] || stockQty > buyerCommodityMap[commodityKey]._sortQty) {
-          buyerCommodityMap[commodityKey] = {
-            ...stockItem,
-            _matchedCommodityName: itemComm,
-            _sortQty: stockQty
-          };
-        }
-      });
     });
 
     const uniqueBuyerStockItems = Object.values(buyerCommodityMap);
@@ -158,7 +106,7 @@ async function runComprehensiveMatching() {
     }
   });
 
-  // 5. Rank buyers strictly by Turnover descending (Highest turnover like FLM at the top)
+  // 5. Rank ALL buyers strictly by Turnover descending (Highest turnover like FLM at the top, down to the lowest)
   allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
 
   console.log("Ranked buyers with matches:", allProcessedMatches.length);
