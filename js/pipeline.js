@@ -74,7 +74,7 @@ function formatPhoneNumber(phone) {
 }
 
 async function runComprehensiveMatching() {
-  console.log("Running comprehensive pipeline match with clean WhatsApp messaging (no dates)...");
+  console.log("Running comprehensive pipeline match with clean WhatsApp messaging (no product dates)...");
 
   let pipelineStock = [];
   let pipelineBuyers = [];
@@ -226,7 +226,7 @@ function renderPipelineMatches(rankedBuyers) {
     const formattedTurnover = `R ${buyerData.turnover.toLocaleString()}`;
     const phone = buyerData.phone || '';
 
-    // WhatsApp message format without product codes and without dates
+    // Clean WhatsApp message format strictly without product codes and without product dates
     const stockSummaryText = buyerData.stockItems.map(s => {
       const friendlyName = getFriendlyProductName(s._matchedCommodityName || s.commodity);
       const packInfo = s.pack ? s.pack : (s.size ? `${s.size}kg` : '');
