@@ -88,10 +88,10 @@ async function runComprehensiveMatching() {
     const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
     const preferences = buyer.prefs || buyer.preferences || buyer.commPreferences || buyer.items || buyer.history || [];
 
-    // Calculate turnover value and give top historical buyers (like FLM) priority sorting
+    // Calculate actual turnover value and give top historical buyers (like FLM) priority sorting
     const turnoverVal = Number(buyer.turnover || buyer.totalSpent || buyer.revenue || buyer.historicalTotal || 0);
     const isTopHistoricalBuyer = normalizeString(buyerName).includes('FLM');
-    const effectiveTurnover = isTopHistoricalBuyer ? Math.max(turnoverVal, 2000000) : turnoverVal;
+    const effectiveTurnover = isTopHistoricalBuyer ? Math.max(turnoverVal, 5000000) : turnoverVal;
 
     const buyerCommodityMap = {};
 
@@ -123,13 +123,14 @@ async function runComprehensiveMatching() {
 
       // Keep only the single best match per commodity/product to prevent duplicate rows
       candidates.forEach(stockItem => {
-        const commodityKey = normalizeString(mappedComm || stockItem.commodity || stockItem.variety || 'ITEM');
+        const itemComm = stockItem.commodity || stockItem.variety || stockItem.item || mappedComm || 'Produce Item';
+        const commodityKey = normalizeString(itemComm);
         const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
 
         if (!buyerCommodityMap[commodityKey] || stockQty > buyerCommodityMap[commodityKey]._sortQty) {
           buyerCommodityMap[commodityKey] = {
             ...stockItem,
-            _matchedCommodityName: mappedComm || stockItem.commodity || stockItem.variety || 'Produce Item',
+            _matchedCommodityName: itemComm,
             _sortQty: stockQty
           };
         }
