@@ -91,18 +91,25 @@ function renderPipelineMatches(matches) {
     return;
   }
 
-  el.innerHTML = matches.slice(0, 50).map((m, idx) => {
-    // Correctly format product identifier strings and avoid repetitive fallbacks
-    const variety = m.stock.variety || m.stock.commodity || m.stock.item || 'Product';
-    const code = m.stock.code || m.stock._id || '*';
-    const size = m.stock.size || '*';
-    const grade = m.stock.grade || '1';
-    const pack = m.stock.pack || '1';
+  // Filter out any matches with 0 or negative balance
+  const validMatches = matches.filter(m => Number(m.stock.balance || 0) > 0);
+
+  if (!validMatches.length) {
+    el.innerHTML = '<div class="empty">No stock with available balance found for these matches.</div>';
+    return;
+  }
+
+  el.innerHTML = validMatches.slice(0, 50).map((m, idx) => {
+    // Pull readable properties from your stock object instead of raw index arrays
+    const productName = m.stock.item || m.stock.commodity || m.stock.variety || 'Produce Item';
+    const variety = m.stock.variety ? ` - ${m.stock.variety}` : '';
+    const classGrade = m.stock.grade ? `Class ${m.stock.grade}` : '';
+    const sizeMark = m.stock.size ? `Size: ${m.stock.size}` : '';
 
     return `<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1.5px solid var(--border)">
       <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.buyer.name}</div>
-      <div style="font-size:12px;font-weight:700;color:#333;margin-top:2px">(${variety},${code},${size},${grade},${pack},*,*)</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: ${m.stock.balance || 0} | Pack: ${pack} | GRN: ${m.stock.grn || '-'}</div>
+      <div style="font-size:12px;font-weight:700;color:#333;margin-top:2px">${productName}${variety} (${classGrade}, ${sizeMark})</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: <strong>${m.stock.balance}</strong> | Pack: ${m.stock.pack || '-'} | GRN: ${m.stock.grn || '-'}</div>
     </div>`;
   }).join('');
 }
