@@ -64,11 +64,11 @@ async function runComprehensiveMatching() {
 
   const allProcessedMatches = [];
 
-  // 4. Evaluate and include all stock for all buyers, sorted strictly by true turnover descending
+  // 4. Evaluate buyers and distill down to exactly ONE best stock line per unique base commodity
   pipelineBuyers.forEach(buyer => {
     const buyerName = buyer.name || buyer.buyerName || buyer.companyName || 'Unknown Buyer';
     
-    // Extract actual turnover cleanly from all potential buyer object properties
+    // Extract actual turnover cleanly from buyer properties
     const turnoverVal = Number(
       buyer.turnover || 
       buyer.totalSpent || 
@@ -79,24 +79,24 @@ async function runComprehensiveMatching() {
       0
     );
 
-    const buyerCommodityMap = {};
+    const commodityBestMatchMap = {};
 
-    // Map all floor stock items directly to ensure every product and commodity appears
     pipelineStock.forEach(stockItem => {
-      const itemComm = stockItem.commodity || stockItem.comm || stockItem.variety || stockItem.item || stockItem.description || 'Produce Item';
-      const commodityKey = normalizeString(itemComm + '_' + (stockItem.variety || '') + '_' + (stockItem.grade || '') + '_' + (stockItem.size || ''));
+      const rawComm = stockItem.commodity || stockItem.comm || stockItem.variety || stockItem.item || stockItem.description || 'Produce Item';
+      const baseCommKey = getBaseCommodity(rawComm);
       const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
 
-      if (!buyerCommodityMap[commodityKey]) {
-        buyerCommodityMap[commodityKey] = {
+      // Keep only the single best match item (e.g., highest quantity or primary batch) per base commodity key
+      if (!commodityBestMatchMap[baseCommKey] || stockQty > commodityBestMatchMap[baseCommKey]._sortQty) {
+        commodityBestMatchMap[baseCommKey] = {
           ...stockItem,
-          _matchedCommodityName: itemComm,
+          _matchedCommodityName: rawComm,
           _sortQty: stockQty
         };
       }
     });
 
-    const uniqueBuyerStockItems = Object.values(buyerCommodityMap);
+    const uniqueBuyerStockItems = Object.values(commodityBestMatchMap);
     if (uniqueBuyerStockItems.length > 0) {
       allProcessedMatches.push({
         buyerName: buyerName,
@@ -106,7 +106,7 @@ async function runComprehensiveMatching() {
     }
   });
 
-  // 5. Rank ALL buyers strictly by Turnover descending (Highest turnover like FLM at the top, down to the lowest)
+  // 5. Rank ALL buyers strictly by Turnover descending (Highest turnover like FLM at the top)
   allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
 
   console.log("Ranked buyers with matches:", allProcessedMatches.length);
