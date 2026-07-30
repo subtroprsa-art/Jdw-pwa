@@ -1,15 +1,12 @@
-// ===== PIPELINE MATCHING FUNCTIONS WITH FIREBASE PHONE LOOKUP =====
+// ===== PIPELINE MATCHING FUNCTIONS WITH CLEAN USER-FRIENDLY WHATSAPP MESSAGE FORMAT =====
 
-// Global cache for buyer phones pulled directly from Firebase node 'buyerPhones'
 let firebaseBuyerPhonesCache = {};
 
-// 1. Normalization & Indexing Helpers
 function normalizeString(str) {
     if (!str) return '';
     return str.toString().trim().toUpperCase();
 }
 
-// Extract base commodity category (e.g., AVOS, LEMS, ORGS, NOVA from any product name string)
 function getBroadCommodityCategory(str) {
     const norm = normalizeString(str);
     if (norm.includes('AVO') || norm.includes('AVOCADO')) return 'AVOS';
@@ -26,7 +23,19 @@ function getBroadCommodityCategory(str) {
     return base || 'OTHER';
 }
 
-// Helper to parse date strings
+function getFriendlyProductName(rawName) {
+    const upper = normalizeString(rawName);
+    if (upper.includes('ORG') || upper.includes('ORANGE')) return 'Oranges';
+    if (upper.includes('AVO') || upper.includes('AVOCADO')) return 'Avos';
+    if (upper.includes('LEM') || upper.includes('LEMON')) return 'Lemons';
+    if (upper.includes('NOV')) return 'Nova';
+    if (upper.includes('BER')) return 'Berries';
+    if (upper.includes('NUT')) return 'Nuts';
+    if (upper.includes('COAL')) return 'Coal';
+    if (upper.includes('APP') || upper.includes('APPLE')) return 'Apples';
+    return rawName.split(',')[0].trim() || 'Produce';
+}
+
 function parseStockDate(dateStr) {
     if (!dateStr) return null;
     if (typeof dateStr === 'number') return new Date(dateStr);
@@ -44,7 +53,6 @@ function parseStockDate(dateStr) {
     return isNaN(d.getTime()) ? null : d;
 }
 
-// Calculate age of stock in days relative to current date (2026)
 function getStockAgeInDays(stockItem) {
     const dateVal = stockItem.date || stockItem.pack || stockItem.intakeDate || stockItem.createdAt || stockItem.timestamp;
     const parsedDate = parseStockDate(dateVal);
@@ -54,7 +62,6 @@ function getStockAgeInDays(stockItem) {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
-// Helper to clean and format phone numbers for WhatsApp and Tel links
 function formatPhoneNumber(phone) {
     if (!phone) return '';
     let cleaned = phone.toString().replace(/[^\d+]/g, '');
@@ -67,20 +74,17 @@ function formatPhoneNumber(phone) {
 }
 
 async function runComprehensiveMatching() {
-  console.log("Running comprehensive pipeline match with Firebase buyerPhones lookup...");
+  console.log("Running comprehensive pipeline match with clean WhatsApp messaging...");
 
   let pipelineStock = [];
   let pipelineBuyers = [];
 
   try {
-    // 1. Fetch buyer phones directly from Firebase 'buyerPhones' node shown in your database
     const phonesSnap = await firebase.database().ref('buyerPhones').once('value');
     if (phonesSnap.exists()) {
       firebaseBuyerPhonesCache = phonesSnap.val() || {};
-      console.log("Successfully loaded buyer phones from Firebase:", Object.keys(firebaseBuyerPhonesCache).length);
     }
 
-    // 2. Pull stock from Firebase
     const stockSnap = await firebase.database().ref('stock').once('value');
     const stockVal = stockSnap.val();
     if (stockVal) {
@@ -98,7 +102,6 @@ async function runComprehensiveMatching() {
       pipelineStock = allLiveStockData;
     }
 
-    // 3. Grab buyers from buyers.js global data
     if (typeof liveBuyerData !== 'undefined' && liveBuyerData.length > 0) {
       pipelineBuyers = liveBuyerData;
     } else if (typeof allBuyers !== 'undefined' && allBuyers.length > 0) {
@@ -112,7 +115,6 @@ async function runComprehensiveMatching() {
   const el = document.getElementById('pipeline-results');
 
   if (!pipelineStock.length || !pipelineBuyers.length) {
-    console.warn("⚠️ Stock lines or buyers data is missing or empty!");
     if (el) {
       el.innerHTML = '<div class="empty">⚠️ Stock lines or buyers data is missing or empty. Please ensure buyers are loaded.</div>';
     }
@@ -133,7 +135,6 @@ async function runComprehensiveMatching() {
       0
     );
     
-    // Look up the phone number directly from Firebase buyerPhones cache using exact or normalized buyer name matching
     let rawPhone = '';
     const normalizedBuyerName = normalizeString(buyerName);
     
@@ -148,7 +149,6 @@ async function runComprehensiveMatching() {
       }
     }
 
-    // Fallback to local buyer object properties if not found in Firebase cache
     if (!rawPhone) {
       rawPhone = buyer.phone || buyer.telephone || buyer.cell || buyer.mobile || buyer.contactNumber || buyer.tel || '';
     }
@@ -179,13 +179,13 @@ async function runComprehensiveMatching() {
         return; 
       }
 
-      const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || 1));
+      const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || stockItem.qty_sort || '*'));
 
       if (!broadCategoryBestMatchMap[broadCategory] || stockQty > broadCategoryBestMatchMap[broadCategory]._sortQty) {
         broadCategoryBestMatchMap[broadCategory] = {
           ...stockItem,
           _matchedCommodityName: rawComm,
-          _sortQty: stockQty,
+          _sortQty: stockQty === '*' ? 0 : stockQty,
           _stockAge: stockAge
         };
       }
@@ -203,13 +203,10 @@ async function runComprehensiveMatching() {
   });
 
   allProcessedMatches.sort((a, b) => b.turnover - a.turnover);
-
-  console.log("Ranked buyers with Firebase phone lookup complete:", allProcessedMatches.length);
   renderPipelineMatches(allProcessedMatches);
 }
 
 function runAIFromPipeline() {
-  console.log("runAIFromPipeline invoked");
   runComprehensiveMatching();
 }
 
@@ -229,9 +226,16 @@ function renderPipelineMatches(rankedBuyers) {
     const formattedTurnover = `R ${buyerData.turnover.toLocaleString()}`;
     const phone = buyerData.phone || '';
 
-    // Generate automatic WhatsApp message populated with the matching stock lines
-    const stockSummaryText = buyerData.stockItems.map(s => `• ${s._matchedCommodityName || s.commodity} - Qty: ${s.count !== undefined ? s.count : 'N/A'} (${s._stockAge}d old)`).join('\n');
-    const waMessage = encodeURIComponent(`Hi ${buyerData.buyerName}, we have fresh stock available matching your requirements:\n\n${stockSummaryText}\n\nPlease let me know if you would like to secure any of these!`);
+    // Clean WhatsApp message format without product codes and without day age
+    const stockSummaryText = buyerData.stockItems.map(s => {
+      const friendlyName = getFriendlyProductName(s._matchedCommodityName || s.commodity);
+      const packInfo = s.pack ? s.pack : (s.size ? `${s.size}kg` : '');
+      const displayPart = packInfo ? `${friendlyName} ${packInfo}` : `${friendlyName}`;
+      return `• ${displayPart} available`;
+    }).join('\n');
+
+    const messageString = `Hi ${buyerData.buyerName}, we have fresh stock available matching your requirements:\n\n${stockSummaryText}\n\nPlease let me know if you would like to secure any of these!`;
+    const waMessage = encodeURIComponent(messageString);
     
     const waLink = phone ? `https://wa.me/${phone.replace('+', '')}?text=${waMessage}` : '#';
     const telLink = phone ? `tel:${phone}` : '#';
@@ -270,7 +274,7 @@ function renderPipelineMatches(rankedBuyers) {
       htmlOutput += `
         <div style="padding:8px 0;border-bottom:1px solid #eee;">
           <div style="font-size:13px;font-weight:700;color:#333;">${commodityName}${variety} (${grade}, ${size})${producer}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Count/Qty: <strong>${availableQty}</strong> | Age: ${stock._stockAge !== undefined ? stock._stockAge + ' days' : 'Fresh'} | Pack: ${stock.pack || '-'} | GRN: ${stock.grn || '-'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Count/Qty: <strong>${availableQty}</strong> | Pack: ${stock.pack || '-'} | GRN: ${stock.grn || '-'}</div>
         </div>
       `;
     });
@@ -284,7 +288,6 @@ function renderPipelineMatches(rankedBuyers) {
   el.innerHTML = htmlOutput;
 }
 
-// Helper function to handle opening/closing dropdowns
 function toggleBuyerDropdown(id) {
   const dropdown = document.getElementById(id);
   if (dropdown) {
