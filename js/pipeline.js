@@ -51,10 +51,11 @@ async function runComprehensiveMatching() {
   const matches = [];
   
   pipelineStock.forEach(stockItem => {
-    const stockBal = Number(stockItem.balance !== undefined ? stockItem.balance : 1);
-    if (stockBal <= 0) return; // Skip zero or negative stock[cite: 1]
+    // Check available stock using 'count' or 'qty_rec' instead of 'balance'
+    const stockQty = Number(stockItem.count !== undefined ? stockItem.count : (stockItem.qty_rec || 0));
+    if (stockQty <= 0) return; // Skip zero or negative stock[cite: 1]
 
-    const stockComm = String(stockItem.commodity || stockItem.item || '').toLowerCase().trim();
+    const stockComm = String(stockItem.commodity || stockItem.variety || '').toLowerCase().trim();
 
     pipelineBuyers.forEach(buyer => {
       const buyerPrefs = buyer.prefs || [];
@@ -91,25 +92,28 @@ function renderPipelineMatches(matches) {
     return;
   }
 
-  // Filter out any matches with 0 or negative balance
-  const validMatches = matches.filter(m => Number(m.stock.balance || 0) > 0);
+  // Filter out items with 0 or negative count/qty
+  const validMatches = matches.filter(m => {
+    const qty = Number(m.stock.count !== undefined ? m.stock.count : (m.stock.qty_rec || 0));
+    return qty > 0;
+  });
 
   if (!validMatches.length) {
-    el.innerHTML = '<div class="empty">No stock with available balance found for these matches.</div>';
+    el.innerHTML = '<div class="empty">No stock with available quantity found for these matches.</div>';
     return;
   }
 
   el.innerHTML = validMatches.slice(0, 50).map((m, idx) => {
-    // Pull readable properties from your stock object instead of raw index arrays
-    const productName = m.stock.item || m.stock.commodity || m.stock.variety || 'Produce Item';
-    const variety = m.stock.variety ? ` - ${m.stock.variety}` : '';
-    const classGrade = m.stock.grade ? `Class ${m.stock.grade}` : '';
-    const sizeMark = m.stock.size ? `Size: ${m.stock.size}` : '';
+    const variety = m.stock.variety || m.stock.commodity || 'Produce Item';
+    const producer = m.stock.producer ? ` - ${m.stock.producer}` : '';
+    const grade = m.stock.grade ? `Grade ${m.stock.grade}` : '';
+    const size = m.stock.size ? `Size: ${m.stock.size}` : '';
+    const availableQty = m.stock.count !== undefined ? m.stock.count : (m.stock.qty_rec || 0);
 
     return `<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1.5px solid var(--border)">
       <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.buyer.name}</div>
-      <div style="font-size:12px;font-weight:700;color:#333;margin-top:2px">${productName}${variety} (${classGrade}, ${sizeMark})</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: <strong>${m.stock.balance}</strong> | Pack: ${m.stock.pack || '-'} | GRN: ${m.stock.grn || '-'}</div>
+      <div style="font-size:12px;font-weight:700;color:#333;margin-top:2px">${variety}${producer} (${grade}, ${size})</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Count/Qty: <strong>${availableQty}</strong> | Pack: ${m.stock.pack || '-'} | GRN: ${m.stock.grn || '-'}</div>
     </div>`;
   }).join('');
 }
