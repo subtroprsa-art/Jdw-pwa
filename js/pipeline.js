@@ -54,12 +54,12 @@ async function runComprehensiveMatching() {
     const stockComm = String(stockItem.commodity || stockItem.variety || '').toLowerCase().trim();
 
     pipelineBuyers.forEach(buyer => {
-      const buyerPrefs = buyer.prefs || [];
+      const buyerPrefs = buyer.prefs || buyer.history || [];
       
       let isMatch = false;
       if (Array.isArray(buyerPrefs)) {
         isMatch = buyerPrefs.some(pref => {
-          const bc = String(pref.comm || '').toLowerCase().trim();
+          const bc = String(pref.comm || pref.commodity || pref.name || '').toLowerCase().trim();
           return bc && (stockComm.includes(bc) || bc.includes(stockComm));
         });
       }
@@ -88,45 +88,63 @@ function renderPipelineMatches(matches) {
     return;
   }
 
-  // Group matches by Buyer and de-duplicate commodities so each commodity appears only once per buyer
+  // Group matches by Buyer and keep ONLY the single best match per commodity
   const buyerMap = {};
 
   matches.forEach(m => {
     const buyerName = m.buyer.name || 'Unknown Buyer';
     if (!buyerMap[buyerName]) {
-      buyerMap[buyerName] = [];
+      buyerMap[buyerName] = {
+        buyerObj: m.buyer,
+        turnover: Number(m.buyer.turnover || m.buyer.totalSpent || m.buyer.revenue || 0),
+        commodities: {}
+      };
     }
 
     const commodityKey = String(m.stock.commodity || m.stock.variety || 'Item').toLowerCase().trim();
-    
-    // Check if this commodity is already added for this buyer to keep only one line per commodity
-    const exists = buyerMap[buyerName].some(item => {
-      const existingKey = String(item.commodity || item.variety || '').toLowerCase().trim();
-      return existingKey === commodityKey;
-    });
+    const stockQty = Number(m.stock.count !== undefined ? m.stock.count : (m.stock.qty_rec || m.stock.qty_sort || 0));
 
-    if (!exists) {
-      buyerMap[buyerName].push(m.stock);
+    // Keep only the highest quantity/best item per commodity if multiple exist
+    if (!buyerMap[buyerName].commodities[commodityKey] || stockQty > buyerMap[buyerName].commodities[commodityKey]._sortQty) {
+      buyerMap[buyerName].commodities[commodityKey] = {
+        ...m.stock,
+        _sortQty: stockQty
+      };
     }
   });
 
-  // Render collapsible dropdown container for each buyer
+  // Convert buyer map to an array and rank buyers by turnover descending (highest turnover first)
+  const sortedBuyers = Object.keys(buyerMap).map(buyerName => {
+    return {
+      name: buyerName,
+      turnover: buyerMap[buyerName].turnover,
+      stockItems: Object.values(buyerMap[buyerName].commodities)
+    };
+  }).sort((a, b) => b.turnover - a.turnover);
+
+  // Render collapsible dropdown container for each ranked buyer
   let htmlOutput = '';
   
-  Object.keys(buyerMap).forEach((buyerName, idx) => {
-    const buyerStockItems = buyerMap[buyerName];
+  sortedBuyers.forEach((buyerData, idx) => {
     const dropdownId = `buyer-dropdown-${idx}`;
+    const formattedTurnover = buyerData.turnover ? `R ${buyerData.turnover.toLocaleString()}` : 'R 0';
 
     htmlOutput += `
       <div style="background:#fff;border-radius:10px;margin-bottom:10px;border:1.5px solid var(--border);overflow:hidden;">
         <div onclick="toggleBuyerDropdown('${dropdownId}')" style="padding:14px 16px;background:#f8f9fa;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-weight:800;font-size:15px;color:var(--moss);">${buyerName} <span style="font-size:12px;color:var(--muted);font-weight:normal;">(${buyerStockItems.length} matched commodities)</span></div>
-          <div style="font-size:14px;color:var(--muted);font-weight:bold;">▼</div>
+          <div style="font-weight:800;font-size:15px;color:var(--moss);">
+            ${buyerData.name} 
+            <span style="font-size:12px;color:var(--muted);font-weight:normal;margin-left:8px;">(Turnover: ${formattedTrust(formattedTurnover)})</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);font-weight:bold;display:flex;align-items:center;gap:8px;">
+            <span>${buyerData.stockItems.length} Products</span>
+            <span>▼</span>
+          </div>
         </div>
         <div id="${dropdownId}" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:#fff;">
     `;
 
-    buyerStockItems.forEach(stock => {
+    buyerData.stockItems.forEach(stock => {
       const variety = stock.variety || stock.commodity || 'Produce Item';
       const producer = stock.producer ? ` - ${stock.producer}` : '';
       const grade = stock.grade ? `Grade ${stock.grade}` : '';
@@ -148,6 +166,11 @@ function renderPipelineMatches(matches) {
   });
 
   el.innerHTML = htmlOutput;
+}
+
+// Helper for formatting turnover text cleanly
+function formattedTrust(val) {
+  return val;
 }
 
 // Helper function to handle opening/closing the dropdown accordions
