@@ -1,4 +1,4 @@
-// ===== PIPELINE MATCHING FUNCTIONS =====
+// ===== PIPELINE MATCHING FUNCTIONS =====[cite: 1]
 
 async function runComprehensiveMatching() {
   console.log("Running comprehensive pipeline match...");
@@ -7,7 +7,7 @@ async function runComprehensiveMatching() {
   let pipelineBuyers = [];
 
   try {
-    // 1. Pull stock directly from Firebase
+    // 1. Pull stock directly from Firebase[cite: 1]
     const stockSnap = await firebase.database().ref('stock').once('value');
     const stockVal = stockSnap.val();
     if (stockVal) {
@@ -25,7 +25,7 @@ async function runComprehensiveMatching() {
       pipelineStock = allLiveStockData;
     }
 
-    // 2. Grab the buyers directly from the global array buyers.js already loaded
+    // 2. Grab the buyers directly from the global array buyers.js already loaded[cite: 1]
     if (typeof liveBuyerData !== 'undefined' && liveBuyerData.length > 0) {
       pipelineBuyers = liveBuyerData;
     } else if (typeof allBuyers !== 'undefined' && allBuyers.length > 0) {
@@ -52,7 +52,7 @@ async function runComprehensiveMatching() {
   
   pipelineStock.forEach(stockItem => {
     const stockBal = Number(stockItem.balance !== undefined ? stockItem.balance : 1);
-    if (stockBal <= 0) return; // Skip zero or negative stock
+    if (stockBal <= 0) return; // Skip zero or negative stock[cite: 1]
 
     const stockComm = String(stockItem.commodity || stockItem.item || '').toLowerCase().trim();
 
@@ -92,9 +92,17 @@ function renderPipelineMatches(matches) {
   }
 
   el.innerHTML = matches.slice(0, 50).map((m, idx) => {
+    // Correctly format product identifier strings and avoid repetitive fallbacks
+    const variety = m.stock.variety || m.stock.commodity || m.stock.item || 'Product';
+    const code = m.stock.code || m.stock._id || '*';
+    const size = m.stock.size || '*';
+    const grade = m.stock.grade || '1';
+    const pack = m.stock.pack || '1';
+
     return `<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1.5px solid var(--border)">
-      <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.stock.producer || m.stock.item || 'Unknown'} (${m.stock.commodity || 'Item'}) -> ${m.buyer.name}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: ${m.stock.balance || 0} | Pack: ${m.stock.pack || '-'} | GRN: ${m.stock.grn || '-'}</div>
+      <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.buyer.name}</div>
+      <div style="font-size:12px;font-weight:700;color:#333;margin-top:2px">(${variety},${code},${size},${grade},${pack},*,*)</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">Balance: ${m.stock.balance || 0} | Pack: ${pack} | GRN: ${m.stock.grn || '-'}</div>
     </div>`;
   }).join('');
 }
