@@ -48,7 +48,7 @@ async function runComprehensiveMatching() {
     return;
   }
 
-  const matches = [];
+  const rawMatches = [];
   
   pipelineStock.forEach(stockItem => {
     const stockComm = String(stockItem.commodity || stockItem.variety || '').toLowerCase().trim();
@@ -65,13 +65,13 @@ async function runComprehensiveMatching() {
       }
 
       if (isMatch) {
-        matches.push({ stock: stockItem, buyer: buyer });
+        rawMatches.push({ stock: stockItem, buyer: buyer });
       }
     });
   });
 
-  console.log("Filtered pipeline matches:", matches.length);
-  renderPipelineMatches(matches);
+  console.log("Filtered pipeline matches:", rawMatches.length);
+  renderPipelineMatches(rawMatches);
 }
 
 function runAIFromPipeline() {
@@ -88,18 +88,72 @@ function renderPipelineMatches(matches) {
     return;
   }
 
-  // Render all matches safely without over-filtering out results
-  el.innerHTML = matches.slice(0, 50).map((m, idx) => {
-    const variety = m.stock.variety || m.stock.commodity || 'Produce Item';
-    const producer = m.stock.producer ? ` - ${m.stock.producer}` : '';
-    const grade = m.stock.grade ? `Grade ${m.stock.grade}` : '';
-    const size = m.stock.size ? `Size: ${m.stock.size}` : '';
-    const availableQty = m.stock.count !== undefined ? m.stock.count : (m.stock.qty_rec || m.stock.qty_sort || 'N/A');
+  // Group matches by Buyer and de-duplicate commodities so each commodity appears only once per buyer
+  const buyerMap = {};
 
-    return `<div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1.5px solid var(--border)">
-      <div style="font-weight:800;font-size:14px;color:var(--moss)">Match #${idx + 1}: ${m.buyer.name}</div>
-      <div style="font-size:12px;font-weight:700;color:#333;margin-top:2px">${variety}${producer} (${grade}, ${size})</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Count/Qty: <strong>${availableQty}</strong> | Pack: ${m.stock.pack || '-'} | GRN: ${m.stock.grn || '-'}</div>
-    </div>`;
-  }).join('');
+  matches.forEach(m => {
+    const buyerName = m.buyer.name || 'Unknown Buyer';
+    if (!buyerMap[buyerName]) {
+      buyerMap[buyerName] = [];
+    }
+
+    const commodityKey = String(m.stock.commodity || m.stock.variety || 'Item').toLowerCase().trim();
+    
+    // Check if this commodity is already added for this buyer to keep only one line per commodity
+    const exists = buyerMap[buyerName].some(item => {
+      const existingKey = String(item.commodity || item.variety || '').toLowerCase().trim();
+      return existingKey === commodityKey;
+    });
+
+    if (!exists) {
+      buyerMap[buyerName].push(m.stock);
+    }
+  });
+
+  // Render collapsible dropdown container for each buyer
+  let htmlOutput = '';
+  
+  Object.keys(buyerMap).forEach((buyerName, idx) => {
+    const buyerStockItems = buyerMap[buyerName];
+    const dropdownId = `buyer-dropdown-${idx}`;
+
+    htmlOutput += `
+      <div style="background:#fff;border-radius:10px;margin-bottom:10px;border:1.5px solid var(--border);overflow:hidden;">
+        <div onclick="toggleBuyerDropdown('${dropdownId}')" style="padding:14px 16px;background:#f8f9fa;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:800;font-size:15px;color:var(--moss);">${buyerName} <span style="font-size:12px;color:var(--muted);font-weight:normal;">(${buyerStockItems.length} matched commodities)</span></div>
+          <div style="font-size:14px;color:var(--muted);font-weight:bold;">▼</div>
+        </div>
+        <div id="${dropdownId}" style="display:none;padding:12px 16px;border-top:1px solid var(--border);background:#fff;">
+    `;
+
+    buyerStockItems.forEach(stock => {
+      const variety = stock.variety || stock.commodity || 'Produce Item';
+      const producer = stock.producer ? ` - ${stock.producer}` : '';
+      const grade = stock.grade ? `Grade ${stock.grade}` : '';
+      const size = stock.size ? `Size: ${stock.size}` : '';
+      const availableQty = stock.count !== undefined ? stock.count : (stock.qty_rec || stock.qty_sort || 'N/A');
+
+      htmlOutput += `
+        <div style="padding:8px 0;border-bottom:1px solid #eee;">
+          <div style="font-size:13px;font-weight:700;color:#333;">${variety}${producer} (${grade}, ${size})</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Count/Qty: <strong>${availableQty}</strong> | Pack: ${stock.pack || '-'} | GRN: ${stock.grn || '-'}</div>
+        </div>
+      `;
+    });
+
+    htmlOutput += `
+        </div>
+      </div>
+    `;
+  });
+
+  el.innerHTML = htmlOutput;
+}
+
+// Helper function to handle opening/closing the dropdown accordions
+function toggleBuyerDropdown(id) {
+  const dropdown = document.getElementById(id);
+  if (dropdown) {
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+  }
 }
