@@ -1,3 +1,7 @@
+// ==========================================
+// CORRECTED main.js FILE (COMPLETE CODE)
+// ==========================================
+
 // ===== MAIN INITIALIZATION & EVENT LISTENERS =====
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -38,5 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Finally, render the dashboard stats with the newly populated global arrays
   if (typeof loadDashboard === 'function') {
     loadDashboard();
+    // Safe retry fallback in case Firebase data takes an extra moment to resolve asynchronously
+    setTimeout(loadDashboard, 1000);
+    setTimeout(loadDashboard, 3000);
   }
 });
