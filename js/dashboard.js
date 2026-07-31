@@ -1,36 +1,99 @@
 // ==========================================
-// FULLY REVISED dashboard.js (DEDICATED NODE READER)
+// COMPLETE DASHBOARD SCRIPT WITH CUSTOM KPI CARDS & THRESHOLDS
 // ==========================================
 
 async function loadDashboard() {
   try {
-    console.log("Fetching pre-calculated dashboard KPIs from dedicated backend node...");
+    console.log("Calculating live dashboard KPIs...");
 
-    // Read directly from the robust backend-maintained node (Zero calculations, zero bugs)
-    firebase.database().ref('/dashboard_kpis').once('value', snapshot => {
-      const kpis = snapshot.val();
-      
-      if (!kpis) {
-        console.warn("⚠️ /dashboard_kpis node is empty. Waiting for sync...");
-        return;
+    const stockSnap = await firebase.database().ref('stock').once('value');
+    const historySnap = await firebase.database().ref('jdw/history').once('value');
+    const buyersSnap = await firebase.database().ref('buyers').once('value'); // or liveBuyerData
+
+    const stockVal = stockSnap.val() || {};
+    const historyVal = historySnap.val() || {};
+    
+    let totalFloorUnits = 0;
+    let coldstoreUnits = 0;
+    let totalStockReceived = 0;
+    let totalStockSold = 0;
+
+    // 1. Process Stock
+    for (const salesmanKey in stockVal) {
+      for (const itemKey in stockVal[salesmanKey]) {
+        const item = stockVal[salesmanKey][itemKey];
+        if (item && typeof item === 'object') {
+          const qty = Number(item.count !== undefined ? item.count : (item.qty_rec || item.qty_sort || 0));
+          const isColdstore = (item.coldstore || item.store || item.location || '').toString().toUpperCase().includes('COLD') || 
+                              item.isColdstore === true || item.coldstore === 'YES' || item.coldstore === '1';
+
+          if (!isNaN(qty)) {
+            totalFloorUnits += qty;
+            totalStockReceived += qty; // Baseline for intake
+            if (isColdstore) {
+              coldstoreUnits += qty;
+            }
+          }
+        }
       }
+    }
 
-      const totalFloorUnits = kpis.total_floor_units || 0;
-      const totalBuyersCount = kpis.total_buyers || 0;
-      const totalRevenue = kpis.total_revenue || 0;
-      const totalOrdersCount = kpis.total_orders || 0;
+    // 2. Process History / Clearance Rate
+    const histArray = Array.isArray(historyVal) ? historyVal : Object.values(historyVal);
+    const uniqueBuyers = new Set();
+    const recentBuyers = new Set();
+    
+    const todayStr = new Date().toISOString().split('T')[0];
 
-      // Directly target exact dashboard KPI element IDs
-      setElemText('kpi-floor', totalFloorUnits.toLocaleString() + ' units');
-      setElemText('kpi-buyers', totalBuyersCount.toLocaleString());
-      setElemText('kpi-revenue', 'R ' + totalRevenue.toLocaleString());
-      setElemText('kpi-orders', totalOrdersCount.toLocaleString());
-
-      console.log("✅ Dashboard KPIs successfully updated from dedicated node:", kpis);
+    histArray.forEach(h => {
+      if (h.buyer && h.buyer !== 'UNKNOWN') {
+        uniqueBuyers.add(h.buyer);
+        // Check if buyer was added recently (e.g. today or last sync)
+        if (h.date && h.date >= todayStr) {
+          recentBuyers.add(h.buyer);
+        }
+      }
+      const soldQty = Number(h.qty) || Number(h.soldQty) || 0;
+      totalStockSold += soldQty;
     });
 
+    const totalBuyersCount = uniqueBuyers.size;
+    const newBuyersCount = recentBuyers.size;
+    const newBuyerPercentage = totalBuyersCount > 0 ? Math.round((newBuyersCount / totalBuyersCount) * 100) : 0;
+
+    // Clearance Rate Calculation: (Sold / Total Available Pool) * 100
+    const totalPool = totalStockSold + totalFloorUnits;
+    const clearanceRate = totalPool > 0 ? Math.round((totalStockSold / totalPool) * 100) : 0;
+
+    // Render to DOM
+    setElemText('kpi-floor', totalFloorUnits.toLocaleString() + ' units');
+    setElemText('kpi-coldstore', coldstoreUnits.toLocaleString() + ' units');
+    setElemText('kpi-buyers', totalBuyersCount.toLocaleString());
+
+    // Clearance Rate Card Styling & Text
+    const clearanceEl = document.getElementById('kpi-clearance') || document.getElementById('kpi-orders');
+    if (clearanceEl) {
+      clearanceEl.textContent = clearanceRate + '%';
+      clearanceEl.style.fontWeight = 'bold';
+      if (clearanceRate < 35) {
+        clearanceEl.style.color = '#d90429'; // Red
+      } else if (clearanceRate <= 50) {
+        clearanceEl.style.color = '#f59e0b'; // Yellow / Amber
+      } else {
+        clearanceEl.style.color = '#2d6a4f'; // Green
+      }
+    }
+
+    // Buyers Card New Buyer Alert Indicator
+    const buyersEl = document.getElementById('kpi-buyers');
+    if (buyersEl && newBuyersCount > 0) {
+      buyersEl.innerHTML = `${totalBuyersCount.toLocaleString()} <span style="background:#d8f3dc;color:#1b4332;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:6px;">+${newBuyerPercentage}% new</span>`;
+    }
+
+    console.log("✅ Custom Dashboard KPIs updated successfully.");
+
   } catch (error) {
-    console.error("Dashboard KPI fetch error:", error);
+    console.error("Dashboard KPI calculation error:", error);
   }
 }
 
@@ -43,12 +106,6 @@ function setElemText(id, text) {
 
 window.loadDashboard = loadDashboard;
 
-// Auto-trigger on load and listen for real-time updates from backend sync
 window.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
-  
-  // Real-time listener so dashboard updates instantly whenever Jdw-sync pushes a new PDF
-  firebase.database().ref('/dashboard_kpis').on('value', () => {
-    loadDashboard();
-  });
 });
