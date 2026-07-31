@@ -1,24 +1,19 @@
 // ==========================================
-// COMPLETE STOCK SCRIPT (SALESMAN TABS & RENDERING)
+// CLEANED COLDSTORE SCRIPT
 // ==========================================
 
-let allLiveStockData = [];
-let currentSalesmanFilter = 'ALL';
-let currentCommodityFilter = 'All commodities';
-let currentColdstoreFilter = false;
+let allColdstoreData = [];
+let currentColdstoreSalesman = 'ALL';
 
-async function loadStockFromFirebase() {
-  const el = document.getElementById('list-stock') || document.getElementById('stock-results');
-  if (!el) {
-    console.warn("Stock container element not found on this view.");
-    return;
-  }
-  el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">Loading stock...</div>';
+async function loadColdstoreStock() {
+  const el = document.getElementById('coldstore-results') || document.getElementById('list-coldstore');
+  if (!el) return; // Safely exit if not currently on the coldstore view
+  el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">Loading coldstore stock...</div>';
 
   try {
     const snapshot = await firebase.database().ref('stock').once('value');
     const raw = snapshot.val();
-    allLiveStockData = [];
+    allColdstoreData = [];
 
     if (raw) {
       for (const salesmanKey in raw) {
@@ -30,31 +25,30 @@ async function loadStockFromFirebase() {
                                 item.coldstore === 'YES' || 
                                 item.coldstore === '1';
 
-            allLiveStockData.push({
-              ...item,
-              _nodeKey: salesmanKey.toLowerCase(),
-              _id: itemKey,
-              _isColdstore: isColdstore
-            });
+            if (isColdstore) {
+              allColdstoreData.push({
+                ...item,
+                _nodeKey: salesmanKey.toLowerCase(),
+                _id: itemKey
+              });
+            }
           }
         }
       }
     }
 
-    window.allLiveStockData = allLiveStockData;
-    renderStockView();
+    renderColdstoreView();
   } catch (e) {
-    console.error('Error loading stock:', e);
-    if (el) el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#d90429;">Error loading stock data.</div>';
+    console.error('Error loading coldstore stock:', e);
+    if (el) el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#d90429;">Error loading coldstore data.</div>';
   }
 }
 
-function switchStockTab(salesman) {
-  currentSalesmanFilter = salesman;
+function switchColdstoreTab(salesman) {
+  currentColdstoreSalesman = salesman;
   
-  // Highlight active salesman button across RJ, CDW, POT, ALL
   ['rj', 'cdw', 'pot', 'all', 'ALL'].forEach(s => {
-    const btn = document.getElementById(`btn-${s}`) || document.getElementById(`btn-salesman-${s}`);
+    const btn = document.getElementById(`coldstore-btn-${s}`) || document.getElementById(`btn-coldstore-${s}`);
     if (btn) {
       if (s.toLowerCase() === salesman.toLowerCase()) {
         btn.style.background = '#1b4332';
@@ -66,43 +60,22 @@ function switchStockTab(salesman) {
     }
   });
 
-  renderStockView();
+  renderColdstoreView();
 }
 
-function filterStockBySalesman(salesman) {
-  switchStockTab(salesman);
-}
-
-function toggleColdstoreFilter() {
-  currentColdstoreFilter = !currentColdstoreFilter;
-  renderStockView();
-}
-
-function renderStockView() {
-  const el = document.getElementById('list-stock') || document.getElementById('stock-results');
+function renderColdstoreView() {
+  const el = document.getElementById('coldstore-results') || document.getElementById('list-coldstore');
   if (!el) return;
 
-  if (!allLiveStockData.length) {
-    el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">No stock records found. Waiting for sync...</div>';
-    return;
-  }
-
-  const filtered = allLiveStockData.filter(item => {
-    if (currentSalesmanFilter !== 'ALL' && item._nodeKey !== currentSalesmanFilter.toLowerCase()) {
-      return false;
-    }
-    if (currentColdstoreFilter && !item._isColdstore) {
-      return false;
-    }
-    const comm = item.commodity || item.comm || item.variety || '';
-    if (currentCommodityFilter && currentCommodityFilter !== 'All commodities' && comm !== currentCommodityFilter) {
+  const filtered = allColdstoreData.filter(item => {
+    if (currentColdstoreSalesman !== 'ALL' && item._nodeKey !== currentColdstoreSalesman.toLowerCase()) {
       return false;
     }
     return true;
   });
 
   if (!filtered.length) {
-    el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">No stock matches current filters for <strong>' + currentSalesmanFilter.toUpperCase() + '</strong>.</div>';
+    el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">No coldstore stock found for <strong>' + currentColdstoreSalesman.toUpperCase() + '</strong>.</div>';
     return;
   }
 
@@ -111,19 +84,18 @@ function renderStockView() {
     const qty = item.count !== undefined ? item.count : (item.qty_rec || item.qty_sort || '0');
     const pack = item.pack || item.size || '-';
     const salesmanBadge = item._nodeKey ? item._nodeKey.toUpperCase() : '';
-    const coldstoreTag = item._isColdstore ? '<span style="background:#1e3a8a;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;">Coldstore</span>' : '';
 
     return `
       <div style="background:#fff;border-radius:10px;padding:12px 16px;margin-bottom:8px;border:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
         <div>
           <div style="font-weight:800;font-size:14px;color:#0f172a;display:flex;align-items:center;">
-            ${commName} ${coldstoreTag}
+            ${commName} <span style="background:#1e3a8a;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;">Coldstore</span>
           </div>
           <div style="font-size:11px;color:#64748b;margin-top:2px;">
             Salesman: <strong>${salesmanBadge}</strong> · Pack: ${pack} · Grade: ${item.grade || '—'}
           </div>
         </div>
-        <div style="background:#1e4d2b;border-radius:8px;padding:6px 12px;text-align:center;">
+        <div style="background:#1e3a8a;border-radius:8px;padding:6px 12px;text-align:center;">
           <div style="font-size:14px;font-weight:800;color:#fff;">${qty} BAL</div>
         </div>
       </div>
@@ -131,12 +103,6 @@ function renderStockView() {
   }).join('');
 }
 
-window.loadStockFromFirebase = loadStockFromFirebase;
-window.switchStockTab = switchStockTab;
-window.filterStockBySalesman = filterStockBySalesman;
-window.toggleColdstoreFilter = toggleColdstoreFilter;
-window.renderStockView = renderStockView;
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadStockFromFirebase();
-});
+window.loadColdstoreStock = loadColdstoreStock;
+window.switchColdstoreTab = switchColdstoreTab;
+window.renderColdstoreView = renderColdstoreView;
