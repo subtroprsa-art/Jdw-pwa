@@ -1,5 +1,5 @@
 // ==========================================
-// PIPELINE SCRIPT WITH REAL-TIME DAILY SYNCED CONTACT STATE
+// COMPLETE PIPELINE SCRIPT WITH COLDSTORE RECOGNITION & DAILY SYNCED STATE
 // ==========================================
 
 let firebaseBuyerPhonesCache = {};
@@ -133,7 +133,12 @@ async function runComprehensiveMatching() {
         for (const e in stockVal[u]) {
           const item = stockVal[u][e];
           if (item && typeof item === 'object') {
-            pipelineStock.push({ ...item, _nodeKey: u, _id: e });
+            const isColdstore = (item.coldstore || item.store || item.location || '').toString().toUpperCase().includes('COLD') || 
+                                item.isColdstore === true || 
+                                item.coldstore === 'YES' || 
+                                item.coldstore === '1';
+
+            pipelineStock.push({ ...item, _nodeKey: u, _id: e, _isColdstore: isColdstore });
           }
         }
       }
@@ -279,7 +284,8 @@ function renderPipelineMatches(rankedBuyers) {
       const rawComm = s._matchedCommodityName || s.commodity || s.variety || 'Produce';
       const friendlyName = getFriendlyProductName(rawComm);
       const packInfo = s.pack ? s.pack : (s.size ? `${s.size}kg` : '');
-      const displayPart = packInfo ? `${friendlyName} ${packInfo}` : `${friendlyName}`;
+      const coldstoreTag = s._isColdstore ? ' (Coldstore)' : '';
+      const displayPart = packInfo ? `${friendlyName} ${packInfo}${coldstoreTag}` : `${friendlyName}${coldstoreTag}`;
       return `• ${displayPart} available`;
     }).join('\n');
 
@@ -318,10 +324,11 @@ function renderPipelineMatches(rankedBuyers) {
       const grade = stock.grade ? `Grade ${stock.grade}` : '';
       const size = stock.size ? `Size: ${stock.size}` : '';
       const availableQty = stock.count !== undefined ? stock.count : (stock.qty_rec || stock.qty_sort || 'N/A');
+      const coldstoreBadge = stock._isColdstore ? ' <span style="background:#1e3a8a;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">Coldstore</span>' : '';
 
       htmlOutput += `
         <div style="padding:8px 0;border-bottom:1px solid #eee;">
-          <div style="font-size:13px;font-weight:700;color:#333;">${commodityName}${variety} (${grade}, ${size})</div>
+          <div style="font-size:13px;font-weight:700;color:#333;">${commodityName}${variety} (${grade}, ${size})${coldstoreBadge}</div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">Qty: <strong>${availableQty}</strong> | Pack: ${stock.pack || '-'}</div>
         </div>
       `;
