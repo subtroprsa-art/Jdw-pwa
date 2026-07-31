@@ -1,38 +1,36 @@
 // ==========================================
-// FULLY REVISED dashboard.js (DIRECT DOM REFRESH & SAFEGUARDED)
+// FULLY REVISED dashboard.js (DEDICATED NODE READER)
 // ==========================================
 
 async function loadDashboard() {
   try {
-    console.log("Forcing direct refresh of dashboard stats...");
+    console.log("Fetching pre-calculated dashboard KPIs from dedicated backend node...");
 
-    // Grab buyers and floor stock directly from global storage or Firebase globals
-    const buyers = window.allBuyers || window.liveBuyerData || window.buyersData || [];
-    const stockItems = window.stockLines || window.liveFloorData || window.allLiveFloorData || window.floorData || [];
+    // Read directly from the robust backend-maintained node (Zero calculations, zero bugs)
+    firebase.database().ref('/dashboard_kpis').once('value', snapshot => {
+      const kpis = snapshot.val();
+      
+      if (!kpis) {
+        console.warn("⚠️ /dashboard_kpis node is empty. Waiting for sync...");
+        return;
+      }
 
-    // Compute totals safely
-    const totalFloorUnits = stockItems.reduce((sum, item) => {
-      const q = Number(item.flr !== undefined ? item.flr : (item.balance || item.qty || item.count || 0));
-      return sum + (isNaN(q) ? 0 : q);
-    }, 0);
+      const totalFloorUnits = kpis.total_floor_units || 0;
+      const totalBuyersCount = kpis.total_buyers || 0;
+      const totalRevenue = kpis.total_revenue || 0;
+      const totalOrdersCount = kpis.total_orders || 0;
 
-    const totalRevenue = buyers.reduce((sum, b) => {
-      const t = Number(b.turnover || b.totalSpent || b.revenue || b.totalTurnover || 0);
-      return sum + (isNaN(t) ? 0 : t);
-    }, 0);
+      // Directly target exact dashboard KPI element IDs
+      setElemText('kpi-floor', totalFloorUnits.toLocaleString() + ' units');
+      setElemText('kpi-buyers', totalBuyersCount.toLocaleString());
+      setElemText('kpi-revenue', 'R ' + totalRevenue.toLocaleString());
+      setElemText('kpi-orders', totalOrdersCount.toLocaleString());
 
-    const totalBuyersCount = buyers.length;
-    const totalOrdersCount = window.allOrders ? window.allOrders.length : (window.ordersCount || 0);
+      console.log("✅ Dashboard KPIs successfully updated from dedicated node:", kpis);
+    });
 
-    // Directly target exact dashboard KPI element IDs from your screenshot
-    setElemText('kpi-floor', totalFloorUnits.toLocaleString() + ' units');
-    setElemText('kpi-buyers', totalBuyersCount.toLocaleString());
-    setElemText('kpi-revenue', 'R ' + totalRevenue.toLocaleString());
-    setElemText('kpi-orders', totalOrdersCount.toLocaleString());
-
-    console.log("✅ Dashboard KPIs updated:", { totalFloorUnits, totalBuyersCount, totalRevenue, totalOrdersCount });
   } catch (error) {
-    console.error("Dashboard calculation error:", error);
+    console.error("Dashboard KPI fetch error:", error);
   }
 }
 
@@ -45,9 +43,12 @@ function setElemText(id, text) {
 
 window.loadDashboard = loadDashboard;
 
-// Auto-trigger on load and retry after async data syncs
+// Auto-trigger on load and listen for real-time updates from backend sync
 window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(loadDashboard, 400);
-  setTimeout(loadDashboard, 1500);
-  setTimeout(loadDashboard, 3500);
+  loadDashboard();
+  
+  // Real-time listener so dashboard updates instantly whenever Jdw-sync pushes a new PDF
+  firebase.database().ref('/dashboard_kpis').on('value', () => {
+    loadDashboard();
+  });
 });
