@@ -1,8 +1,10 @@
 // ==========================================
-// COMPLETE STOCK SCRIPT WITH SALESMAN TAB SWITCHER
+// CLEANED STOCK SCRIPT
 // ==========================================
 
-let allLiveStockData = [];
+if (typeof window.allLiveStockData === 'undefined') {
+  window.allLiveStockData = [];
+}
 let currentSalesmanFilter = 'ALL';
 let currentCommodityFilter = 'All commodities';
 let currentColdstoreFilter = false;
@@ -10,12 +12,12 @@ let currentColdstoreFilter = false;
 async function loadStockFromFirebase() {
   const el = document.getElementById('list-stock') || document.getElementById('stock-results');
   if (!el) return;
-  el.innerHTML = '<div class="empty">Loading stock...</div>';
+  el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">Loading stock...</div>';
 
   try {
     const snapshot = await firebase.database().ref('stock').once('value');
     const raw = snapshot.val();
-    allLiveStockData = [];
+    window.allLiveStockData = [];
 
     if (raw) {
       for (const salesmanKey in raw) {
@@ -27,7 +29,7 @@ async function loadStockFromFirebase() {
                                 item.coldstore === 'YES' || 
                                 item.coldstore === '1';
 
-            allLiveStockData.push({
+            window.allLiveStockData.push({
               ...item,
               _nodeKey: salesmanKey.toLowerCase(),
               _id: itemKey,
@@ -38,23 +40,20 @@ async function loadStockFromFirebase() {
       }
     }
 
-    window.allLiveStockData = allLiveStockData;
     renderStockView();
   } catch (e) {
     console.error('Error loading stock:', e);
-    if (el) el.innerHTML = '<div class="empty">Error loading stock data.</div>';
+    if (el) el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#d90429;">Error loading stock data.</div>';
   }
 }
 
-// Function name required by UI buttons (RJ, CDW, POT)
 function switchStockTab(salesman) {
   currentSalesmanFilter = salesman;
   
-  // Update button active styles across RJ, CDW, POT, ALL
-  ['rj', 'cdw', 'pot', 'all'].forEach(s => {
+  ['rj', 'cdw', 'pot', 'all', 'ALL'].forEach(s => {
     const btn = document.getElementById(`btn-${s}`) || document.getElementById(`btn-salesman-${s}`);
     if (btn) {
-      if (s === salesman.toLowerCase()) {
+      if (s.toLowerCase() === salesman.toLowerCase()) {
         btn.style.background = '#1b4332';
         btn.style.color = '#fff';
       } else {
@@ -80,12 +79,12 @@ function renderStockView() {
   const el = document.getElementById('list-stock') || document.getElementById('stock-results');
   if (!el) return;
 
-  if (!allLiveStockData.length) {
-    el.innerHTML = '<div class="empty">No stock records found. Waiting for sync...</div>';
+  if (!window.allLiveStockData.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">No stock records found. Waiting for sync...</div>';
     return;
   }
 
-  const filtered = allLiveStockData.filter(item => {
+  const filtered = window.allLiveStockData.filter(item => {
     if (currentSalesmanFilter !== 'ALL' && item._nodeKey !== currentSalesmanFilter.toLowerCase()) {
       return false;
     }
@@ -100,7 +99,7 @@ function renderStockView() {
   });
 
   if (!filtered.length) {
-    el.innerHTML = '<div class="empty">No stock matches current filters for salesman <strong>' + currentSalesmanFilter.toUpperCase() + '</strong>.</div>';
+    el.innerHTML = '<div class="empty" style="padding:20px;text-align:center;color:#64748b;">No stock matches current filters for <strong>' + currentSalesmanFilter.toUpperCase() + '</strong>.</div>';
     return;
   }
 
@@ -134,7 +133,3 @@ window.switchStockTab = switchStockTab;
 window.filterStockBySalesman = filterStockBySalesman;
 window.toggleColdstoreFilter = toggleColdstoreFilter;
 window.renderStockView = renderStockView;
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadStockFromFirebase();
-});
