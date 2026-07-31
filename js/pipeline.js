@@ -80,13 +80,11 @@ function formatPhoneNumber(phone) {
     return cleaned;
 }
 
-// Get today's date key for daily resetting (e.g., "2026-07-31")
 function getTodayPipelineKey() {
   const d = new Date();
   return d.toISOString().split('T')[0];
 }
 
-// Fetch contacted status for today from Firebase in real-time
 function loadContactedBuyersState() {
   const dateKey = getTodayPipelineKey();
   firebase.database().ref(`pipeline_contacted/${dateKey}`).on('value', snapshot => {
@@ -97,7 +95,6 @@ function loadContactedBuyersState() {
   });
 }
 
-// Toggle or mark a buyer as contacted/messaged in Firebase
 async function markBuyerContacted(buyerName, type) {
   const dateKey = getTodayPipelineKey();
   const safeName = buyerName.replace(/[.#$[\]]/g, '_');
@@ -113,7 +110,6 @@ async function markBuyerContacted(buyerName, type) {
   await ref.set(current);
 }
 
-// Initialize real-time sync listener on startup
 document.addEventListener('DOMContentLoaded', () => {
   loadContactedBuyersState();
 });
@@ -255,9 +251,6 @@ function runAIFromPipeline() {
   runComprehensiveMatching();
 }
 
-window.runAIFromPipeline = runAIFromPipeline;
-window.runComprehensiveMatching = runComprehensiveMatching;
-
 function renderPipelineMatches(rankedBuyers) {
   lastRankedBuyers = rankedBuyers;
   const el = document.getElementById('pipeline-results');
@@ -351,4 +344,5 @@ function toggleBuyerDropdown(id) {
 }
 
 window.toggleBuyerDropdown = toggleBuyerDropdown;
-```[cite: 4]
+window.runAIFromPipeline = runAIFromPipeline;
+window.runComprehensiveMatching = runComprehensiveMatching;
