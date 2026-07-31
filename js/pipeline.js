@@ -1,8 +1,10 @@
 // ==========================================
-// PIPELINE SCRIPT WITH RESTORED runAIFromPipeline & CLEAN WHATSAPP (NO DATES)
+// PIPELINE SCRIPT WITH REAL-TIME DAILY SYNCED CONTACT STATE
 // ==========================================
 
 let firebaseBuyerPhonesCache = {};
+let currentContactedMap = {};
+let lastRankedBuyers = [];
 
 function normalizeString(str) {
     if (!str) return '';
@@ -77,6 +79,44 @@ function formatPhoneNumber(phone) {
     }
     return cleaned;
 }
+
+// Get today's date key for daily resetting (e.g., "2026-07-31")
+function getTodayPipelineKey() {
+  const d = new Date();
+  return d.toISOString().split('T')[0];
+}
+
+// Fetch contacted status for today from Firebase in real-time
+function loadContactedBuyersState() {
+  const dateKey = getTodayPipelineKey();
+  firebase.database().ref(`pipeline_contacted/${dateKey}`).on('value', snapshot => {
+    currentContactedMap = snapshot.val() || {};
+    if (lastRankedBuyers.length > 0) {
+      renderPipelineMatches(lastRankedBuyers);
+    }
+  });
+}
+
+// Toggle or mark a buyer as contacted/messaged in Firebase
+async function markBuyerContacted(buyerName, type) {
+  const dateKey = getTodayPipelineKey();
+  const safeName = buyerName.replace(/[.#$[\]]/g, '_');
+  
+  const ref = firebase.database().ref(`pipeline_contacted/${dateKey}/${safeName}`);
+  const snapshot = await ref.once('value');
+  const current = snapshot.val() || { called: false, whatsapp: false };
+
+  if (type === 'call') current.called = !current.called;
+  if (type === 'whatsapp') current.whatsapp = !current.whatsapp;
+  current.timestamp = Date.now();
+
+  await ref.set(current);
+}
+
+// Initialize real-time sync listener on startup
+document.addEventListener('DOMContentLoaded', () => {
+  loadContactedBuyersState();
+});
 
 async function runComprehensiveMatching() {
   console.log("Running comprehensive pipeline match...");
@@ -211,7 +251,6 @@ async function runComprehensiveMatching() {
   renderPipelineMatches(allProcessedMatches);
 }
 
-// RESTORED: Ensures your HTML match button onclick event finds the function immediately
 function runAIFromPipeline() {
   runComprehensiveMatching();
 }
@@ -220,6 +259,7 @@ window.runAIFromPipeline = runAIFromPipeline;
 window.runComprehensiveMatching = runComprehensiveMatching;
 
 function renderPipelineMatches(rankedBuyers) {
+  lastRankedBuyers = rankedBuyers;
   const el = document.getElementById('pipeline-results');
   if (!el) return;
 
@@ -234,8 +274,14 @@ function renderPipelineMatches(rankedBuyers) {
     const dropdownId = `buyer-dropdown-${idx}`;
     const formattedTurnover = `R ${buyerData.turnover.toLocaleString()}`;
     const phone = buyerData.phone || '';
+    
+    const safeName = buyerData.buyerName.replace(/[.#$[\]]/g, '_');
+    const buyerStatus = currentContactedMap[safeName] || { called: false, whatsapp: false };
+    
+    const isDone = buyerStatus.called || buyerStatus.whatsapp;
+    const cardBg = isDone ? '#f0fdf4' : '#fff';
+    const cardBorder = isDone ? '#bbf7d0' : 'var(--border)';
 
-    // STRICTLY NO DATES: Clean bullet points containing ONLY name and pack/size
     const stockSummaryText = buyerData.stockItems.map(s => {
       const rawComm = s._matchedCommodityName || s.commodity || s.variety || 'Produce';
       const friendlyName = getFriendlyProductName(rawComm);
@@ -251,19 +297,19 @@ function renderPipelineMatches(rankedBuyers) {
     const telLink = phone ? `tel:${phone}` : '#';
 
     htmlOutput += `
-      <div style="background:#fff;border-radius:10px;margin-bottom:10px;border:1.5px solid var(--border);overflow:hidden;">
-        <div style="padding:14px 16px;background:#f8f9fa;display:flex;justify-content:space-between;align-items:center;">
+      <div style="background:${cardBg};border-radius:10px;margin-bottom:10px;border:1.5px solid ${cardBorder};overflow:hidden;transition:all 0.2s ease;">
+        <div style="padding:14px 16px;background:${isDone ? '#f6fdf9' : '#f8f9fa'};display:flex;justify-content:space-between;align-items:center;">
           <div onclick="toggleBuyerDropdown('${dropdownId}')" style="cursor:pointer;flex-grow:1;">
-            <div style="font-weight:800;font-size:15px;color:var(--moss);">
+            <div style="font-weight:800;font-size:15px;color:var(--moss);display:flex;align-items:center;gap:8px;">
               ${buyerData.buyerName} 
-              <span style="font-size:12px;color:var(--muted);font-weight:normal;margin-left:8px;">(Turnover: ${formattedTurnover})</span>
+              ${isDone ? '<span style="background:#2d6a4f;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;">✓ Contacted Today</span>' : ''}
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Phone: ${phone || '<span style="color:#d90429;">Not found</span>'}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Turnover: ${formattedTurnover} · Phone: ${phone || '<span style="color:#d90429;">Not found</span>'}</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px;">
             ${phone ? `
-              <a href="${telLink}" title="Call" style="background:#e2f0d9;color:#2d6a4f;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">📞 Call</a>
-              <a href="${waLink}" target="_blank" title="WhatsApp" style="background:#d8f3dc;color:#1b4332;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">💬 WhatsApp</a>
+              <a href="${telLink}" onclick="markBuyerContacted('${buyerData.buyerName.replace(/'/g, "\\'")}', 'call')" title="Call" style="background:${buyerStatus.called ? '#2d6a4f' : '#e2f0d9'};color:${buyerStatus.called ? '#fff' : '#2d6a4f'};padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">📞 ${buyerStatus.called ? 'Called ✓' : 'Call'}</a>
+              <a href="${waLink}" target="_blank" onclick="markBuyerContacted('${buyerData.buyerName.replace(/'/g, "\\'")}', 'whatsapp')" title="WhatsApp" style="background:${buyerStatus.whatsapp ? '#1b4332' : '#d8f3dc'};color:${buyerStatus.whatsapp ? '#fff' : '#1b4332'};padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:bold;">💬 ${buyerStatus.whatsapp ? 'Sent ✓' : 'WhatsApp'}</a>
             ` : `<span style="font-size:11px;color:#999;font-style:italic;">No phone</span>`}
             <div onclick="toggleBuyerDropdown('${dropdownId}')" style="cursor:pointer;font-size:12px;color:var(--muted);font-weight:bold;padding-left:6px;">
               <span>${buyerData.stockItems.length} Products ▼</span>
@@ -303,3 +349,6 @@ function toggleBuyerDropdown(id) {
     dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
   }
 }
+
+window.toggleBuyerDropdown = toggleBuyerDropdown;
+```[cite: 4]
