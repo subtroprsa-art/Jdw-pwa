@@ -1,5 +1,5 @@
 // ==========================================
-// COMPLETE STOCK SCRIPT WITH SALESMAN TOGGLES & COLDSTORE FILTER
+// COMPLETE STOCK SCRIPT WITH SALESMAN TAB SWITCHER
 // ==========================================
 
 let allLiveStockData = [];
@@ -22,7 +22,6 @@ async function loadStockFromFirebase() {
         for (const itemKey in raw[salesmanKey]) {
           const item = raw[salesmanKey][itemKey];
           if (item && typeof item === 'object') {
-            // Determine coldstore flag from item properties
             const isColdstore = (item.coldstore || item.store || item.location || '').toString().toUpperCase().includes('COLD') || 
                                 item.isColdstore === true || 
                                 item.coldstore === 'YES' || 
@@ -39,9 +38,7 @@ async function loadStockFromFirebase() {
       }
     }
 
-    // Expose globally for pipeline matcher
     window.allLiveStockData = allLiveStockData;
-
     renderStockView();
   } catch (e) {
     console.error('Error loading stock:', e);
@@ -49,12 +46,13 @@ async function loadStockFromFirebase() {
   }
 }
 
-function filterStockBySalesman(salesman) {
+// Function name required by UI buttons (RJ, CDW, POT)
+function switchStockTab(salesman) {
   currentSalesmanFilter = salesman;
   
-  // Highlight active salesman button if they exist in UI
+  // Update button active styles across RJ, CDW, POT, ALL
   ['rj', 'cdw', 'pot', 'all'].forEach(s => {
-    const btn = document.getElementById(`btn-salesman-${s}`);
+    const btn = document.getElementById(`btn-${s}`) || document.getElementById(`btn-salesman-${s}`);
     if (btn) {
       if (s === salesman.toLowerCase()) {
         btn.style.background = '#1b4332';
@@ -69,20 +67,12 @@ function filterStockBySalesman(salesman) {
   renderStockView();
 }
 
+function filterStockBySalesman(salesman) {
+  switchStockTab(salesman);
+}
+
 function toggleColdstoreFilter() {
   currentColdstoreFilter = !currentColdstoreFilter;
-  const btn = document.getElementById('coldstore-toggle-btn');
-  if (btn) {
-    if (currentColdstoreFilter) {
-      btn.style.background = '#1b4332';
-      btn.style.color = '#fff';
-      btn.style.borderColor = '#1b4332';
-    } else {
-      btn.style.background = '#f8f9fa';
-      btn.style.color = '#2d6a4f';
-      btn.style.borderColor = '#2d6a4f';
-    }
-  }
   renderStockView();
 }
 
@@ -95,7 +85,6 @@ function renderStockView() {
     return;
   }
 
-  // Filter stock based on selected salesman, commodity, and coldstore toggle
   const filtered = allLiveStockData.filter(item => {
     if (currentSalesmanFilter !== 'ALL' && item._nodeKey !== currentSalesmanFilter.toLowerCase()) {
       return false;
@@ -111,7 +100,7 @@ function renderStockView() {
   });
 
   if (!filtered.length) {
-    el.innerHTML = '<div class="empty">No stock matches current filters.</div>';
+    el.innerHTML = '<div class="empty">No stock matches current filters for salesman <strong>' + currentSalesmanFilter.toUpperCase() + '</strong>.</div>';
     return;
   }
 
@@ -141,6 +130,11 @@ function renderStockView() {
 }
 
 window.loadStockFromFirebase = loadStockFromFirebase;
+window.switchStockTab = switchStockTab;
 window.filterStockBySalesman = filterStockBySalesman;
 window.toggleColdstoreFilter = toggleColdstoreFilter;
 window.renderStockView = renderStockView;
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadStockFromFirebase();
+});
