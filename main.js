@@ -7,7 +7,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 JDW CRM Initialized');
   
-  // Initialize Firebase connection check or listeners
   if (typeof firebase !== 'undefined') {
     console.log('🔥 Firebase SDK detected');
   }
@@ -28,22 +27,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     cancelBtn.addEventListener('click', cancelCamera);
   }
 
-  // Load initial stock and buyer data, then load the dashboard stats
+  // Load baseline buyers if the function exists
   try {
-    await Promise.all([
-      typeof loadAllStockForMatcher === 'function' ? loadAllStockForMatcher() : Promise.resolve(),
-      typeof loadBuyersFromFirebase === 'function' ? loadBuyersFromFirebase() : Promise.resolve(),
-      typeof loadFloorFromFirebase === 'function' ? loadFloorFromFirebase('default_user') : Promise.resolve()
-    ]);
+    if (typeof loadBuyersFromFirebase === 'function') {
+      await loadBuyersFromFirebase();
+    }
   } catch (e) {
-    console.error('Error loading initial data:', e);
+    console.error('Error loading initial buyer data:', e);
   }
 
-  // Finally, render the dashboard stats with the newly populated global arrays
+  // Initialize decoupled dashboard and stock views from our pre-calculated nodes
   if (typeof loadDashboard === 'function') {
     loadDashboard();
-    // Safe retry fallback in case Firebase data takes an extra moment to resolve asynchronously
-    setTimeout(loadDashboard, 1000);
-    setTimeout(loadDashboard, 3000);
+  }
+  
+  if (typeof loadStockFromFirebase === 'function') {
+    loadStockFromFirebase();
   }
 });
